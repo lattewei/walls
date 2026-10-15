@@ -1,12 +1,14 @@
 package auth
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/openstudio/openstudio/services/api/internal/domain"
 	"github.com/openstudio/openstudio/services/api/internal/httpx"
 )
 
@@ -31,9 +33,15 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+// updateMeRequest uses json.RawMessage for contact fields so clients can
+// explicitly clear a value with null vs omit the field entirely.
 type updateMeRequest struct {
 	DisplayName *string `json:"display_name"`
 	Bio         *string `json:"bio"`
+
+	PublicContactEmail json.RawMessage `json:"public_contact_email"`
+	InstagramURL       json.RawMessage `json:"instagram_url"`
+	OtherLinks         json.RawMessage `json:"other_links"`
 }
 
 // Register POST /api/v1/auth/register
@@ -84,12 +92,12 @@ func (h *Handler) Logout(c *gin.Context) {
 // Me GET /api/v1/me
 func (h *Handler) Me(c *gin.Context) {
 	uid := UserIDFromContext(c)
-	user, err := h.svc.Me(c.Request.Context(), uid)
+	res, err := h.svc.Me(c.Request.Context(), uid)
 	if err != nil {
 		h.mapError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	c.JSON(http.StatusOK, res)
 }
 
 // UpdateMe PATCH /api/v1/me
@@ -99,21 +107,67 @@ func (h *Handler) UpdateMe(c *gin.Context) {
 		httpx.BadRequest(c, "invalid JSON body")
 		return
 	}
-	if req.DisplayName == nil && req.Bio == nil {
+
+	in := UpdateProfileInput{
+		DisplayName: req.DisplayName,
+		Bio:         req.Bio,
+	}
+
+	if len(req.PublicContactEmail) > 0 {
+		val, err := parseOptionalStringField(req.PublicContactEmail)
+		if err != nil {
+			httpx.BadRequest(c, "invalid public_contact_email")
+			return
+		}
+		in.PublicContactEmail = &val
+	}
+	if len(req.InstagramURL) > 0 {
+		val, err := parseOptionalStringField(req.InstagramURL)
+		if err != nil {
+			httpx.BadRequest(c, "invalid instagram_url")
+			return
+		}
+		in.InstagramURL = &val
+	}
+	if len(req.OtherLinks) > 0 {
+		if string(req.OtherLinks) == "null" {
+			empty := []domain.ExternalLink{}
+			in.OtherLinks = &empty
+		} else {
+			var links []domain.ExternalLink
+			if err := json.Unmarshal(req.OtherLinks, &links); err != nil {
+				httpx.BadRequest(c, "invalid other_links")
+				return
+			}
+			in.OtherLinks = &links
+		}
+	}
+
+	if in.DisplayName == nil && in.Bio == nil &&
+		in.PublicContactEmail == nil && in.InstagramURL == nil && in.OtherLinks == nil {
 		httpx.BadRequest(c, "no fields to update")
 		return
 	}
 
 	uid := UserIDFromContext(c)
-	user, err := h.svc.UpdateProfile(c.Request.Context(), uid, UpdateProfileInput{
-		DisplayName: req.DisplayName,
-		Bio:         req.Bio,
-	})
+	res, err := h.svc.UpdateProfile(c.Request.Context(), uid, in)
 	if err != nil {
 		h.mapError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	c.JSON(http.StatusOK, res)
+}
+
+// parseOptionalStringField decodes a JSON string or null into *string (nil means clear).
+func parseOptionalStringField(raw json.RawMessage) (*string, error) {
+	if string(raw) == "null" {
+		return nil, nil
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err
+	}
+	return &s, nil
 }
 
 func (h *Handler) mapError(c *gin.Context, err error) {

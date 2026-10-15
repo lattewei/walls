@@ -59,15 +59,55 @@ Stateless JWT : le client jette le token. Répond `{"status":"ok"}`.
 
 Header : `Authorization: Bearer <access_token>`
 
-**200** : `{ "user": { … } }`
+**200** :
+
+```json
+{
+  "user": {
+    "id": "…",
+    "handle": "johnny_beats",
+    "display_name": "Johnny Beats",
+    "role": "user",
+    "created_at": "…"
+  },
+  "contacts": {
+    "public_contact_email": "pro@example.com",
+    "instagram_url": "https://instagram.com/johnny",
+    "other_links": [
+      { "label": "SoundCloud", "url": "https://soundcloud.com/johnny" }
+    ]
+  }
+}
+```
+
+`contacts` ne contient **que** ce que l’utilisateur a choisi de rendre public. Pas d’e-mail de compte (il n’y en a pas au MVP).
+
+Register / login renvoient aussi `contacts` (vide au départ).
 
 ### `PATCH /api/v1/me`
 
+Profil et/ou contacts, au moins un champ :
+
 ```json
-{ "display_name": "Nouveau nom", "bio": "Prod hip-hop" }
+{
+  "display_name": "Nouveau nom",
+  "bio": "Prod hip-hop",
+  "public_contact_email": "pro@example.com",
+  "instagram_url": "https://instagram.com/johnny",
+  "other_links": [
+    { "label": "SoundCloud", "url": "https://soundcloud.com/johnny" }
+  ]
+}
 ```
 
-Au moins un champ requis.
+Pour **effacer** un contact : envoyer `null` (`"instagram_url": null`).  
+Omettre le champ = ne pas le modifier.
+
+Règles contacts :
+
+- `public_contact_email` : e-mail valide, **optionnel**, purement public (pas d’auth)
+- `instagram_url` / liens : `http://` ou `https://` uniquement (pas de `javascript:`)
+- max 10 `other_links` ; label ≤ 40 chars
 
 ## Mot de passe
 

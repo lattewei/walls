@@ -37,16 +37,23 @@ type LoginInput struct {
 
 // AuthResult is returned after register or login.
 type AuthResult struct {
-	User         domain.PublicUser `json:"user"`
-	AccessToken  string            `json:"access_token"`
-	TokenType    string            `json:"token_type"`
-	ExpiresAt    string            `json:"expires_at"`
+	User        domain.PublicUser     `json:"user"`
+	Contacts    domain.PublicContacts `json:"contacts"`
+	AccessToken string                `json:"access_token"`
+	TokenType   string                `json:"token_type"`
+	ExpiresAt   string                `json:"expires_at"`
 }
 
 // UpdateProfileInput is the payload for PATCH /me.
 type UpdateProfileInput struct {
 	DisplayName *string
 	Bio         *string
+
+	// Contact fields — optional; only applied when the pointer is non-nil.
+	// Nested pointers distinguish "omit" vs "clear".
+	PublicContactEmail **string
+	InstagramURL       **string
+	OtherLinks         *[]domain.ExternalLink
 }
 
 // Register creates a user and returns an access token.
@@ -80,7 +87,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (AuthResult, e
 		return AuthResult{}, err
 	}
 
-	return s.issue(user)
+	return s.issue(ctx, user)
 }
 
 // Login authenticates by handle + password.
@@ -102,66 +109,137 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (AuthResult, error) 
 		return AuthResult{}, ErrInvalidCredentials
 	}
 
-	return s.issue(user)
+	return s.issue(ctx, user)
 }
 
-// Me returns the current user by id.
-func (s *Service) Me(ctx context.Context, userID string) (domain.PublicUser, error) {
+// Me returns the current user and public contacts.
+func (s *Service) Me(ctx context.Context, userID string) (domain.MeResponse, error) {
 	user, err := s.users.GetByID(ctx, userID)
 	if errors.Is(err, users.ErrNotFound) {
-		return domain.PublicUser{}, ErrUnauthorized
+		return domain.MeResponse{}, ErrUnauthorized
 	}
 	if err != nil {
-		return domain.PublicUser{}, err
+		return domain.MeResponse{}, err
 	}
-	return user.ToPublic(), nil
+
+	profile, err := s.users.GetProducerProfile(ctx, userID)
+	if err != nil {
+		return domain.MeResponse{}, err
+	}
+
+	return domain.MeResponse{
+		User:     user.ToPublic(),
+		Contacts: profile.ToPublic(),
+	}, nil
 }
 
-// UpdateProfile updates the authenticated user's profile.
-func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdateProfileInput) (domain.PublicUser, error) {
+// UpdateProfile updates the authenticated user's profile and/or contacts.
+func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdateProfileInput) (domain.MeResponse, error) {
 	user, err := s.users.GetByID(ctx, userID)
 	if errors.Is(err, users.ErrNotFound) {
-		return domain.PublicUser{}, ErrUnauthorized
+		return domain.MeResponse{}, ErrUnauthorized
 	}
 	if err != nil {
-		return domain.PublicUser{}, err
+		return domain.MeResponse{}, err
 	}
 
-	displayName := user.DisplayName
-	if in.DisplayName != nil {
-		displayName = strings.TrimSpace(*in.DisplayName)
-		if err := ValidateDisplayName(displayName); err != nil {
-			return domain.PublicUser{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
-		}
+	touchUser := in.DisplayName != nil || in.Bio != nil
+	touchContacts := in.PublicContactEmail != nil || in.InstagramURL != nil || in.OtherLinks != nil
+	if !touchUser && !touchContacts {
+		return domain.MeResponse{}, fmt.Errorf("%w: no fields to update", ErrValidation)
 	}
 
-	bio := user.Bio
-	if in.Bio != nil {
-		b := strings.TrimSpace(*in.Bio)
-		if err := ValidateBio(b); err != nil {
-			return domain.PublicUser{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+	if touchUser {
+		displayName := user.DisplayName
+		if in.DisplayName != nil {
+			displayName = strings.TrimSpace(*in.DisplayName)
+			if err := ValidateDisplayName(displayName); err != nil {
+				return domain.MeResponse{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+			}
 		}
-		if b == "" {
-			bio = nil
-		} else {
-			bio = &b
+
+		bio := user.Bio
+		if in.Bio != nil {
+			b := strings.TrimSpace(*in.Bio)
+			if err := ValidateBio(b); err != nil {
+				return domain.MeResponse{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+			}
+			if b == "" {
+				bio = nil
+			} else {
+				bio = &b
+			}
 		}
+
+		updated, err := s.users.UpdateProfile(ctx, userID, displayName, bio)
+		if err != nil {
+			return domain.MeResponse{}, err
+		}
+		user = updated
 	}
 
-	updated, err := s.users.UpdateProfile(ctx, userID, displayName, bio)
+	profile, err := s.users.GetProducerProfile(ctx, userID)
 	if err != nil {
-		return domain.PublicUser{}, err
+		return domain.MeResponse{}, err
 	}
-	return updated.ToPublic(), nil
+
+	if touchContacts {
+		if in.PublicContactEmail != nil {
+			if *in.PublicContactEmail == nil {
+				profile.PublicContactEmail = nil
+			} else {
+				email := strings.TrimSpace(**in.PublicContactEmail)
+				if err := ValidatePublicEmail(email); err != nil {
+					return domain.MeResponse{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+				}
+				profile.PublicContactEmail = PtrString(email)
+			}
+		}
+		if in.InstagramURL != nil {
+			if *in.InstagramURL == nil {
+				profile.InstagramURL = nil
+			} else {
+				ig := strings.TrimSpace(**in.InstagramURL)
+				if err := ValidateInstagramURL(ig); err != nil {
+					return domain.MeResponse{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+				}
+				profile.InstagramURL = PtrString(ig)
+			}
+		}
+		if in.OtherLinks != nil {
+			links := NormalizeOtherLinks(*in.OtherLinks)
+			if err := ValidateOtherLinks(links); err != nil {
+				return domain.MeResponse{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+			}
+			profile.OtherLinks = links
+		}
+
+		profile, err = s.users.UpsertProducerProfile(ctx, userID, profile)
+		if err != nil {
+			return domain.MeResponse{}, err
+		}
+	}
+
+	return domain.MeResponse{
+		User:     user.ToPublic(),
+		Contacts: profile.ToPublic(),
+	}, nil
 }
 
-func (s *Service) issue(user domain.User) (AuthResult, error) {
+func (s *Service) issue(ctx context.Context, user domain.User) (AuthResult, error) {
 	tok, exp, err := s.tokens.IssueAccessToken(user.ID, user.Handle, user.Role)
 	if err != nil {
 		return AuthResult{}, err
 	}
+
+	contacts := domain.EmptyContacts()
+	if profile, err := s.users.GetProducerProfile(ctx, user.ID); err == nil {
+		contacts = profile.ToPublic()
+	}
+
 	return AuthResult{
 		User:        user.ToPublic(),
+		Contacts:    contacts,
 		AccessToken: tok,
 		TokenType:   "Bearer",
 		ExpiresAt:   exp.UTC().Format(time.RFC3339),

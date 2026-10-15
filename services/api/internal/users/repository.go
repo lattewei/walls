@@ -31,22 +31,36 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-// Create inserts a new user and returns it.
+// Create inserts a new user and an empty producer_profiles row in one transaction.
 func (r *Repository) Create(ctx context.Context, handle, passwordHash, displayName string) (domain.User, error) {
-	const q = `
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	const insertUser = `
 		INSERT INTO users (handle, password_hash, display_name)
 		VALUES ($1, $2, $3)
 		RETURNING id, handle, password_hash, display_name, avatar_url, bio, role,
 		          created_at, updated_at, deleted_at
 	`
-	row := r.pool.QueryRow(ctx, q, handle, passwordHash, displayName)
-	u, err := scanUser(row)
+	u, err := scanUser(tx.QueryRow(ctx, insertUser, handle, passwordHash, displayName))
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return domain.User{}, ErrHandleTaken
 		}
 		return domain.User{}, fmt.Errorf("create user: %w", err)
+	}
+
+	const insertProfile = `INSERT INTO producer_profiles (user_id) VALUES ($1)`
+	if _, err := tx.Exec(ctx, insertProfile, u.ID); err != nil {
+		return domain.User{}, fmt.Errorf("create producer profile: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return domain.User{}, fmt.Errorf("commit: %w", err)
 	}
 	return u, nil
 }
