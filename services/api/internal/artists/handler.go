@@ -50,6 +50,20 @@ func (h *Handler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"artist": artist})
 }
 
+func (h *Handler) GetBySlug(c *gin.Context) {
+	slug := c.Param("slug")
+	artist, err := h.svc.GetBySlug(c.Request.Context(), slug)
+	if errors.Is(err, ErrNotFound) {
+		httpx.NotFound(c, "artist not found")
+		return
+	}
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"artist": artist})
+}
+
 func (h *Handler) mapError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, ErrValidation):
@@ -58,6 +72,8 @@ func (h *Handler) mapError(c *gin.Context, err error) {
 	case errors.Is(err, ErrConflict):
 		msg := strings.TrimPrefix(err.Error(), ErrConflict.Error()+": ")
 		httpx.JSONError(c, http.StatusConflict, "conflict", msg)
+	case errors.Is(err, ErrNotFound):
+		httpx.NotFound(c, "artist not found")
 	default:
 		httpx.Internal(c)
 	}

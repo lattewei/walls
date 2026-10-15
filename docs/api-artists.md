@@ -52,3 +52,30 @@ curl -s -X POST http://localhost:8080/api/v1/artists \
   -H "Content-Type: application/json" \
   -d '{"name":"Johnny","genres":["rap"]}'
 ```
+
+---
+
+## `GET /api/v1/artists/{slug}` — T3.2
+
+Public, pas d’auth.
+
+**200**
+
+```json
+{
+  "artist": {
+    "id": "…",
+    "name": "Johnny",
+    "slug": "johnny",
+    "genres": ["rap"],
+    "claim_status": "unclaimed",
+    "created_at": "…"
+  }
+}
+```
+
+**404** si slug inconnu ou invalide.
+
+```bash
+curl -s http://localhost:8080/api/v1/artists/johnny
+```

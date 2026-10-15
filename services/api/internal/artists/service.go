@@ -104,6 +104,22 @@ func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.Publ
 	return artist.ToPublic(), nil
 }
 
+func (s *Service) GetBySlug(ctx context.Context, slug string) (domain.PublicArtist, error) {
+	slug = strings.TrimSpace(strings.ToLower(slug))
+	if err := ValidateSlug(slug); err != nil {
+		return domain.PublicArtist{}, ErrNotFound
+	}
+
+	artist, err := s.repo.GetBySlug(ctx, slug)
+	if errors.Is(err, ErrNotFound) {
+		return domain.PublicArtist{}, ErrNotFound
+	}
+	if err != nil {
+		return domain.PublicArtist{}, err
+	}
+	return artist.ToPublic(), nil
+}
+
 func slugify(name string) string {
 	return Slugify(name)
 }
