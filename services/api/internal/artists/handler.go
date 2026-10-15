@@ -3,6 +3,7 @@ package artists
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -62,6 +63,44 @@ func (h *Handler) GetBySlug(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"artist": artist})
+}
+
+func (h *Handler) List(c *gin.Context) {
+	limit, err := parseNonNegInt(c.Query("limit"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid limit")
+		return
+	}
+	offset, err := parseNonNegInt(c.Query("offset"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid offset")
+		return
+	}
+
+	res, err := h.svc.List(c.Request.Context(), ListInput{
+		Query:  c.Query("q"),
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func parseNonNegInt(raw string, fallback int) (int, error) {
+	if raw == "" {
+		return fallback, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, err
+	}
+	if n < 0 {
+		return 0, strconv.ErrRange
+	}
+	return n, nil
 }
 
 func (h *Handler) mapError(c *gin.Context, err error) {

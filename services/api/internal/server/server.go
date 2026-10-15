@@ -88,6 +88,7 @@ func (s *Server) routes() {
 
 		artistsGroup := v1.Group("/artists")
 		{
+			artistsGroup.GET("", s.artistsHandler.List)
 			artistsGroup.POST("", s.authMW.RequireAuth(), s.artistsHandler.Create)
 			artistsGroup.GET("/:slug", s.artistsHandler.GetBySlug)
 		}

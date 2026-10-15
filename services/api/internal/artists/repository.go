@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -97,6 +98,61 @@ func (r *Repository) GetBySlug(ctx context.Context, slug string) (domain.Artist,
 		return domain.Artist{}, fmt.Errorf("get by slug: %w", err)
 	}
 	return a, nil
+}
+
+type ListParams struct {
+	Query  string
+	Limit  int
+	Offset int
+}
+
+func (r *Repository) List(ctx context.Context, p ListParams) ([]domain.Artist, int, error) {
+	pattern := ""
+	if p.Query != "" {
+		pattern = "%" + escapeILIKE(p.Query) + "%"
+	}
+
+	const countQ = `
+		SELECT COUNT(*)
+		FROM artists
+		WHERE ($1 = '' OR name ILIKE $1 ESCAPE '\' OR slug ILIKE $1 ESCAPE '\')
+	`
+	var total int
+	if err := r.pool.QueryRow(ctx, countQ, pattern).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count artists: %w", err)
+	}
+
+	const listQ = `
+		SELECT id, name, slug, bio, avatar_url, cover_url, genres, looking_for,
+		       claim_status, created_by, claimed_by, created_at, updated_at
+		FROM artists
+		WHERE ($1 = '' OR name ILIKE $1 ESCAPE '\' OR slug ILIKE $1 ESCAPE '\')
+		ORDER BY lower(name) ASC, created_at ASC
+		LIMIT $2 OFFSET $3
+	`
+	rows, err := r.pool.Query(ctx, listQ, pattern, p.Limit, p.Offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list artists: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]domain.Artist, 0, p.Limit)
+	for rows.Next() {
+		a, err := scanArtist(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("scan artist: %w", err)
+		}
+		out = append(out, a)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("list artists rows: %w", err)
+	}
+	return out, total, nil
+}
+
+func escapeILIKE(s string) string {
+	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return replacer.Replace(s)
 }
 
 type scannable interface {

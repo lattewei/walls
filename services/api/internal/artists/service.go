@@ -5,8 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/openstudio/openstudio/services/api/internal/domain"
+)
+
+const (
+	defaultListLimit = 20
+	maxListLimit     = 50
+	maxSearchQuery   = 100
 )
 
 type Service struct {
@@ -118,6 +125,58 @@ func (s *Service) GetBySlug(ctx context.Context, slug string) (domain.PublicArti
 		return domain.PublicArtist{}, err
 	}
 	return artist.ToPublic(), nil
+}
+
+type ListInput struct {
+	Query  string
+	Limit  int
+	Offset int
+}
+
+type ListResult struct {
+	Artists []domain.PublicArtist `json:"artists"`
+	Total   int                   `json:"total"`
+	Limit   int                   `json:"limit"`
+	Offset  int                   `json:"offset"`
+}
+
+func (s *Service) List(ctx context.Context, in ListInput) (ListResult, error) {
+	q := strings.TrimSpace(in.Query)
+	if utf8.RuneCountInString(q) > maxSearchQuery {
+		return ListResult{}, fmt.Errorf("%w: q is too long", ErrValidation)
+	}
+
+	limit := in.Limit
+	if limit <= 0 {
+		limit = defaultListLimit
+	}
+	if limit > maxListLimit {
+		limit = maxListLimit
+	}
+	offset := in.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	rows, total, err := s.repo.List(ctx, ListParams{
+		Query:  q,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return ListResult{}, err
+	}
+
+	artists := make([]domain.PublicArtist, 0, len(rows))
+	for _, a := range rows {
+		artists = append(artists, a.ToPublic())
+	}
+	return ListResult{
+		Artists: artists,
+		Total:   total,
+		Limit:   limit,
+		Offset:  offset,
+	}, nil
 }
 
 func slugify(name string) string {

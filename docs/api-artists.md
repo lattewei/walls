@@ -55,6 +55,44 @@ curl -s -X POST http://localhost:8080/api/v1/artists \
 
 ---
 
+## `GET /api/v1/artists` — T3.3
+
+Public list / search. No auth.
+
+### Query params
+
+| Param    | Default | Notes                                      |
+|----------|---------|--------------------------------------------|
+| `q`      | (empty) | Case-insensitive match on **name** or **slug** |
+| `limit`  | `20`    | Max `50`                                   |
+| `offset` | `0`     | Pagination offset                          |
+
+### Response **200**
+
+```json
+{
+  "artists": [
+    {
+      "id": "…",
+      "name": "Johnny",
+      "slug": "johnny",
+      "genres": ["rap"],
+      "claim_status": "unclaimed",
+      "created_at": "…"
+    }
+  ],
+  "total": 1,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+```bash
+curl -s "http://localhost:8080/api/v1/artists?q=john&limit=10&offset=0"
+```
+
+---
+
 ## `GET /api/v1/artists/{slug}` — T3.2
 
 Public, no auth.
