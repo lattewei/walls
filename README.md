@@ -69,6 +69,7 @@ curl http://localhost:8080/api/v1/health
 - [Architecture](./docs/architecture.md)
 - [Développement](./docs/development.md)
 - [Auth API (handles)](./docs/api-auth.md)
+- [Artistes API](./docs/api-artists.md)
 - [Backlog petites tâches](./docs/tasks.md)
 
 ## Auth (MVP)

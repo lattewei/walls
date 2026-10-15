@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openstudio/openstudio/services/api/internal/artists"
 	"github.com/openstudio/openstudio/services/api/internal/auth"
 	"github.com/openstudio/openstudio/services/api/internal/config"
 	"github.com/openstudio/openstudio/services/api/internal/httpx"
@@ -21,10 +22,11 @@ type Server struct {
 	pool   *pgxpool.Pool
 	engine *gin.Engine
 
-	authHandler  *auth.Handler
-	authMW       *auth.Middleware
-	usersHandler *users.Handler
-	authLimiter  *httpx.MemoryRateLimiter
+	authHandler    *auth.Handler
+	authMW         *auth.Middleware
+	usersHandler   *users.Handler
+	artistsHandler *artists.Handler
+	authLimiter    *httpx.MemoryRateLimiter
 }
 
 func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
@@ -39,19 +41,22 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
 	r.Use(httpx.RequestLogger(log))
 
 	userRepo := users.NewRepository(pool)
+	artistRepo := artists.NewRepository(pool)
 	tokens := auth.NewTokenService(cfg.JWTSecret, cfg.JWTAccessTTL)
 	authSvc := auth.NewService(userRepo, tokens)
 	usersSvc := users.NewService(userRepo)
+	artistsSvc := artists.NewService(artistRepo)
 
 	s := &Server{
-		cfg:          cfg,
-		log:          log,
-		pool:         pool,
-		engine:       r,
-		authHandler:  auth.NewHandler(authSvc),
-		authMW:       auth.NewMiddleware(tokens),
-		usersHandler: users.NewHandler(usersSvc),
-		authLimiter:  httpx.NewMemoryRateLimiter(cfg.AuthRateLimit, cfg.AuthRateWindow),
+		cfg:            cfg,
+		log:            log,
+		pool:           pool,
+		engine:         r,
+		authHandler:    auth.NewHandler(authSvc),
+		authMW:         auth.NewMiddleware(tokens),
+		usersHandler:   users.NewHandler(usersSvc),
+		artistsHandler: artists.NewHandler(artistsSvc),
+		authLimiter:    httpx.NewMemoryRateLimiter(cfg.AuthRateLimit, cfg.AuthRateWindow),
 	}
 	s.routes()
 	return s
@@ -80,6 +85,11 @@ func (s *Server) routes() {
 		}
 
 		v1.GET("/users/:handle", s.usersHandler.GetByHandle)
+
+		artistsGroup := v1.Group("/artists")
+		{
+			artistsGroup.POST("", s.authMW.RequireAuth(), s.artistsHandler.Create)
+		}
 	}
 }
 
