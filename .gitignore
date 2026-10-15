@@ -3,6 +3,7 @@
 .env.local
 .env.*.local
 !.env.example
+!**/.env.example
 
 # OS
 .DS_Store
