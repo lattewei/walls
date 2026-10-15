@@ -1,0 +1,45 @@
+# Env & secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Go
+services/api/bin/
+services/api/tmp/
+*.exe
+*.test
+*.out
+coverage.out
+
+# Node / Next
+node_modules/
+apps/web/.next/
+apps/web/out/
+apps/web/dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Media & data locale
+data/
+*.mp3
+*.wav
+*.flac
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker-compose.override.yml

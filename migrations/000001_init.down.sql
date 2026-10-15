@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS reports;
+DROP TABLE IF EXISTS favorites;
+DROP TABLE IF EXISTS track_tags;
+DROP TABLE IF EXISTS track_artists;
+DROP TABLE IF EXISTS tracks;
+DROP TABLE IF EXISTS artist_social_links;
+DROP TABLE IF EXISTS artist_claims;
+DROP TABLE IF EXISTS artists;
+DROP TABLE IF EXISTS producer_profiles;
+DROP TABLE IF EXISTS users;
