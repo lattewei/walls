@@ -19,10 +19,10 @@ Un beatmaker produit pour Johnny mais ne peut pas le joindre facilement. Il cré
 ## Prérequis
 
 - [Go](https://go.dev/dl/) ≥ 1.22
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (PostgreSQL + services)
+- PostgreSQL (install native **ou** Docker — au choix ; pas obligatoire pour coder / `go test`)
 - [Node.js](https://nodejs.org/) ≥ 20 _(frontend, plus tard)_
 
-Sans Docker, tu peux pointer `DATABASE_URL` vers un PostgreSQL déjà installé.
+`DATABASE_URL` pointe vers ton Postgres local. Voir [docs/development.md](./docs/development.md).
 
 ## Démarrage rapide
 

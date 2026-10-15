@@ -3,18 +3,29 @@
 ## Prérequis
 
 1. Go ≥ 1.22
-2. Docker Desktop (pour PostgreSQL)
+2. PostgreSQL local (install native **ou** Docker Compose — au choix)
 3. Copier `.env.example` → `.env`
+
+Docker n’est **pas** obligatoire. Sans base, on peut quand même coder et lancer `go test ./...` (tests unitaires sans DB).
 
 ## Base de données
 
-```bash
-docker compose up -d db
+### Option A — PostgreSQL installé sur Windows
+
+1. Installer [PostgreSQL](https://www.postgresql.org/download/windows/)
+2. Créer user/db :
+
+```sql
+CREATE USER openstudio WITH PASSWORD 'openstudio_dev';
+CREATE DATABASE openstudio OWNER openstudio;
 ```
 
-Vérifier :
+3. `DATABASE_URL` dans `.env` (déjà le défaut du projet)
+
+### Option B — Docker Compose (si tu as Docker plus tard)
 
 ```bash
+docker compose up -d db
 docker compose ps
 ```
 
