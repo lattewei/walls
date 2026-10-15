@@ -1,46 +1,37 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Figtree, Syne } from "next/font/google";
 
-import { PlayerBar } from "@/components/player-bar";
+import { Shell } from "@/components/shell";
 import { Providers } from "@/components/providers";
-import { SiteHeader } from "@/components/site-header";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const display = Syne({
+  variable: "--font-display",
   subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const text = Figtree({
+  variable: "--font-text",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
-  title: "Open Studio",
-  description:
-    "Open artist pages. Upload beats tagged for an artist. Listen in-app. Contact the producer.",
+  title: "Studio",
+  description: "Artist walls for beats. Listen in the browser. Contact the producer.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
-      >
+    <html lang="en" className={`${display.variable} ${text.variable}`}>
+      <body className="font-[family-name:var(--font-text)] antialiased">
+        <div className="grain" aria-hidden />
         <Providers>
-          <div className="flex min-h-[100dvh] flex-col">
-            <SiteHeader />
-            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 pb-28">
-              {children}
-            </main>
-            <PlayerBar />
-          </div>
+          <Shell>{children}</Shell>
         </Providers>
       </body>
     </html>

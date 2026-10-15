@@ -4,15 +4,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { ArtistBadge } from "@/components/artist-badge";
+import { Sleeve } from "@/components/sleeve";
 import { TrackRow } from "@/components/track-row";
-import { EmptyState, ErrorBanner, PageTitle } from "@/components/ui";
-import { ApiClientError, api } from "@/lib/api";
+import { api, ApiClientError } from "@/lib/api";
 import type { PublicArtist, PublicTrack } from "@/lib/types";
 
-export default function ArtistPage() {
-  const params = useParams();
-  const slug = String(params.slug ?? "");
+export default function ArtistWallPage() {
+  const slug = String(useParams().slug ?? "");
   const [artist, setArtist] = useState<PublicArtist | null>(null);
   const [tracks, setTracks] = useState<PublicTrack[]>([]);
   const [error, setError] = useState("");
@@ -23,7 +21,6 @@ export default function ArtistPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      setError("");
       try {
         const [a, t] = await Promise.all([
           api.getArtist(slug),
@@ -33,12 +30,9 @@ export default function ArtistPage() {
         setArtist(a.artist);
         setTracks(t.tracks);
       } catch (err) {
-        if (cancelled) return;
-        setError(
-          err instanceof ApiClientError
-            ? err.message
-            : "Could not load this page",
-        );
+        if (!cancelled) {
+          setError(err instanceof ApiClientError ? err.message : "Page not found");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -48,16 +42,13 @@ export default function ArtistPage() {
     };
   }, [slug]);
 
-  if (loading) {
-    return <p className="text-sm text-zinc-500">Loading…</p>;
-  }
-
+  if (loading) return <p className="text-sm text-[var(--ink-3)]">Opening wall…</p>;
   if (error || !artist) {
     return (
       <div className="space-y-4">
-        <ErrorBanner>{error || "Artist not found"}</ErrorBanner>
-        <Link href="/artists" className="text-sm text-amber-400 hover:underline">
-          Back to artists
+        <p className="text-sm text-[#e23b2f]">{error || "Not found"}</p>
+        <Link href="/artists" className="text-sm underline">
+          Back
         </Link>
       </div>
     );
@@ -65,46 +56,51 @@ export default function ArtistPage() {
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <ArtistBadge artist={artist} />
-        {artist.genres?.length ? (
-          <span className="text-xs text-zinc-500">{artist.genres.join(" · ")}</span>
-        ) : null}
-      </div>
-      <PageTitle
-        title={artist.name}
-        subtitle={
-          artist.bio ||
-          "Community wall of productions tagged for this artist. Not an official account unless marked Official."
-        }
-      />
-
-      <div className="mb-6 flex flex-wrap gap-3">
-        <Link
-          href={`/upload?artist=${encodeURIComponent(artist.slug)}`}
-          className="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-amber-400"
-        >
-          Add a production
-        </Link>
-        <span className="self-center font-mono text-xs text-zinc-600">
-          /artists/{artist.slug}
-        </span>
-      </div>
-
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
-          Productions ({tracks.length})
-        </h2>
-        {tracks.length === 0 ? (
-          <EmptyState>
-            No prods yet. Be the first to upload something for {artist.name}.
-          </EmptyState>
-        ) : (
-          <div className="rounded-lg border border-zinc-800 px-3">
-            {tracks.map((t) => (
-              <TrackRow key={t.id} track={t} />
-            ))}
+      <div className="grid items-end gap-6 md:grid-cols-[280px_1fr] md:gap-10">
+        <Sleeve
+          seed={artist.slug}
+          label={artist.name}
+          size="lg"
+          className="aspect-square w-full max-w-sm"
+        />
+        <div className="pb-2">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
+            {artist.is_official ? "Official page" : "Community wall"}
+          </p>
+          <h1 className="mt-2 font-[family-name:var(--font-display)] text-5xl font-semibold leading-[0.92] tracking-tight md:text-7xl">
+            {artist.name}
+          </h1>
+          <p className="mt-4 max-w-lg text-sm leading-relaxed text-[var(--ink-2)]">
+            {artist.bio ||
+              "Anyone can leave a production here. Official status only appears after a verified claim."}
+          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              href={`/upload?artist=${encodeURIComponent(artist.slug)}`}
+              className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-medium text-white"
+            >
+              Add a production
+            </Link>
+            {artist.genres?.length ? (
+              <span className="text-xs text-[var(--ink-3)]">
+                {artist.genres.join(" · ")}
+              </span>
+            ) : null}
           </div>
+        </div>
+      </div>
+
+      <section className="mt-12">
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2 className="font-[family-name:var(--font-display)] text-2xl">Tracklist</h2>
+          <span className="text-xs text-[var(--ink-3)]">{tracks.length}</span>
+        </div>
+        {tracks.length === 0 ? (
+          <p className="py-10 text-sm text-[var(--ink-3)]">
+            Empty sleeve. Be the first file on this wall.
+          </p>
+        ) : (
+          tracks.map((t, i) => <TrackRow key={t.id} track={t} index={i} />)
         )}
       </section>
     </div>

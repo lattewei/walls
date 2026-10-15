@@ -5,58 +5,56 @@ import Link from "next/link";
 
 import { usePlayer } from "@/lib/player";
 import type { PublicTrack } from "@/lib/types";
+import { Sleeve } from "./sleeve";
 
-export function TrackRow({ track }: { track: PublicTrack }) {
+export function TrackRow({
+  track,
+  index,
+}: {
+  track: PublicTrack;
+  index: number;
+}) {
   const { current, playing, play, toggle } = usePlayer();
-  const isCurrent = current?.id === track.id;
-  const isPlaying = isCurrent && playing;
+  const active = current?.id === track.id;
+  const isPlaying = active && playing;
 
   return (
-    <div className="group flex items-center gap-3 border-b border-zinc-900 py-3 last:border-0">
+    <div className="group flex items-center gap-3 border-b border-[var(--line)] py-2.5 last:border-0">
       <button
         type="button"
         disabled={!track.audio_url}
-        onClick={() => {
-          if (isCurrent) toggle();
-          else play(track);
-        }}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900 text-zinc-200 transition hover:border-amber-500/50 hover:text-amber-400 disabled:opacity-40"
-        aria-label={isPlaying ? "Pause" : "Play"}
+        onClick={() => (active ? toggle() : play(track))}
+        aria-label={isPlaying ? "Pause" : `Play ${track.title}`}
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center text-[var(--ink-3)]"
       >
-        {isPlaying ? (
-          <Pause weight="fill" className="h-4 w-4" />
-        ) : (
-          <Play weight="fill" className="h-4 w-4 translate-x-px" />
-        )}
+        <span className="font-mono text-xs group-hover:opacity-0">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <span className="absolute inset-0 hidden items-center justify-center rounded-full bg-[var(--ink)] text-[var(--bg)] group-hover:flex">
+          {isPlaying ? (
+            <Pause weight="fill" className="h-3.5 w-3.5" />
+          ) : (
+            <Play weight="fill" className="ml-px h-3.5 w-3.5" />
+          )}
+        </span>
       </button>
-
+      <Sleeve seed={track.id} className="h-11 w-11 shrink-0" />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium text-zinc-100">
-          {track.title}
-        </div>
-        <div className="truncate text-xs text-zinc-500">
+        <div className="truncate text-sm font-medium text-[var(--ink)]">{track.title}</div>
+        <div className="truncate text-xs text-[var(--ink-3)]">
           {track.uploader_handle ? (
-            <Link
-              href={`/u/${track.uploader_handle}`}
-              className="hover:text-zinc-300"
-            >
+            <Link href={`/u/${track.uploader_handle}`} className="hover:text-[var(--ink)]">
               @{track.uploader_handle}
             </Link>
           ) : (
             "Unknown"
           )}
-          {track.tags?.length ? (
-            <span className="text-zinc-600">
-              {" · "}
-              {track.tags.slice(0, 3).join(", ")}
-            </span>
-          ) : null}
+          {track.tags?.length ? `  ·  ${track.tags.slice(0, 2).join(" · ")}` : ""}
         </div>
       </div>
-
-      <div className="hidden text-xs text-zinc-600 sm:block">
-        {track.audio_format?.toUpperCase()}
-      </div>
+      <span className="hidden text-[11px] uppercase tracking-wider text-[var(--ink-3)] sm:block">
+        {track.audio_format ?? ""}
+      </span>
     </div>
   );
 }

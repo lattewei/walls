@@ -1,105 +1,132 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight, MusicNotes, UploadSimple, UserCircle } from "@phosphor-icons/react/dist/ssr";
+import { useEffect, useState } from "react";
+
+import { Sleeve } from "@/components/sleeve";
+import { TrackRow } from "@/components/track-row";
+import { api } from "@/lib/api";
+import type { PublicArtist, PublicTrack } from "@/lib/types";
 
 export default function HomePage() {
+  const [artists, setArtists] = useState<PublicArtist[]>([]);
+  const [tracks, setTracks] = useState<PublicTrack[]>([]);
+  const [offline, setOffline] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await api.listArtists({ limit: 12 });
+        if (cancelled) return;
+        setArtists(list.artists);
+        const first = list.artists[0];
+        if (first) {
+          const wall = await api.listArtistTracks(first.slug, { limit: 8 });
+          if (!cancelled) setTracks(wall.tracks);
+        }
+      } catch {
+        if (!cancelled) setOffline(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const featured = artists[0];
+
   return (
-    <div className="space-y-16">
-      <section className="grid gap-10 md:grid-cols-[1.2fr_0.8fr] md:items-end">
-        <div className="space-y-5">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-amber-400/90">
-            Open source music desk
+    <div className="space-y-14">
+      <header className="grid items-end gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
+            Listening room
           </p>
-          <h1 className="max-w-xl text-4xl font-semibold tracking-tight text-zinc-50 md:text-5xl md:leading-[1.08]">
-            Put your beat on the artist&apos;s wall
+          <h1 className="mt-3 max-w-xl font-[family-name:var(--font-display)] text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
+            Beats, parked on the artist.
           </h1>
-          <p className="max-w-md text-base leading-relaxed text-zinc-400">
-            Create a page for Johnny, upload your prod, tag it. They open the page,
-            listen in the browser, and hit you up.
+          <p className="mt-5 max-w-md text-base leading-relaxed text-[var(--ink-2)]">
+            A public wall per name. Upload a prod, tag the page, they press play.
           </p>
-          <div className="flex flex-wrap gap-3 pt-1">
+          <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/artists"
-              className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2.5 text-sm font-medium text-zinc-950 hover:bg-amber-400 active:scale-[0.98]"
+              className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-medium text-white transition duration-300 hover:brightness-110 active:scale-[0.98]"
             >
-              Browse artists
-              <ArrowRight className="h-4 w-4" weight="bold" />
+              Open the walls
             </Link>
             <Link
-              href="/register"
-              className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
+              href="/upload"
+              className="rounded-full border border-[var(--line)] px-5 py-2.5 text-sm text-[var(--ink)] hover:bg-white/5"
             >
-              Create account
+              Drop a file
             </Link>
           </div>
         </div>
 
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5">
-          <ol className="space-y-4 text-sm text-zinc-300">
-            <li className="flex gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-800 font-mono text-xs text-amber-400">
-                1
+        {featured ? (
+          <Link href={`/artists/${featured.slug}`} className="group block">
+            <Sleeve
+              seed={featured.slug}
+              label={featured.name}
+              size="lg"
+              className="aspect-[4/5] w-full transition duration-700 group-hover:scale-[1.015]"
+            />
+            <div className="mt-3 flex items-baseline justify-between">
+              <span className="font-[family-name:var(--font-display)] text-2xl">
+                {featured.name}
               </span>
-              <span>
-                <strong className="text-zinc-100">Open or create</strong> an artist
-                page (community by default).
+              <span className="text-xs uppercase tracking-[0.16em] text-[var(--ink-3)]">
+                {featured.is_official ? "Official" : "Community"}
               </span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-800 font-mono text-xs text-amber-400">
-                2
-              </span>
-              <span>
-                <strong className="text-zinc-100">Upload</strong> MP3/WAV and tag
-                the artist slug.
-              </span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-800 font-mono text-xs text-amber-400">
-                3
-              </span>
-              <span>
-                <strong className="text-zinc-100">They listen</strong> and contact
-                you via public Instagram or email.
-              </span>
-            </li>
-          </ol>
-        </div>
-      </section>
-
-      <section className="grid gap-4 sm:grid-cols-3">
-        {[
-          {
-            icon: MusicNotes,
-            title: "Artist walls",
-            body: "Every tagged prod lands on one public page.",
-            href: "/artists",
-          },
-          {
-            icon: UploadSimple,
-            title: "Fast upload",
-            body: "Handle auth, multipart audio, stream in-app.",
-            href: "/upload",
-          },
-          {
-            icon: UserCircle,
-            title: "Public contacts",
-            body: "Share Instagram or email only if you want.",
-            href: "/me",
-          },
-        ].map((item) => (
-          <Link
-            key={item.title}
-            href={item.href}
-            className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-5 transition hover:border-zinc-700 hover:bg-zinc-900/60"
-          >
-            <item.icon className="mb-3 h-6 w-6 text-amber-400" weight="duotone" />
-            <h2 className="text-sm font-semibold text-zinc-100">{item.title}</h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-zinc-500">
-              {item.body}
-            </p>
+            </div>
           </Link>
-        ))}
-      </section>
+        ) : (
+          <div className="rounded-[18px] border border-dashed border-[var(--line)] p-8 text-sm text-[var(--ink-3)]">
+            {offline
+              ? "API is offline. Start it on port 8080, then the walls appear here."
+              : "No artist pages yet. Create the first one."}
+          </div>
+        )}
+      </header>
+
+      {artists.length > 1 ? (
+        <section>
+          <div className="mb-4 flex items-end justify-between">
+            <h2 className="font-[family-name:var(--font-display)] text-2xl">
+              Walls
+            </h2>
+            <Link href="/artists" className="text-sm text-[var(--ink-3)] hover:text-[var(--ink)]">
+              All
+            </Link>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {artists.slice(1).map((a) => (
+              <Link key={a.id} href={`/artists/${a.slug}`} className="w-36 shrink-0">
+                <Sleeve seed={a.slug} label={a.name} className="aspect-square w-full" />
+                <div className="mt-2 truncate text-sm">{a.name}</div>
+                <div className="truncate font-mono text-[11px] text-[var(--ink-3)]">
+                  /{a.slug}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {tracks.length > 0 && featured ? (
+        <section>
+          <h2 className="mb-2 font-[family-name:var(--font-display)] text-2xl">
+            On {featured.name}
+          </h2>
+          <div>
+            {tracks.map((t, i) => (
+              <TrackRow key={t.id} track={t} index={i} />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

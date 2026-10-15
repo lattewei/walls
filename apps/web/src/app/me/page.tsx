@@ -3,15 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
-import {
-  Button,
-  ErrorBanner,
-  Field,
-  Input,
-  PageTitle,
-  Textarea,
-} from "@/components/ui";
-import { ApiClientError, api } from "@/lib/api";
+import { api, ApiClientError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export default function MePage() {
@@ -21,7 +13,7 @@ export default function MePage() {
   const [email, setEmail] = useState("");
   const [instagram, setInstagram] = useState("");
   const [error, setError] = useState("");
-  const [ok, setOk] = useState("");
+  const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -32,18 +24,12 @@ export default function MePage() {
     setInstagram(contacts?.instagram_url ?? "");
   }, [user, contacts]);
 
-  if (loading) {
-    return <p className="text-sm text-zinc-500">Loading…</p>;
-  }
-
+  if (loading) return <p className="text-sm text-[var(--ink-3)]">Loading…</p>;
   if (!user || !token) {
     return (
-      <div className="space-y-4">
-        <PageTitle title="Your profile" />
-        <Link href="/login" className="text-amber-400 hover:underline">
-          Log in
-        </Link>
-      </div>
+      <Link href="/login" className="underline">
+        Log in
+      </Link>
     );
   }
 
@@ -52,7 +38,7 @@ export default function MePage() {
     if (!token) return;
     setBusy(true);
     setError("");
-    setOk("");
+    setSaved(false);
     try {
       await api.updateMe(token, {
         display_name: displayName.trim(),
@@ -61,7 +47,7 @@ export default function MePage() {
         instagram_url: instagram.trim() || null,
       });
       await refresh();
-      setOk("Saved.");
+      setSaved(true);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Save failed");
     } finally {
@@ -71,58 +57,52 @@ export default function MePage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <PageTitle
-        title={`@${user.handle}`}
-        subtitle="Public contacts are optional. Only fill what you want artists to see."
-      />
-      <p className="mb-6 text-sm text-zinc-500">
-        Public page:{" "}
-        <Link
-          href={`/u/${user.handle}`}
-          className="text-amber-400 hover:underline"
-        >
+      <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
+        @{user.handle}
+      </p>
+      <h1 className="mt-2 font-[family-name:var(--font-display)] text-5xl font-semibold">
+        Your card
+      </h1>
+      <p className="mt-3 text-sm text-[var(--ink-2)]">
+        Public page{" "}
+        <Link href={`/u/${user.handle}`} className="underline">
           /u/{user.handle}
         </Link>
       </p>
-      <form onSubmit={onSubmit} className="space-y-4">
-        {error ? <ErrorBanner>{error}</ErrorBanner> : null}
-        {ok ? (
-          <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
-            {ok}
-          </div>
-        ) : null}
-        <Field label="Display name">
-          <Input
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Bio">
-          <Textarea
+      <form onSubmit={onSubmit} className="mt-8 space-y-4">
+        {error ? <p className="text-sm text-[#e23b2f]">{error}</p> : null}
+        {saved ? <p className="text-sm text-emerald-400">Saved.</p> : null}
+        {[
+          ["Display name", displayName, setDisplayName, "text"],
+          ["Public email", email, setEmail, "email"],
+          ["Instagram URL", instagram, setInstagram, "url"],
+        ].map(([label, value, set, type]) => (
+          <label key={String(label)} className="block text-sm">
+            <span className="text-[var(--ink-2)]">{label as string}</span>
+            <input
+              type={type as string}
+              value={value as string}
+              onChange={(e) => (set as (v: string) => void)(e.target.value)}
+              className="mt-1.5 w-full rounded-2xl border border-[var(--line)] bg-transparent px-4 py-3 outline-none"
+            />
+          </label>
+        ))}
+        <label className="block text-sm">
+          <span className="text-[var(--ink-2)]">Bio</span>
+          <textarea
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={3}
+            className="mt-1.5 w-full rounded-2xl border border-[var(--line)] bg-transparent px-4 py-3 outline-none"
           />
-        </Field>
-        <Field label="Public contact email">
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="pro@example.com"
-          />
-        </Field>
-        <Field label="Instagram URL">
-          <Input
-            value={instagram}
-            onChange={(e) => setInstagram(e.target.value)}
-            placeholder="https://instagram.com/you"
-          />
-        </Field>
-        <Button type="submit" disabled={busy}>
-          {busy ? "Saving…" : "Save profile"}
-        </Button>
+        </label>
+        <button
+          type="submit"
+          disabled={busy}
+          className="rounded-full bg-[var(--ink)] px-6 py-3 text-sm font-medium text-[var(--bg)]"
+        >
+          {busy ? "Saving" : "Save"}
+        </button>
       </form>
     </div>
   );

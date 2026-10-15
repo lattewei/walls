@@ -4,35 +4,29 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { ErrorBanner, PageTitle } from "@/components/ui";
-import { ApiClientError, api } from "@/lib/api";
+import { Sleeve } from "@/components/sleeve";
+import { api, ApiClientError } from "@/lib/api";
 import type { PublicContacts, PublicUser } from "@/lib/types";
 
-export default function PublicUserPage() {
-  const params = useParams();
-  const handle = String(params.handle ?? "");
+export default function ProducerPage() {
+  const handle = String(useParams().handle ?? "");
   const [user, setUser] = useState<PublicUser | null>(null);
   const [contacts, setContacts] = useState<PublicContacts | null>(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!handle) return;
     let cancelled = false;
     (async () => {
-      setLoading(true);
       try {
         const res = await api.getUser(handle);
         if (cancelled) return;
         setUser(res.user);
         setContacts(res.contacts);
       } catch (err) {
-        if (cancelled) return;
-        setError(
-          err instanceof ApiClientError ? err.message : "User not found",
-        );
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setError(err instanceof ApiClientError ? err.message : "Not found");
+        }
       }
     })();
     return () => {
@@ -40,70 +34,53 @@ export default function PublicUserPage() {
     };
   }, [handle]);
 
-  if (loading) return <p className="text-sm text-zinc-500">Loading…</p>;
-  if (error || !user) {
-    return <ErrorBanner>{error || "Not found"}</ErrorBanner>;
-  }
+  if (error) return <p className="text-sm text-[#e23b2f]">{error}</p>;
+  if (!user) return <p className="text-sm text-[var(--ink-3)]">Loading…</p>;
 
   const links = [
     contacts?.public_contact_email
-      ? {
-          label: "Email",
-          href: `mailto:${contacts.public_contact_email}`,
-          text: contacts.public_contact_email,
-        }
+      ? { label: "Email", href: `mailto:${contacts.public_contact_email}` }
       : null,
     contacts?.instagram_url
-      ? {
-          label: "Instagram",
-          href: contacts.instagram_url,
-          text: contacts.instagram_url,
-        }
+      ? { label: "Instagram", href: contacts.instagram_url }
       : null,
-    ...(contacts?.other_links ?? []).map((l) => ({
-      label: l.label,
-      href: l.url,
-      text: l.url,
-    })),
-  ].filter(Boolean) as { label: string; href: string; text: string }[];
+    ...(contacts?.other_links ?? []).map((l) => ({ label: l.label, href: l.url })),
+  ].filter(Boolean) as { label: string; href: string }[];
 
   return (
-    <div className="mx-auto max-w-lg">
-      <PageTitle
-        title={user.display_name}
-        subtitle={`@${user.handle}${user.bio ? ` · ${user.bio}` : ""}`}
-      />
-
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
-        Contact
-      </h2>
-      {links.length === 0 ? (
-        <p className="text-sm text-zinc-500">
-          No public contacts published yet.
+    <div className="grid gap-8 md:grid-cols-[220px_1fr] md:items-start">
+      <Sleeve seed={user.handle} label={user.display_name} className="aspect-square w-full" />
+      <div>
+        <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
+          @{user.handle}
         </p>
-      ) : (
-        <ul className="space-y-2">
-          {links.map((l) => (
-            <li key={l.href}>
+        <h1 className="mt-2 font-[family-name:var(--font-display)] text-5xl font-semibold tracking-tight">
+          {user.display_name}
+        </h1>
+        {user.bio ? (
+          <p className="mt-4 max-w-lg text-sm leading-relaxed text-[var(--ink-2)]">{user.bio}</p>
+        ) : null}
+        <div className="mt-8 flex flex-wrap gap-2">
+          {links.length === 0 ? (
+            <p className="text-sm text-[var(--ink-3)]">No public contact yet.</p>
+          ) : (
+            links.map((l) => (
               <a
+                key={l.href}
                 href={l.href}
                 target={l.href.startsWith("http") ? "_blank" : undefined}
-                rel="noopener noreferrer"
-                className="block rounded-md border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-sm hover:border-zinc-700"
+                rel="noreferrer"
+                className="rounded-full border border-[var(--line)] px-4 py-2 text-sm hover:bg-white/5"
               >
-                <span className="text-zinc-500">{l.label}</span>
-                <div className="truncate text-amber-400">{l.text}</div>
+                {l.label}
               </a>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <p className="mt-8 text-sm text-zinc-600">
-        <Link href="/artists" className="text-zinc-400 hover:text-zinc-200">
-          Browse artists
+            ))
+          )}
+        </div>
+        <Link href="/artists" className="mt-10 inline-block text-sm text-[var(--ink-3)] hover:text-[var(--ink)]">
+          Back to walls
         </Link>
-      </p>
+      </div>
     </div>
   );
 }

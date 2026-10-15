@@ -4,44 +4,28 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 
-import {
-  Button,
-  ErrorBanner,
-  Field,
-  Input,
-  PageTitle,
-  Textarea,
-} from "@/components/ui";
-import { ApiClientError, api } from "@/lib/api";
+import { api, ApiClientError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 function UploadForm() {
-  const { token, user, loading } = useAuth();
+  const { token, loading } = useAuth();
   const router = useRouter();
-  const search = useSearchParams();
+  const preset = useSearchParams().get("artist") ?? "";
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [artistSlugs, setArtistSlugs] = useState(
-    search.get("artist") ?? "",
-  );
+  const [slugs, setSlugs] = useState(preset);
   const [tags, setTags] = useState("");
+  const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (loading) {
-    return <p className="text-sm text-zinc-500">Loading…</p>;
-  }
-
-  if (!token || !user) {
+  if (loading) return <p className="text-sm text-[var(--ink-3)]">Loading…</p>;
+  if (!token) {
     return (
-      <div className="space-y-4">
-        <PageTitle title="Upload" subtitle="You need an account to upload." />
-        <Link
-          href="/login"
-          className="inline-flex rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-zinc-950"
-        >
-          Log in
+      <div>
+        <h1 className="font-[family-name:var(--font-display)] text-4xl">Upload</h1>
+        <Link href="/login" className="mt-4 inline-block text-sm underline">
+          Log in first
         </Link>
       </div>
     );
@@ -56,72 +40,81 @@ function UploadForm() {
       const form = new FormData();
       form.append("audio", file);
       form.append("title", title.trim());
-      if (description.trim()) form.append("description", description.trim());
-      form.append("artist_slugs", artistSlugs.trim());
+      form.append("artist_slugs", slugs.trim());
       if (tags.trim()) form.append("tags", tags.trim());
+      if (description.trim()) form.append("description", description.trim());
       const res = await api.uploadTrack(token, form);
       const slug = res.track.artist_slugs?.[0];
-      router.push(slug ? `/artists/${slug}` : "/artists");
+      router.push(slug ? `/artists/${slug}` : "/");
     } catch (err) {
-      setError(
-        err instanceof ApiClientError
-          ? err.message
-          : "Upload failed. Check API and file type (mp3/wav).",
-      );
+      setError(err instanceof ApiClientError ? err.message : "Upload failed. MP3 or WAV only.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="mx-auto max-w-lg">
-      <PageTitle
-        title="Upload a production"
-        subtitle="MP3 or WAV. Tag at least one existing artist slug so it appears on their wall."
-      />
-      <form onSubmit={onSubmit} className="space-y-4">
-        {error ? <ErrorBanner>{error}</ErrorBanner> : null}
-        <Field label="Title">
-          <Input
+    <div className="mx-auto max-w-xl">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--ink-3)]">Drop</p>
+      <h1 className="mt-2 font-[family-name:var(--font-display)] text-5xl font-semibold tracking-tight">
+        Put it on a wall.
+      </h1>
+      <form onSubmit={onSubmit} className="mt-8 space-y-4">
+        {error ? <p className="text-sm text-[#e23b2f]">{error}</p> : null}
+        <label className="block text-sm">
+          <span className="text-[var(--ink-2)]">Title</span>
+          <input
+            required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            required
-            maxLength={120}
+            className="mt-1.5 w-full rounded-2xl border border-[var(--line)] bg-transparent px-4 py-3 outline-none"
           />
-        </Field>
-        <Field label="Artist slugs (comma-separated)">
-          <Input
-            value={artistSlugs}
-            onChange={(e) => setArtistSlugs(e.target.value)}
+        </label>
+        <label className="block text-sm">
+          <span className="text-[var(--ink-2)]">Artist slugs</span>
+          <input
+            required
+            value={slugs}
+            onChange={(e) => setSlugs(e.target.value)}
             placeholder="johnny"
-            required
+            className="mt-1.5 w-full rounded-2xl border border-[var(--line)] bg-transparent px-4 py-3 outline-none"
           />
-        </Field>
-        <Field label="Tags (optional)">
-          <Input
+        </label>
+        <label className="block text-sm">
+          <span className="text-[var(--ink-2)]">Tags</span>
+          <input
             value={tags}
             onChange={(e) => setTags(e.target.value)}
-            placeholder="drill, dark"
+            placeholder="drill, night"
+            className="mt-1.5 w-full rounded-2xl border border-[var(--line)] bg-transparent px-4 py-3 outline-none"
           />
-        </Field>
-        <Field label="Description (optional)">
-          <Textarea
+        </label>
+        <label className="block text-sm">
+          <span className="text-[var(--ink-2)]">Note</span>
+          <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
+            className="mt-1.5 w-full rounded-2xl border border-[var(--line)] bg-transparent px-4 py-3 outline-none"
           />
-        </Field>
-        <Field label="Audio file (mp3 or wav)">
-          <Input
+        </label>
+        <label className="block text-sm">
+          <span className="text-[var(--ink-2)]">File</span>
+          <input
+            required
             type="file"
             accept=".mp3,.wav,audio/mpeg,audio/wav"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            required
+            className="mt-1.5 block w-full text-sm text-[var(--ink-2)] file:mr-3 file:rounded-full file:border-0 file:bg-white/10 file:px-4 file:py-2 file:text-[var(--ink)]"
           />
-        </Field>
-        <Button type="submit" disabled={busy || !file} className="w-full">
-          {busy ? "Uploading…" : "Publish on wall"}
-        </Button>
+        </label>
+        <button
+          type="submit"
+          disabled={busy || !file}
+          className="rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-medium text-white disabled:opacity-40"
+        >
+          {busy ? "Sending" : "Publish"}
+        </button>
       </form>
     </div>
   );
@@ -129,7 +122,7 @@ function UploadForm() {
 
 export default function UploadPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+    <Suspense fallback={<p className="text-sm text-[var(--ink-3)]">Loading…</p>}>
       <UploadForm />
     </Suspense>
   );

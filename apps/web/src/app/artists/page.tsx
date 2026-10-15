@@ -3,16 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
-import { ArtistBadge } from "@/components/artist-badge";
-import {
-  Button,
-  EmptyState,
-  ErrorBanner,
-  Field,
-  Input,
-  PageTitle,
-} from "@/components/ui";
-import { ApiClientError, api } from "@/lib/api";
+import { Sleeve } from "@/components/sleeve";
+import { api, ApiClientError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { PublicArtist } from "@/lib/types";
 
@@ -20,10 +12,9 @@ export default function ArtistsPage() {
   const { token } = useAuth();
   const [q, setQ] = useState("");
   const [artists, setArtists] = useState<PublicArtist[]>([]);
-  const [total, setTotal] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [newName, setNewName] = useState("");
+  const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(async (query?: string) => {
@@ -32,13 +23,8 @@ export default function ArtistsPage() {
     try {
       const res = await api.listArtists({ q: query || undefined, limit: 40 });
       setArtists(res.artists);
-      setTotal(res.total);
     } catch (err) {
-      setError(
-        err instanceof ApiClientError
-          ? err.message
-          : "Could not load artists. Start the API on :8080.",
-      );
+      setError(err instanceof ApiClientError ? err.message : "Could not reach the API.");
     } finally {
       setLoading(false);
     }
@@ -48,22 +34,16 @@ export default function ArtistsPage() {
     void load();
   }, [load]);
 
-  function onSearch(e: FormEvent) {
-    e.preventDefault();
-    void load(q.trim());
-  }
-
-  async function onCreate(e: FormEvent) {
+  async function create(e: FormEvent) {
     e.preventDefault();
     if (!token) return;
     setCreating(true);
     setError("");
     try {
-      const res = await api.createArtist(token, { name: newName.trim() });
-      setNewName("");
+      const res = await api.createArtist(token, { name: name.trim() });
       window.location.href = `/artists/${res.artist.slug}`;
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Create failed");
+      setError(err instanceof ApiClientError ? err.message : "Could not create the page.");
     } finally {
       setCreating(false);
     }
@@ -71,87 +51,92 @@ export default function ArtistsPage() {
 
   return (
     <div>
-      <PageTitle
-        title="Artists"
-        subtitle="Community pages first. Official badge only after a verified claim."
-      />
-
-      <form onSubmit={onSearch} className="mb-6 flex gap-2">
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search name or slug…"
-          className="flex-1"
-        />
-        <Button type="submit" variant="ghost">
-          Search
-        </Button>
-      </form>
+      <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--ink-3)]">
+            Directory
+          </p>
+          <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight md:text-6xl">
+            Artist walls
+          </h1>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void load(q.trim());
+          }}
+          className="w-full md:max-w-xs"
+        >
+          <label className="sr-only" htmlFor="q">
+            Search artists
+          </label>
+          <input
+            id="q"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search a name"
+            className="w-full rounded-full border border-[var(--line)] bg-transparent px-4 py-2.5 text-sm outline-none placeholder:text-[var(--ink-3)] focus:border-white/30"
+          />
+        </form>
+      </div>
 
       {token ? (
-        <form
-          onSubmit={onCreate}
-          className="mb-8 flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900/30 p-4 sm:flex-row sm:items-end"
-        >
-          <div className="flex-1">
-            <Field label="Create page">
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Johnny"
-                required
-              />
-            </Field>
-          </div>
-          <Button type="submit" disabled={creating || !newName.trim()}>
-            {creating ? "Creating…" : "Create"}
-          </Button>
+        <form onSubmit={create} className="mb-10 flex flex-col gap-2 sm:flex-row">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="New wall, e.g. Johnny"
+            required
+            className="flex-1 rounded-full border border-[var(--line)] bg-transparent px-4 py-2.5 text-sm outline-none"
+          />
+          <button
+            type="submit"
+            disabled={creating}
+            className="rounded-full bg-[var(--ink)] px-5 py-2.5 text-sm font-medium text-[var(--bg)] disabled:opacity-50"
+          >
+            {creating ? "Creating" : "Create wall"}
+          </button>
         </form>
       ) : (
-        <p className="mb-8 text-sm text-zinc-500">
-          <Link href="/login" className="text-amber-400 hover:underline">
+        <p className="mb-10 text-sm text-[var(--ink-3)]">
+          <Link href="/login" className="text-[var(--ink)] underline-offset-4 hover:underline">
             Log in
           </Link>{" "}
-          to create an artist page.
+          to open a missing page.
         </p>
       )}
 
-      {error ? (
-        <div className="mb-4">
-          <ErrorBanner>{error}</ErrorBanner>
-        </div>
-      ) : null}
+      {error ? <p className="mb-6 text-sm text-[#e23b2f]">{error}</p> : null}
 
       {loading ? (
-        <p className="text-sm text-zinc-500">Loading…</p>
+        <p className="text-sm text-[var(--ink-3)]">Loading walls…</p>
       ) : artists.length === 0 ? (
-        <EmptyState>
-          No artists yet. Create Johnny&apos;s page to start the wall.
-        </EmptyState>
+        <p className="text-sm text-[var(--ink-3)]">Nothing under that name yet.</p>
       ) : (
-        <>
-          <p className="mb-3 text-xs text-zinc-600">{total} page(s)</p>
-          <ul className="divide-y divide-zinc-900 rounded-lg border border-zinc-800">
-            {artists.map((a) => (
-              <li key={a.id}>
-                <Link
-                  href={`/artists/${a.slug}`}
-                  className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-zinc-900/50"
-                >
+        <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+          {artists.map((a) => (
+            <li key={a.id}>
+              <Link href={`/artists/${a.slug}`} className="group block">
+                <Sleeve
+                  seed={a.slug}
+                  label={a.name}
+                  className="aspect-square w-full transition duration-500 group-hover:scale-[1.02]"
+                />
+                <div className="mt-3 flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="truncate font-medium text-zinc-100">
-                      {a.name}
-                    </div>
-                    <div className="truncate font-mono text-xs text-zinc-500">
+                    <div className="truncate font-medium">{a.name}</div>
+                    <div className="truncate font-mono text-[11px] text-[var(--ink-3)]">
                       /{a.slug}
                     </div>
                   </div>
-                  <ArtistBadge artist={a} />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </>
+                  <span className="shrink-0 text-[10px] uppercase tracking-wider text-[var(--ink-3)]">
+                    {a.is_official ? "Official" : "Open"}
+                  </span>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
