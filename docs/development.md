@@ -48,6 +48,21 @@ cd services/api
 go test ./...
 ```
 
+## Auth manuelle (après migrate)
+
+```bash
+# Register
+curl -s -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d "{\"handle\":\"demo_user\",\"password\":\"secret123\",\"display_name\":\"Demo\"}"
+
+# Login puis appeler /me avec le token
+curl -s http://localhost:8080/api/v1/me \
+  -H "Authorization: Bearer <access_token>"
+```
+
+Voir [api-auth.md](./api-auth.md). Backlog : [tasks.md](./tasks.md).
+
 ## Sans Docker
 
 Installer PostgreSQL localement, créer la base `openstudio`, puis ajuster `DATABASE_URL` dans `.env`.

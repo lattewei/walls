@@ -9,8 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openstudio/openstudio/services/api/internal/auth"
 	"github.com/openstudio/openstudio/services/api/internal/config"
 	"github.com/openstudio/openstudio/services/api/internal/httpx"
+	"github.com/openstudio/openstudio/services/api/internal/users"
 )
 
 // Server wires HTTP routes and dependencies.
@@ -19,6 +21,9 @@ type Server struct {
 	log    *slog.Logger
 	pool   *pgxpool.Pool
 	engine *gin.Engine
+
+	authHandler *auth.Handler
+	authMW      *auth.Middleware
 }
 
 // New builds the HTTP server with middleware and routes.
@@ -33,7 +38,18 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
 	r.Use(httpx.CORS(cfg.CORSOrigins))
 	r.Use(httpx.RequestLogger(log))
 
-	s := &Server{cfg: cfg, log: log, pool: pool, engine: r}
+	userRepo := users.NewRepository(pool)
+	tokens := auth.NewTokenService(cfg.JWTSecret, cfg.JWTAccessTTL)
+	authSvc := auth.NewService(userRepo, tokens)
+
+	s := &Server{
+		cfg:         cfg,
+		log:         log,
+		pool:        pool,
+		engine:      r,
+		authHandler: auth.NewHandler(authSvc),
+		authMW:      auth.NewMiddleware(tokens),
+	}
 	s.routes()
 	return s
 }
@@ -44,6 +60,20 @@ func (s *Server) routes() {
 	v1 := s.engine.Group("/api/v1")
 	{
 		v1.GET("/health", s.handleHealth)
+
+		authGroup := v1.Group("/auth")
+		{
+			authGroup.POST("/register", s.authHandler.Register)
+			authGroup.POST("/login", s.authHandler.Login)
+			authGroup.POST("/logout", s.authHandler.Logout)
+		}
+
+		me := v1.Group("/me")
+		me.Use(s.authMW.RequireAuth())
+		{
+			me.GET("", s.authHandler.Me)
+			me.PATCH("", s.authHandler.UpdateMe)
+		}
 	}
 }
 
@@ -66,7 +96,7 @@ func (s *Server) HTTPServer() *http.Server {
 
 func (s *Server) handleProcessHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"status": "ok",
+		"status":  "ok",
 		"service": "openstudio-api",
 	})
 }
@@ -76,6 +106,14 @@ func (s *Server) handleHealth(c *gin.Context) {
 	defer cancel()
 
 	dbStatus := "ok"
+	if s.pool == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status":  "degraded",
+			"service": "openstudio-api",
+			"db":      "unavailable",
+		})
+		return
+	}
 	if err := s.pool.Ping(ctx); err != nil {
 		s.log.Error("health db ping failed", "err", err)
 		c.JSON(http.StatusServiceUnavailable, gin.H{

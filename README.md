@@ -68,6 +68,18 @@ curl http://localhost:8080/api/v1/health
 - [Cahier des charges](./cdc.md)
 - [Architecture](./docs/architecture.md)
 - [Développement](./docs/development.md)
+- [Auth API (handles)](./docs/api-auth.md)
+- [Backlog petites tâches](./docs/tasks.md)
+
+## Auth (MVP)
+
+Pas d’e-mail au début : **handle + mot de passe**.
+
+```bash
+curl -s -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"handle":"johnny_beats","password":"secret123","display_name":"Johnny"}'
+```
 
 ## Licence
 

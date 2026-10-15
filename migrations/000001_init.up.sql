@@ -2,22 +2,24 @@
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- users
+-- users (auth by handle only in MVP — no email required)
 CREATE TABLE users (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email           TEXT NOT NULL,
+    handle          TEXT NOT NULL,
     password_hash   TEXT NOT NULL,
     display_name    TEXT NOT NULL,
     avatar_url      TEXT,
     bio             TEXT,
     role            TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
-    email_verified_at TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at      TIMESTAMPTZ
+    deleted_at      TIMESTAMPTZ,
+    CONSTRAINT users_handle_format CHECK (
+        handle ~ '^[a-z0-9_]{3,32}$'
+    )
 );
 
-CREATE UNIQUE INDEX users_email_unique ON users (lower(email)) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX users_handle_unique ON users (handle) WHERE deleted_at IS NULL;
 
 -- producer / public contact profile
 CREATE TABLE producer_profiles (
