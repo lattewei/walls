@@ -2,7 +2,6 @@ package domain
 
 import "time"
 
-// User is the account identity. Auth is handle + password (no email in MVP).
 type User struct {
 	ID           string
 	Handle       string
@@ -16,7 +15,6 @@ type User struct {
 	DeletedAt    *time.Time
 }
 
-// PublicUser is the safe representation returned by the API.
 type PublicUser struct {
 	ID          string  `json:"id"`
 	Handle      string  `json:"handle"`
@@ -27,7 +25,6 @@ type PublicUser struct {
 	CreatedAt   string  `json:"created_at"`
 }
 
-// ToPublic maps a User to its public JSON form (never includes password hash).
 func (u User) ToPublic() PublicUser {
 	return PublicUser{
 		ID:          u.ID,

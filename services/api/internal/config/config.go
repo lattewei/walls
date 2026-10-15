@@ -8,24 +8,23 @@ import (
 	"time"
 )
 
-// Config holds process configuration loaded from the environment.
 type Config struct {
-	Host            string
-	Port            int
-	Env             string
-	CORSOrigins     []string
-	DatabaseURL     string
-	MigrationsPath  string
-	JWTSecret       string
-	JWTAccessTTL    time.Duration
-	JWTRefreshTTL   time.Duration
-	MediaStorage    string
-	MediaLocalPath  string
-	MediaMaxBytes   int64
+	Host           string
+	Port           int
+	Env            string
+	CORSOrigins    []string
+	DatabaseURL    string
+	MigrationsPath string
+	JWTSecret      string
+	JWTAccessTTL   time.Duration
+	JWTRefreshTTL  time.Duration
+	MediaStorage   string
+	MediaLocalPath string
+	MediaMaxBytes  int64
+	AuthRateLimit  int
+	AuthRateWindow time.Duration
 }
 
-// Load reads configuration from environment variables.
-// It optionally loads a .env file from search paths (never fails if missing).
 func Load() (Config, error) {
 	cfg := Config{
 		Host:           getEnv("API_HOST", "0.0.0.0"),
@@ -40,6 +39,8 @@ func Load() (Config, error) {
 		MediaStorage:   getEnv("MEDIA_STORAGE", "local"),
 		MediaLocalPath: getEnv("MEDIA_LOCAL_PATH", "./data/media"),
 		MediaMaxBytes:  getEnvInt64("MEDIA_MAX_UPLOAD_BYTES", 50<<20),
+		AuthRateLimit:  getEnvInt("AUTH_RATE_LIMIT", 20),
+		AuthRateWindow: getEnvDuration("AUTH_RATE_WINDOW", time.Minute),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -52,12 +53,10 @@ func Load() (Config, error) {
 	return cfg, nil
 }
 
-// Addr returns the HTTP listen address.
 func (c Config) Addr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
 
-// IsDev reports whether the process runs in development mode.
 func (c Config) IsDev() bool {
 	return c.Env == "development" || c.Env == "dev"
 }

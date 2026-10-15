@@ -8,12 +8,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var (
-	// ErrInvalidToken is returned when a token cannot be parsed or verified.
-	ErrInvalidToken = errors.New("invalid token")
-)
+var ErrInvalidToken = errors.New("invalid token")
 
-// Claims are embedded in access tokens.
 type Claims struct {
 	UserID string `json:"uid"`
 	Handle string `json:"handle"`
@@ -21,14 +17,12 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// TokenService issues and validates JWTs.
 type TokenService struct {
 	secret []byte
 	ttl    time.Duration
 	issuer string
 }
 
-// NewTokenService creates a JWT helper.
 func NewTokenService(secret string, ttl time.Duration) *TokenService {
 	return &TokenService{
 		secret: []byte(secret),
@@ -37,7 +31,6 @@ func NewTokenService(secret string, ttl time.Duration) *TokenService {
 	}
 }
 
-// IssueAccessToken creates a signed access JWT for the user.
 func (s *TokenService) IssueAccessToken(userID, handle, role string) (string, time.Time, error) {
 	now := time.Now().UTC()
 	exp := now.Add(s.ttl)
@@ -60,7 +53,6 @@ func (s *TokenService) IssueAccessToken(userID, handle, role string) (string, ti
 	return signed, exp, nil
 }
 
-// ParseAccessToken validates a token and returns its claims.
 func (s *TokenService) ParseAccessToken(tokenStr string) (Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (any, error) {
 		if t.Method != jwt.SigningMethodHS256 {

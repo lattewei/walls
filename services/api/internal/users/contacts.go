@@ -11,7 +11,6 @@ import (
 	"github.com/openstudio/openstudio/services/api/internal/domain"
 )
 
-// EnsureProducerProfile creates an empty producer_profiles row if missing.
 func (r *Repository) EnsureProducerProfile(ctx context.Context, userID string) error {
 	const q = `
 		INSERT INTO producer_profiles (user_id)
@@ -25,8 +24,6 @@ func (r *Repository) EnsureProducerProfile(ctx context.Context, userID string) e
 	return nil
 }
 
-// GetProducerProfile loads public contacts for a user.
-// Missing row returns an empty profile (not an error).
 func (r *Repository) GetProducerProfile(ctx context.Context, userID string) (domain.ProducerProfile, error) {
 	const q = `
 		SELECT user_id, public_contact_email, instagram_url, other_links
@@ -62,7 +59,6 @@ func (r *Repository) GetProducerProfile(ctx context.Context, userID string) (dom
 	return p, nil
 }
 
-// UpsertProducerProfile replaces public contact fields for a user.
 func (r *Repository) UpsertProducerProfile(ctx context.Context, userID string, p domain.ProducerProfile) (domain.ProducerProfile, error) {
 	links := p.OtherLinks
 	if links == nil {
@@ -102,5 +98,3 @@ func (r *Repository) UpsertProducerProfile(ctx context.Context, userID string, p
 	}
 	return out, nil
 }
-
-

@@ -9,25 +9,19 @@ import (
 )
 
 const (
-	// ContextUserID is the gin context key for the authenticated user id.
 	ContextUserID = "auth_user_id"
-	// ContextHandle is the gin context key for the authenticated handle.
 	ContextHandle = "auth_handle"
-	// ContextRole is the gin context key for the authenticated role.
-	ContextRole = "auth_role"
+	ContextRole   = "auth_role"
 )
 
-// Middleware validates Bearer access tokens.
 type Middleware struct {
 	tokens *TokenService
 }
 
-// NewMiddleware creates auth middleware.
 func NewMiddleware(tokens *TokenService) *Middleware {
 	return &Middleware{tokens: tokens}
 }
 
-// RequireAuth aborts with 401 if the request has no valid access token.
 func (m *Middleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims, ok := m.parse(c)
@@ -58,7 +52,6 @@ func (m *Middleware) parse(c *gin.Context) (Claims, bool) {
 	return claims, true
 }
 
-// UserIDFromContext returns the authenticated user id, or empty.
 func UserIDFromContext(c *gin.Context) string {
 	v, _ := c.Get(ContextUserID)
 	s, _ := v.(string)

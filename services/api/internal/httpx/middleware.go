@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RequestLogger logs method, path, status and latency.
 func RequestLogger(log *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -22,7 +21,6 @@ func RequestLogger(log *slog.Logger) gin.HandlerFunc {
 	}
 }
 
-// CORS applies a simple allow-list CORS policy for browser clients.
 func CORS(origins []string) gin.HandlerFunc {
 	allowed := make(map[string]struct{}, len(origins))
 	for _, o := range origins {
@@ -47,7 +45,6 @@ func CORS(origins []string) gin.HandlerFunc {
 	}
 }
 
-// SecureHeaders adds a few baseline response headers.
 func SecureHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("X-Content-Type-Options", "nosniff")

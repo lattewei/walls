@@ -16,7 +16,6 @@ const (
 	maxURLLen       = 500
 )
 
-// ValidatePublicEmail checks an optional public contact email (not account login).
 func ValidatePublicEmail(email string) error {
 	email = strings.TrimSpace(email)
 	if email == "" {
@@ -32,7 +31,6 @@ func ValidatePublicEmail(email string) error {
 	return nil
 }
 
-// ValidateHTTPURL ensures the URL is http(s) with a host (blocks javascript:, etc.).
 func ValidateHTTPURL(raw string) error {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -54,7 +52,6 @@ func ValidateHTTPURL(raw string) error {
 	return nil
 }
 
-// ValidateInstagramURL accepts empty or a valid http(s) URL (flexible host).
 func ValidateInstagramURL(raw string) error {
 	if err := ValidateHTTPURL(raw); err != nil {
 		return fmt.Errorf("instagram_url: %s", err.Error())
@@ -62,7 +59,6 @@ func ValidateInstagramURL(raw string) error {
 	return nil
 }
 
-// ValidateOtherLinks validates the optional link list.
 func ValidateOtherLinks(links []domain.ExternalLink) error {
 	if len(links) > maxOtherLinks {
 		return fmt.Errorf("at most %d other links allowed", maxOtherLinks)
@@ -83,7 +79,6 @@ func ValidateOtherLinks(links []domain.ExternalLink) error {
 	return nil
 }
 
-// NormalizeOtherLinks trims labels/urls.
 func NormalizeOtherLinks(links []domain.ExternalLink) []domain.ExternalLink {
 	if links == nil {
 		return []domain.ExternalLink{}
@@ -98,7 +93,6 @@ func NormalizeOtherLinks(links []domain.ExternalLink) []domain.ExternalLink {
 	return out
 }
 
-// PtrString returns nil if s is empty after trim, else a pointer to trimmed s.
 func PtrString(s string) *string {
 	s = strings.TrimSpace(s)
 	if s == "" {

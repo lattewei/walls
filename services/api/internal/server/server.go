@@ -15,18 +15,18 @@ import (
 	"github.com/openstudio/openstudio/services/api/internal/users"
 )
 
-// Server wires HTTP routes and dependencies.
 type Server struct {
 	cfg    config.Config
 	log    *slog.Logger
 	pool   *pgxpool.Pool
 	engine *gin.Engine
 
-	authHandler *auth.Handler
-	authMW      *auth.Middleware
+	authHandler  *auth.Handler
+	authMW       *auth.Middleware
+	usersHandler *users.Handler
+	authLimiter  *httpx.MemoryRateLimiter
 }
 
-// New builds the HTTP server with middleware and routes.
 func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
 	if !cfg.IsDev() {
 		gin.SetMode(gin.ReleaseMode)
@@ -41,14 +41,17 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
 	userRepo := users.NewRepository(pool)
 	tokens := auth.NewTokenService(cfg.JWTSecret, cfg.JWTAccessTTL)
 	authSvc := auth.NewService(userRepo, tokens)
+	usersSvc := users.NewService(userRepo)
 
 	s := &Server{
-		cfg:         cfg,
-		log:         log,
-		pool:        pool,
-		engine:      r,
-		authHandler: auth.NewHandler(authSvc),
-		authMW:      auth.NewMiddleware(tokens),
+		cfg:          cfg,
+		log:          log,
+		pool:         pool,
+		engine:       r,
+		authHandler:  auth.NewHandler(authSvc),
+		authMW:       auth.NewMiddleware(tokens),
+		usersHandler: users.NewHandler(usersSvc),
+		authLimiter:  httpx.NewMemoryRateLimiter(cfg.AuthRateLimit, cfg.AuthRateWindow),
 	}
 	s.routes()
 	return s
@@ -61,10 +64,11 @@ func (s *Server) routes() {
 	{
 		v1.GET("/health", s.handleHealth)
 
+		authLimit := httpx.RateLimit(s.authLimiter)
 		authGroup := v1.Group("/auth")
 		{
-			authGroup.POST("/register", s.authHandler.Register)
-			authGroup.POST("/login", s.authHandler.Login)
+			authGroup.POST("/register", authLimit, s.authHandler.Register)
+			authGroup.POST("/login", authLimit, s.authHandler.Login)
 			authGroup.POST("/logout", s.authHandler.Logout)
 		}
 
@@ -74,15 +78,15 @@ func (s *Server) routes() {
 			me.GET("", s.authHandler.Me)
 			me.PATCH("", s.authHandler.UpdateMe)
 		}
+
+		v1.GET("/users/:handle", s.usersHandler.GetByHandle)
 	}
 }
 
-// Engine exposes the Gin engine (tests / custom listeners).
 func (s *Server) Engine() *gin.Engine {
 	return s.engine
 }
 
-// HTTPServer returns a configured net/http.Server.
 func (s *Server) HTTPServer() *http.Server {
 	return &http.Server{
 		Addr:              s.cfg.Addr(),
@@ -105,7 +109,6 @@ func (s *Server) handleHealth(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 	defer cancel()
 
-	dbStatus := "ok"
 	if s.pool == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"status":  "degraded",
@@ -127,6 +130,6 @@ func (s *Server) handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "ok",
 		"service": "openstudio-api",
-		"db":      dbStatus,
+		"db":      "ok",
 	})
 }

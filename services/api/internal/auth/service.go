@@ -11,31 +11,26 @@ import (
 	"github.com/openstudio/openstudio/services/api/internal/users"
 )
 
-// Service implements register / login / profile operations.
 type Service struct {
 	users  *users.Repository
 	tokens *TokenService
 }
 
-// NewService wires auth use-cases.
 func NewService(userRepo *users.Repository, tokens *TokenService) *Service {
 	return &Service{users: userRepo, tokens: tokens}
 }
 
-// RegisterInput is the payload for account creation.
 type RegisterInput struct {
 	Handle      string
 	Password    string
 	DisplayName string
 }
 
-// LoginInput is the payload for authentication.
 type LoginInput struct {
 	Handle   string
 	Password string
 }
 
-// AuthResult is returned after register or login.
 type AuthResult struct {
 	User        domain.PublicUser     `json:"user"`
 	Contacts    domain.PublicContacts `json:"contacts"`
@@ -44,19 +39,14 @@ type AuthResult struct {
 	ExpiresAt   string                `json:"expires_at"`
 }
 
-// UpdateProfileInput is the payload for PATCH /me.
 type UpdateProfileInput struct {
-	DisplayName *string
-	Bio         *string
-
-	// Contact fields — optional; only applied when the pointer is non-nil.
-	// Nested pointers distinguish "omit" vs "clear".
+	DisplayName        *string
+	Bio                *string
 	PublicContactEmail **string
 	InstagramURL       **string
 	OtherLinks         *[]domain.ExternalLink
 }
 
-// Register creates a user and returns an access token.
 func (s *Service) Register(ctx context.Context, in RegisterInput) (AuthResult, error) {
 	handle := users.NormalizeHandle(in.Handle)
 	if err := ValidateHandle(handle); err != nil {
@@ -90,7 +80,6 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (AuthResult, e
 	return s.issue(ctx, user)
 }
 
-// Login authenticates by handle + password.
 func (s *Service) Login(ctx context.Context, in LoginInput) (AuthResult, error) {
 	handle := users.NormalizeHandle(in.Handle)
 	if handle == "" || in.Password == "" {
@@ -112,7 +101,6 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (AuthResult, error) 
 	return s.issue(ctx, user)
 }
 
-// Me returns the current user and public contacts.
 func (s *Service) Me(ctx context.Context, userID string) (domain.MeResponse, error) {
 	user, err := s.users.GetByID(ctx, userID)
 	if errors.Is(err, users.ErrNotFound) {
@@ -133,7 +121,6 @@ func (s *Service) Me(ctx context.Context, userID string) (domain.MeResponse, err
 	}, nil
 }
 
-// UpdateProfile updates the authenticated user's profile and/or contacts.
 func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdateProfileInput) (domain.MeResponse, error) {
 	user, err := s.users.GetByID(ctx, userID)
 	if errors.Is(err, users.ErrNotFound) {
@@ -246,7 +233,6 @@ func (s *Service) issue(ctx context.Context, user domain.User) (AuthResult, erro
 	}, nil
 }
 
-// Sentinel errors mapped to HTTP by the handler.
 var (
 	ErrValidation         = errors.New("validation_error")
 	ErrHandleTaken        = errors.New("handle_taken")

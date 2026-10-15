@@ -109,6 +109,38 @@ Règles contacts :
 - `instagram_url` / liens : `http://` ou `https://` uniquement (pas de `javascript:`)
 - max 10 `other_links` ; label ≤ 40 chars
 
+### `GET /api/v1/users/{handle}`
+
+Profil **public** (pas d’auth). Ne renvoie jamais le hash mot de passe ni de données privées.
+
+**200** :
+
+```json
+{
+  "user": {
+    "id": "…",
+    "handle": "johnny_beats",
+    "display_name": "Johnny Beats",
+    "bio": "…",
+    "created_at": "…"
+  },
+  "contacts": {
+    "public_contact_email": "pro@example.com",
+    "instagram_url": "https://instagram.com/johnny",
+    "other_links": []
+  }
+}
+```
+
+**404** si handle inconnu ou invalide.
+
+## Rate limit (register / login)
+
+Par IP, fenêtre glissante fixe (in-memory, mono-instance) :
+
+- défaut : **20 requêtes / minute** (`AUTH_RATE_LIMIT`, `AUTH_RATE_WINDOW`)
+- réponse **429** `rate_limited` + headers `Retry-After`, `X-RateLimit-*`
+
 ## Mot de passe
 
 - 8 à 128 caractères

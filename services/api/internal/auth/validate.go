@@ -2,12 +2,11 @@ package auth
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"unicode/utf8"
-)
 
-var handleRe = regexp.MustCompile(`^[a-z0-9_]{3,32}$`)
+	"github.com/openstudio/openstudio/services/api/internal/users"
+)
 
 const (
 	minPasswordLen = 8
@@ -16,15 +15,10 @@ const (
 	maxBioLen      = 500
 )
 
-// ValidateHandle checks handle format (already normalized to lowercase).
 func ValidateHandle(handle string) error {
-	if !handleRe.MatchString(handle) {
-		return fmt.Errorf("handle must be 3–32 chars: lowercase letters, digits, underscore")
-	}
-	return nil
+	return users.ValidateHandle(handle)
 }
 
-// ValidatePassword checks password length only (no email recovery in MVP).
 func ValidatePassword(password string) error {
 	n := utf8.RuneCountInString(password)
 	if n < minPasswordLen {
@@ -36,7 +30,6 @@ func ValidatePassword(password string) error {
 	return nil
 }
 
-// ValidateDisplayName checks an optional display name; empty is allowed (caller may default).
 func ValidateDisplayName(name string) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -48,7 +41,6 @@ func ValidateDisplayName(name string) error {
 	return nil
 }
 
-// ValidateBio checks an optional bio.
 func ValidateBio(bio string) error {
 	if utf8.RuneCountInString(bio) > maxBioLen {
 		return fmt.Errorf("bio must be at most %d characters", maxBioLen)

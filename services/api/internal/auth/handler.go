@@ -12,12 +12,10 @@ import (
 	"github.com/openstudio/openstudio/services/api/internal/httpx"
 )
 
-// Handler exposes auth HTTP endpoints.
 type Handler struct {
 	svc *Service
 }
 
-// NewHandler creates an auth HTTP handler.
 func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
@@ -33,18 +31,14 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
-// updateMeRequest uses json.RawMessage for contact fields so clients can
-// explicitly clear a value with null vs omit the field entirely.
 type updateMeRequest struct {
-	DisplayName *string `json:"display_name"`
-	Bio         *string `json:"bio"`
-
+	DisplayName        *string         `json:"display_name"`
+	Bio                *string         `json:"bio"`
 	PublicContactEmail json.RawMessage `json:"public_contact_email"`
 	InstagramURL       json.RawMessage `json:"instagram_url"`
 	OtherLinks         json.RawMessage `json:"other_links"`
 }
 
-// Register POST /api/v1/auth/register
 func (h *Handler) Register(c *gin.Context) {
 	var req registerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -64,7 +58,6 @@ func (h *Handler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, res)
 }
 
-// Login POST /api/v1/auth/login
 func (h *Handler) Login(c *gin.Context) {
 	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -83,13 +76,10 @@ func (h *Handler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-// Logout POST /api/v1/auth/logout
-// Stateless JWT: client discards the token. Endpoint exists for API symmetry / future denylist.
 func (h *Handler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-// Me GET /api/v1/me
 func (h *Handler) Me(c *gin.Context) {
 	uid := UserIDFromContext(c)
 	res, err := h.svc.Me(c.Request.Context(), uid)
@@ -100,7 +90,6 @@ func (h *Handler) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-// UpdateMe PATCH /api/v1/me
 func (h *Handler) UpdateMe(c *gin.Context) {
 	var req updateMeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -158,7 +147,6 @@ func (h *Handler) UpdateMe(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-// parseOptionalStringField decodes a JSON string or null into *string (nil means clear).
 func parseOptionalStringField(raw json.RawMessage) (*string, error) {
 	if string(raw) == "null" {
 		return nil, nil

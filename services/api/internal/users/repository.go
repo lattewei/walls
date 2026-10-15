@@ -15,23 +15,18 @@ import (
 )
 
 var (
-	// ErrNotFound is returned when no user matches the query.
-	ErrNotFound = errors.New("user not found")
-	// ErrHandleTaken is returned on unique handle conflict.
+	ErrNotFound    = errors.New("user not found")
 	ErrHandleTaken = errors.New("handle already taken")
 )
 
-// Repository persists users in PostgreSQL.
 type Repository struct {
 	pool *pgxpool.Pool
 }
 
-// NewRepository creates a user repository.
 func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-// Create inserts a new user and an empty producer_profiles row in one transaction.
 func (r *Repository) Create(ctx context.Context, handle, passwordHash, displayName string) (domain.User, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -65,7 +60,6 @@ func (r *Repository) Create(ctx context.Context, handle, passwordHash, displayNa
 	return u, nil
 }
 
-// GetByHandle returns a non-deleted user by handle (exact, already normalized).
 func (r *Repository) GetByHandle(ctx context.Context, handle string) (domain.User, error) {
 	const q = `
 		SELECT id, handle, password_hash, display_name, avatar_url, bio, role,
@@ -83,7 +77,6 @@ func (r *Repository) GetByHandle(ctx context.Context, handle string) (domain.Use
 	return u, nil
 }
 
-// GetByID returns a non-deleted user by id.
 func (r *Repository) GetByID(ctx context.Context, id string) (domain.User, error) {
 	const q = `
 		SELECT id, handle, password_hash, display_name, avatar_url, bio, role,
@@ -101,7 +94,6 @@ func (r *Repository) GetByID(ctx context.Context, id string) (domain.User, error
 	return u, nil
 }
 
-// UpdateProfile updates mutable profile fields.
 func (r *Repository) UpdateProfile(ctx context.Context, id string, displayName string, bio *string) (domain.User, error) {
 	const q = `
 		UPDATE users
@@ -151,7 +143,6 @@ func scanUser(row scannable) (domain.User, error) {
 	return u, nil
 }
 
-// NormalizeHandle lowercases and trims a handle candidate.
 func NormalizeHandle(handle string) string {
 	return strings.ToLower(strings.TrimSpace(handle))
 }

@@ -8,7 +8,6 @@ import (
 
 const bcryptCost = 12
 
-// HashPassword returns a bcrypt hash of the password.
 func HashPassword(password string) (string, error) {
 	b, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	if err != nil {
@@ -17,7 +16,6 @@ func HashPassword(password string) (string, error) {
 	return string(b), nil
 }
 
-// CheckPassword compares a plaintext password with a bcrypt hash.
 func CheckPassword(hash, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }
