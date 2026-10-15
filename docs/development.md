@@ -73,3 +73,15 @@ curl -s http://localhost:8080/api/v1/me \
 ```
 
 See [api-auth.md](./api-auth.md). Backlog: [tasks.md](./tasks.md).
+
+## Frontend (Next.js)
+
+```bash
+cd apps/web
+cp .env.example .env.local   # NEXT_PUBLIC_API_URL=http://localhost:8080
+npm install
+npm run dev
+```
+
+App: `http://localhost:3000`  
+API must be running on `:8080` for data pages.

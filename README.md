@@ -33,15 +33,23 @@ cp .env.example .env
 # 2. Database (Docker optional)
 docker compose up -d db
 
-# 3. Migrations
+# 3. Migrations + API
 cd services/api
 go run ./cmd/migrate up
-
-# 4. API
 go run ./cmd/api
 ```
 
-API listens on `http://localhost:8080`.
+API: `http://localhost:8080`
+
+```bash
+# 4. Frontend (other terminal)
+cd apps/web
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+Web: `http://localhost:3000`
 
 ```bash
 curl http://localhost:8080/health
