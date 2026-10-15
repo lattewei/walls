@@ -35,6 +35,8 @@ Initial `claim_status`: `unclaimed`.
     "slug": "johnny",
     "genres": [],
     "claim_status": "unclaimed",
+    "badge": "community",
+    "is_official": false,
     "created_at": "…"
   }
 }
@@ -78,6 +80,8 @@ Public list / search. No auth.
       "slug": "johnny",
       "genres": ["rap"],
       "claim_status": "unclaimed",
+      "badge": "community",
+      "is_official": false,
       "created_at": "…"
     }
   ],
@@ -107,6 +111,8 @@ Public, no auth.
     "slug": "johnny",
     "genres": ["rap"],
     "claim_status": "unclaimed",
+    "badge": "community",
+    "is_official": false,
     "created_at": "…"
   }
 }
@@ -117,3 +123,21 @@ Public, no auth.
 ```bash
 curl -s http://localhost:8080/api/v1/artists/johnny
 ```
+
+---
+
+## Trust badge — T3.4
+
+Every artist payload includes:
+
+| Field | Meaning |
+|-------|---------|
+| `claim_status` | Raw DB status: `unclaimed` \| `pending` \| `claimed` |
+| `badge` | UI-ready label: `community` \| `pending_claim` \| `claimed` |
+| `is_official` | `true` **only** when `claim_status` is `claimed` |
+
+Rules for clients:
+
+- Show a **community / unverified** badge when `badge` is `community` or `pending_claim`.
+- Never present a page as the artist’s official account unless `is_official` is `true`.
+- Claim flow (request + review) is **T3.5** — until then new pages stay `unclaimed` / `community`.

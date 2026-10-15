@@ -2,6 +2,16 @@ package domain
 
 import "time"
 
+const (
+	ClaimUnclaimed = "unclaimed"
+	ClaimPending   = "pending"
+	ClaimClaimed   = "claimed"
+
+	BadgeCommunity    = "community"
+	BadgePendingClaim = "pending_claim"
+	BadgeClaimed      = "claimed"
+)
+
 type Artist struct {
 	ID          string
 	Name        string
@@ -28,13 +38,30 @@ type PublicArtist struct {
 	Genres      []string `json:"genres"`
 	LookingFor  *string  `json:"looking_for,omitempty"`
 	ClaimStatus string   `json:"claim_status"`
+	Badge       string   `json:"badge"`
+	IsOfficial  bool     `json:"is_official"`
 	CreatedAt   string   `json:"created_at"`
+}
+
+func ClaimBadge(status string) string {
+	switch status {
+	case ClaimClaimed:
+		return BadgeClaimed
+	case ClaimPending:
+		return BadgePendingClaim
+	default:
+		return BadgeCommunity
+	}
 }
 
 func (a Artist) ToPublic() PublicArtist {
 	genres := a.Genres
 	if genres == nil {
 		genres = []string{}
+	}
+	status := a.ClaimStatus
+	if status == "" {
+		status = ClaimUnclaimed
 	}
 	return PublicArtist{
 		ID:          a.ID,
@@ -45,7 +72,9 @@ func (a Artist) ToPublic() PublicArtist {
 		CoverURL:    a.CoverURL,
 		Genres:      genres,
 		LookingFor:  a.LookingFor,
-		ClaimStatus: a.ClaimStatus,
+		ClaimStatus: status,
+		Badge:       ClaimBadge(status),
+		IsOfficial:  status == ClaimClaimed,
 		CreatedAt:   a.CreatedAt.UTC().Format(time.RFC3339),
 	}
 }
