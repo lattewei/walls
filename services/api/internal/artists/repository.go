@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -98,6 +99,178 @@ func (r *Repository) GetBySlug(ctx context.Context, slug string) (domain.Artist,
 		return domain.Artist{}, fmt.Errorf("get by slug: %w", err)
 	}
 	return a, nil
+}
+
+func (r *Repository) GetByID(ctx context.Context, id string) (domain.Artist, error) {
+	const q = `
+		SELECT id, name, slug, bio, avatar_url, cover_url, genres, looking_for,
+		       claim_status, created_by, claimed_by, created_at, updated_at
+		FROM artists
+		WHERE id = $1
+	`
+	a, err := scanArtist(r.pool.QueryRow(ctx, q, id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Artist{}, ErrNotFound
+	}
+	if err != nil {
+		return domain.Artist{}, fmt.Errorf("get by id: %w", err)
+	}
+	return a, nil
+}
+
+type Claim struct {
+	ID                 string
+	ArtistID           string
+	UserID             string
+	VerificationMethod string
+	ProofURL           *string
+	Status             string
+	ReviewedBy         *string
+	CreatedAt          time.Time
+	ReviewedAt         *time.Time
+}
+
+func (r *Repository) CreateClaim(ctx context.Context, artistID, userID, method string, proofURL *string) (Claim, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return Claim{}, err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	const insert = `
+		INSERT INTO artist_claims (artist_id, user_id, verification_method, proof_url, status)
+		VALUES ($1, $2, $3, $4, 'pending')
+		RETURNING id, artist_id, user_id, verification_method, proof_url, status, reviewed_by, created_at, reviewed_at
+	`
+	var cl Claim
+	err = tx.QueryRow(ctx, insert, artistID, userID, method, proofURL).Scan(
+		&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ProofURL,
+		&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
+	)
+	if err != nil {
+		return Claim{}, fmt.Errorf("create claim: %w", err)
+	}
+
+	const touch = `
+		UPDATE artists
+		SET claim_status = CASE WHEN claim_status = 'claimed' THEN claim_status ELSE 'pending' END,
+		    updated_at = now()
+		WHERE id = $1
+	`
+	if _, err := tx.Exec(ctx, touch, artistID); err != nil {
+		return Claim{}, fmt.Errorf("update artist claim status: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return Claim{}, err
+	}
+	return cl, nil
+}
+
+func (r *Repository) GetClaim(ctx context.Context, id string) (Claim, error) {
+	const q = `
+		SELECT id, artist_id, user_id, verification_method, proof_url, status, reviewed_by, created_at, reviewed_at
+		FROM artist_claims WHERE id = $1
+	`
+	var cl Claim
+	err := r.pool.QueryRow(ctx, q, id).Scan(
+		&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ProofURL,
+		&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Claim{}, ErrNotFound
+	}
+	if err != nil {
+		return Claim{}, err
+	}
+	return cl, nil
+}
+
+func (r *Repository) ListPendingClaims(ctx context.Context, limit, offset int) ([]Claim, int, error) {
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM artist_claims WHERE status = 'pending'`).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, artist_id, user_id, verification_method, proof_url, status, reviewed_by, created_at, reviewed_at
+		FROM artist_claims WHERE status = 'pending'
+		ORDER BY created_at ASC
+		LIMIT $1 OFFSET $2
+	`, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	out := []Claim{}
+	for rows.Next() {
+		var cl Claim
+		if err := rows.Scan(
+			&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ProofURL,
+			&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		out = append(out, cl)
+	}
+	return out, total, rows.Err()
+}
+
+func (r *Repository) ReviewClaim(ctx context.Context, claimID, reviewerID, status string) (Claim, error) {
+	if status != "accepted" && status != "rejected" {
+		return Claim{}, fmt.Errorf("invalid claim status")
+	}
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return Claim{}, err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	cl, err := r.GetClaim(ctx, claimID)
+	if err != nil {
+		return Claim{}, err
+	}
+	if cl.Status != "pending" {
+		return Claim{}, fmt.Errorf("claim is not pending")
+	}
+
+	const upd = `
+		UPDATE artist_claims
+		SET status = $2, reviewed_by = $3, reviewed_at = now()
+		WHERE id = $1
+		RETURNING id, artist_id, user_id, verification_method, proof_url, status, reviewed_by, created_at, reviewed_at
+	`
+	var out Claim
+	err = tx.QueryRow(ctx, upd, claimID, status, reviewerID).Scan(
+		&out.ID, &out.ArtistID, &out.UserID, &out.VerificationMethod, &out.ProofURL,
+		&out.Status, &out.ReviewedBy, &out.CreatedAt, &out.ReviewedAt,
+	)
+	if err != nil {
+		return Claim{}, err
+	}
+
+	if status == "accepted" {
+		_, err = tx.Exec(ctx, `
+			UPDATE artists
+			SET claim_status = 'claimed', claimed_by = $2, updated_at = now()
+			WHERE id = $1
+		`, out.ArtistID, out.UserID)
+	} else {
+		_, err = tx.Exec(ctx, `
+			UPDATE artists
+			SET claim_status = CASE
+				WHEN EXISTS (SELECT 1 FROM artist_claims WHERE artist_id = $1 AND status = 'pending' AND id <> $2)
+				THEN 'pending' ELSE 'unclaimed' END,
+			    updated_at = now()
+			WHERE id = $1
+		`, out.ArtistID, claimID)
+	}
+	if err != nil {
+		return Claim{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Claim{}, err
+	}
+	return out, nil
 }
 
 type ListParams struct {

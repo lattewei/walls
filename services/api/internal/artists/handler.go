@@ -65,6 +65,55 @@ func (h *Handler) GetBySlug(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"artist": artist})
 }
 
+func (h *Handler) RequestClaim(c *gin.Context) {
+	var req struct {
+		VerificationMethod string `json:"verification_method"`
+		ProofURL           string `json:"proof_url"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequest(c, "invalid JSON body")
+		return
+	}
+	cl, err := h.svc.RequestClaim(c.Request.Context(), ClaimInput{
+		Slug:               c.Param("slug"),
+		UserID:             auth.UserIDFromContext(c),
+		VerificationMethod: req.VerificationMethod,
+		ProofURL:           req.ProofURL,
+	})
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"claim": cl})
+}
+
+func (h *Handler) ListPendingClaims(c *gin.Context) {
+	limit, _ := parseNonNegInt(c.Query("limit"), 0)
+	offset, _ := parseNonNegInt(c.Query("offset"), 0)
+	items, total, err := h.svc.ListPendingClaims(c.Request.Context(), limit, offset)
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"claims": items, "total": total, "limit": limit, "offset": offset})
+}
+
+func (h *Handler) ReviewClaim(c *gin.Context) {
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequest(c, "invalid JSON body")
+		return
+	}
+	cl, err := h.svc.ReviewClaim(c.Request.Context(), c.Param("id"), auth.UserIDFromContext(c), req.Status)
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"claim": cl})
+}
+
 func (h *Handler) List(c *gin.Context) {
 	limit, err := parseNonNegInt(c.Query("limit"), 0)
 	if err != nil {

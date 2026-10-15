@@ -1,0 +1,45 @@
+# Tracks API
+
+## `POST /api/v1/tracks`
+
+Auth required. Multipart form upload.
+
+| Field | Required | Notes |
+|-------|----------|--------|
+| `audio` | yes | file (mp3 or wav) |
+| `title` | yes | max 120 chars |
+| `description` | no | |
+| `artist_slugs` | yes | comma-separated or repeated field |
+| `tags` | no | comma-separated |
+
+```bash
+curl -X POST http://localhost:8080/api/v1/tracks \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "audio=@beat.mp3" \
+  -F "title=For Johnny" \
+  -F "artist_slugs=johnny" \
+  -F "tags=drill,dark"
+```
+
+**201** `{ "track": { …, "audio_url": "/api/v1/tracks/{id}/audio" } }`  
+**400** validation · **429** daily upload limit (`TRACK_DAILY_UPLOAD_LIMIT`)
+
+## `GET /api/v1/tracks/{id}`
+
+Public metadata (not removed tracks).
+
+## `GET /api/v1/tracks/{id}/audio`
+
+Public stream for `ready` tracks. Supports range requests via `ServeContent`.
+
+## `DELETE /api/v1/tracks/{id}`
+
+Auth required. Owner withdraws own track (`status=removed`).
+
+## `GET /api/v1/artists/{slug}/tracks`
+
+Public list of ready tracks on an artist page.
+
+```bash
+curl "http://localhost:8080/api/v1/artists/johnny/tracks?limit=20&offset=0"
+```

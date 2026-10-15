@@ -21,8 +21,9 @@ type Config struct {
 	MediaStorage   string
 	MediaLocalPath string
 	MediaMaxBytes  int64
-	AuthRateLimit  int
-	AuthRateWindow time.Duration
+	AuthRateLimit   int
+	AuthRateWindow  time.Duration
+	TrackDailyLimit int
 }
 
 func Load() (Config, error) {
@@ -39,8 +40,9 @@ func Load() (Config, error) {
 		MediaStorage:   getEnv("MEDIA_STORAGE", "local"),
 		MediaLocalPath: getEnv("MEDIA_LOCAL_PATH", "./data/media"),
 		MediaMaxBytes:  getEnvInt64("MEDIA_MAX_UPLOAD_BYTES", 50<<20),
-		AuthRateLimit:  getEnvInt("AUTH_RATE_LIMIT", 20),
-		AuthRateWindow: getEnvDuration("AUTH_RATE_WINDOW", time.Minute),
+		AuthRateLimit:   getEnvInt("AUTH_RATE_LIMIT", 20),
+		AuthRateWindow:  getEnvDuration("AUTH_RATE_WINDOW", time.Minute),
+		TrackDailyLimit: getEnvInt("TRACK_DAILY_UPLOAD_LIMIT", 20),
 	}
 
 	if cfg.DatabaseURL == "" {

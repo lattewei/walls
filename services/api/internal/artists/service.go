@@ -182,3 +182,101 @@ func (s *Service) List(ctx context.Context, in ListInput) (ListResult, error) {
 func slugify(name string) string {
 	return Slugify(name)
 }
+
+type ClaimInput struct {
+	Slug               string
+	UserID             string
+	VerificationMethod string
+	ProofURL           string
+}
+
+type PublicClaim struct {
+	ID                 string  `json:"id"`
+	ArtistID           string  `json:"artist_id"`
+	Status             string  `json:"status"`
+	VerificationMethod string  `json:"verification_method"`
+	ProofURL           *string `json:"proof_url,omitempty"`
+	CreatedAt          string  `json:"created_at"`
+}
+
+func (s *Service) RequestClaim(ctx context.Context, in ClaimInput) (PublicClaim, error) {
+	method := strings.TrimSpace(in.VerificationMethod)
+	if method == "" {
+		return PublicClaim{}, fmt.Errorf("%w: verification_method is required", ErrValidation)
+	}
+	if utf8.RuneCountInString(method) > 100 {
+		return PublicClaim{}, fmt.Errorf("%w: verification_method is too long", ErrValidation)
+	}
+
+	artist, err := s.GetBySlug(ctx, in.Slug)
+	if err != nil {
+		return PublicClaim{}, err
+	}
+
+	var proof *string
+	if p := strings.TrimSpace(in.ProofURL); p != "" {
+		proof = &p
+	}
+
+	cl, err := s.repo.CreateClaim(ctx, artist.ID, in.UserID, method, proof)
+	if err != nil {
+		return PublicClaim{}, err
+	}
+	return PublicClaim{
+		ID:                 cl.ID,
+		ArtistID:           cl.ArtistID,
+		Status:             cl.Status,
+		VerificationMethod: cl.VerificationMethod,
+		ProofURL:           cl.ProofURL,
+		CreatedAt:          cl.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+	}, nil
+}
+
+func (s *Service) ListPendingClaims(ctx context.Context, limit, offset int) ([]PublicClaim, int, error) {
+	if limit <= 0 {
+		limit = defaultListLimit
+	}
+	if limit > maxListLimit {
+		limit = maxListLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	rows, total, err := s.repo.ListPendingClaims(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	out := make([]PublicClaim, 0, len(rows))
+	for _, cl := range rows {
+		out = append(out, PublicClaim{
+			ID:                 cl.ID,
+			ArtistID:           cl.ArtistID,
+			Status:             cl.Status,
+			VerificationMethod: cl.VerificationMethod,
+			ProofURL:           cl.ProofURL,
+			CreatedAt:          cl.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		})
+	}
+	return out, total, nil
+}
+
+func (s *Service) ReviewClaim(ctx context.Context, claimID, reviewerID, status string) (PublicClaim, error) {
+	cl, err := s.repo.ReviewClaim(ctx, claimID, reviewerID, status)
+	if err != nil {
+		if strings.Contains(err.Error(), "not pending") || strings.Contains(err.Error(), "invalid") {
+			return PublicClaim{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+		}
+		if errors.Is(err, ErrNotFound) {
+			return PublicClaim{}, ErrNotFound
+		}
+		return PublicClaim{}, err
+	}
+	return PublicClaim{
+		ID:                 cl.ID,
+		ArtistID:           cl.ArtistID,
+		Status:             cl.Status,
+		VerificationMethod: cl.VerificationMethod,
+		ProofURL:           cl.ProofURL,
+		CreatedAt:          cl.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+	}, nil
+}
