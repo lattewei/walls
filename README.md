@@ -1,36 +1,36 @@
-# Open Studio _(nom provisoire)_
+# Open Studio _(working name)_
 
-Plateforme web open source : pages d’artistes ouvertes, upload de productions taguées, écoute in-app, contact direct du beatmaker.
+Open-source web platform: open artist pages, tagged beat submissions, in-app listening, and direct contact with producers.
 
-> Le nom commercial reste à définir. Le nom technique du dépôt est `openstudio` pour l’instant.
+> Product name is still TBD. Technical repo name is `openstudio` for now.
 
-## Le problème
+## The problem
 
-Un beatmaker produit pour Johnny mais ne peut pas le joindre facilement. Il crée (ou ouvre) la page Johnny, uploade sa prod, la tague. Johnny voit toutes les prods qui le mentionnent, écoute dans le navigateur, contacte le créateur (mail / Instagram).
+A beatmaker makes a track for Johnny but cannot reach him easily. They create (or open) Johnny’s page, upload the prod, and tag it. Johnny sees every production that mentions him, listens in the browser, and contacts the creator (email / Instagram).
 
 ## Stack
 
-| Couche        | Techno                          |
-|---------------|---------------------------------|
-| API           | Go, Gin, PostgreSQL             |
-| Web           | Next.js, TypeScript _(Phase 2+)_ |
-| Infra locale  | Docker Compose                  |
+| Layer        | Tech                            |
+|--------------|---------------------------------|
+| API          | Go, Gin, PostgreSQL             |
+| Web          | Next.js, TypeScript _(later)_   |
+| Local infra  | Docker Compose (optional)       |
 
-## Prérequis
+## Prerequisites
 
 - [Go](https://go.dev/dl/) ≥ 1.22
-- PostgreSQL (install native **ou** Docker — au choix ; pas obligatoire pour coder / `go test`)
-- [Node.js](https://nodejs.org/) ≥ 20 _(frontend, plus tard)_
+- PostgreSQL (native install **or** Docker — optional for coding / `go test`)
+- [Node.js](https://nodejs.org/) ≥ 20 _(frontend, later)_
 
-`DATABASE_URL` pointe vers ton Postgres local. Voir [docs/development.md](./docs/development.md).
+Point `DATABASE_URL` at your local Postgres. See [docs/development.md](./docs/development.md).
 
-## Démarrage rapide
+## Quick start
 
 ```bash
-# 1. Variables d'environnement
+# 1. Environment
 cp .env.example .env
 
-# 2. Base de données
+# 2. Database (Docker optional)
 docker compose up -d db
 
 # 3. Migrations
@@ -41,40 +41,40 @@ go run ./cmd/migrate up
 go run ./cmd/api
 ```
 
-L’API écoute sur `http://localhost:8080`.
+API listens on `http://localhost:8080`.
 
 ```bash
 curl http://localhost:8080/health
 curl http://localhost:8080/api/v1/health
 ```
 
-## Structure
+## Layout
 
 ```text
 .
-├── apps/web/           # Frontend Next.js (à venir)
-├── services/api/       # API Go
-├── migrations/         # SQL versionné
+├── apps/web/           # Next.js frontend (upcoming)
+├── services/api/       # Go API
+├── migrations/         # Versioned SQL
 ├── docs/               # Architecture, API, dev
 ├── scripts/
 ├── docker-compose.yml
 ├── .env.example
-├── cdc.md              # Cahier des charges
+├── cdc.md              # Product requirements (spec)
 └── README.md
 ```
 
 ## Documentation
 
-- [Cahier des charges](./cdc.md)
+- [Product requirements](./cdc.md)
 - [Architecture](./docs/architecture.md)
-- [Développement](./docs/development.md)
+- [Local development](./docs/development.md)
 - [Auth API (handles)](./docs/api-auth.md)
-- [Artistes API](./docs/api-artists.md)
-- [Backlog petites tâches](./docs/tasks.md)
+- [Artists API](./docs/api-artists.md)
+- [Task backlog](./docs/tasks.md)
 
 ## Auth (MVP)
 
-Pas d’e-mail au début : **handle + mot de passe**.
+No email at the start: **handle + password**.
 
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/auth/register \
@@ -82,6 +82,6 @@ curl -s -X POST http://localhost:8080/api/v1/auth/register \
   -d '{"handle":"johnny_beats","password":"secret123","display_name":"Johnny"}'
 ```
 
-## Licence
+## License
 
-À définir (MIT ou AGPL-3.0) avant publication publique.
+TBD (MIT or AGPL-3.0) before public release.

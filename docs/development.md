@@ -1,28 +1,28 @@
-# Développement local
+# Local development
 
-## Prérequis
+## Prerequisites
 
 1. Go ≥ 1.22
-2. PostgreSQL local (install native **ou** Docker Compose — au choix)
-3. Copier `.env.example` → `.env`
+2. Local PostgreSQL (native install **or** Docker Compose)
+3. Copy `.env.example` → `.env`
 
-Docker n’est **pas** obligatoire. Sans base, on peut quand même coder et lancer `go test ./...` (tests unitaires sans DB).
+Docker is **not** required. Without a database you can still code and run `go test ./...` (unit tests need no DB).
 
-## Base de données
+## Database
 
-### Option A — PostgreSQL installé sur Windows
+### Option A — PostgreSQL on Windows
 
-1. Installer [PostgreSQL](https://www.postgresql.org/download/windows/)
-2. Créer user/db :
+1. Install [PostgreSQL](https://www.postgresql.org/download/windows/)
+2. Create user/db:
 
 ```sql
 CREATE USER openstudio WITH PASSWORD 'openstudio_dev';
 CREATE DATABASE openstudio OWNER openstudio;
 ```
 
-3. `DATABASE_URL` dans `.env` (déjà le défaut du projet)
+3. Use `DATABASE_URL` in `.env` (project default already matches)
 
-### Option B — Docker Compose (si tu as Docker plus tard)
+### Option B — Docker Compose (if you have Docker later)
 
 ```bash
 docker compose up -d db
@@ -34,20 +34,20 @@ docker compose ps
 ```bash
 cd services/api
 go run ./cmd/migrate up
-go run ./cmd/migrate down   # une étape en arrière
+go run ./cmd/migrate down   # one step back
 go run ./cmd/migrate version
 ```
 
-Les fichiers SQL sont dans `/migrations` à la racine du dépôt.
+SQL files live in `/migrations` at the repo root.
 
-## Lancer l’API
+## Run the API
 
 ```bash
 cd services/api
 go run ./cmd/api
 ```
 
-Health checks :
+Health checks:
 
 - `GET /health` — process up
 - `GET /api/v1/health` — process + DB
@@ -59,7 +59,7 @@ cd services/api
 go test ./...
 ```
 
-## Auth manuelle (après migrate)
+## Manual auth (after migrate)
 
 ```bash
 # Register
@@ -67,13 +67,9 @@ curl -s -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d "{\"handle\":\"demo_user\",\"password\":\"secret123\",\"display_name\":\"Demo\"}"
 
-# Login puis appeler /me avec le token
+# Call /me with the token
 curl -s http://localhost:8080/api/v1/me \
   -H "Authorization: Bearer <access_token>"
 ```
 
-Voir [api-auth.md](./api-auth.md). Backlog : [tasks.md](./tasks.md).
-
-## Sans Docker
-
-Installer PostgreSQL localement, créer la base `openstudio`, puis ajuster `DATABASE_URL` dans `.env`.
+See [api-auth.md](./api-auth.md). Backlog: [tasks.md](./tasks.md).

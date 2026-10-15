@@ -1,12 +1,12 @@
-# API Auth (MVP — handles only)
+# Auth API (MVP — handles only)
 
-Pas d’e-mail au démarrage. L’identité = **handle** + mot de passe.
+No email at launch. Identity = **handle** + password.
 
 ## Handle
 
-- 3 à 32 caractères
-- minuscules `a-z`, chiffres `0-9`, underscore `_`
-- stocké en minuscules (insensible à la casse à l’entrée)
+- 3–32 characters
+- lowercase `a-z`, digits `0-9`, underscore `_`
+- stored lowercase (case-insensitive on input)
 - unique
 
 ## Endpoints
@@ -16,14 +16,14 @@ Pas d’e-mail au démarrage. L’identité = **handle** + mot de passe.
 ```json
 {
   "handle": "johnny_beats",
-  "password": "motdepasse8+",
+  "password": "password8+",
   "display_name": "Johnny Beats"
 }
 ```
 
-`display_name` optionnel → défaut = handle.
+`display_name` optional → defaults to handle.
 
-**201** :
+**201**:
 
 ```json
 {
@@ -34,32 +34,35 @@ Pas d’e-mail au démarrage. L’identité = **handle** + mot de passe.
     "role": "user",
     "created_at": "…"
   },
+  "contacts": {
+    "other_links": []
+  },
   "access_token": "eyJ…",
   "token_type": "Bearer",
   "expires_at": "…"
 }
 ```
 
-Erreurs : `400 validation_error`, `409 handle_taken`.
+Errors: `400 validation_error`, `409 handle_taken`.
 
 ### `POST /api/v1/auth/login`
 
 ```json
-{ "handle": "johnny_beats", "password": "motdepasse8+" }
+{ "handle": "johnny_beats", "password": "password8+" }
 ```
 
-**200** : même forme que register.  
-**401** `invalid_credentials` si handle ou mot de passe incorrect.
+**200**: same shape as register.  
+**401** `invalid_credentials` if handle or password is wrong.
 
 ### `POST /api/v1/auth/logout`
 
-Stateless JWT : le client jette le token. Répond `{"status":"ok"}`.
+Stateless JWT: client discards the token. Responds `{"status":"ok"}`.
 
 ### `GET /api/v1/me`
 
-Header : `Authorization: Bearer <access_token>`
+Header: `Authorization: Bearer <access_token>`
 
-**200** :
+**200**:
 
 ```json
 {
@@ -80,18 +83,18 @@ Header : `Authorization: Bearer <access_token>`
 }
 ```
 
-`contacts` ne contient **que** ce que l’utilisateur a choisi de rendre public. Pas d’e-mail de compte (il n’y en a pas au MVP).
+`contacts` only contains what the user chose to publish. There is no account email in the MVP.
 
-Register / login renvoient aussi `contacts` (vide au départ).
+Register / login also return `contacts` (empty at first).
 
 ### `PATCH /api/v1/me`
 
-Profil et/ou contacts, au moins un champ :
+Profile and/or contacts; at least one field:
 
 ```json
 {
-  "display_name": "Nouveau nom",
-  "bio": "Prod hip-hop",
+  "display_name": "New name",
+  "bio": "Hip-hop producer",
   "public_contact_email": "pro@example.com",
   "instagram_url": "https://instagram.com/johnny",
   "other_links": [
@@ -100,20 +103,20 @@ Profil et/ou contacts, au moins un champ :
 }
 ```
 
-Pour **effacer** un contact : envoyer `null` (`"instagram_url": null`).  
-Omettre le champ = ne pas le modifier.
+To **clear** a contact field: send `null` (`"instagram_url": null`).  
+Omit a field = leave it unchanged.
 
-Règles contacts :
+Contact rules:
 
-- `public_contact_email` : e-mail valide, **optionnel**, purement public (pas d’auth)
-- `instagram_url` / liens : `http://` ou `https://` uniquement (pas de `javascript:`)
-- max 10 `other_links` ; label ≤ 40 chars
+- `public_contact_email`: valid email, **optional**, public only (not used for auth)
+- `instagram_url` / links: `http://` or `https://` only (no `javascript:`)
+- max 10 `other_links`; label ≤ 40 chars
 
 ### `GET /api/v1/users/{handle}`
 
-Profil **public** (pas d’auth). Ne renvoie jamais le hash mot de passe ni de données privées.
+**Public** profile (no auth). Never returns password hash or private data.
 
-**200** :
+**200**:
 
 ```json
 {
@@ -132,17 +135,17 @@ Profil **public** (pas d’auth). Ne renvoie jamais le hash mot de passe ni de d
 }
 ```
 
-**404** si handle inconnu ou invalide.
+**404** if handle is unknown or invalid.
 
 ## Rate limit (register / login)
 
-Par IP, fenêtre glissante fixe (in-memory, mono-instance) :
+Per IP, fixed window (in-memory, single instance):
 
-- défaut : **20 requêtes / minute** (`AUTH_RATE_LIMIT`, `AUTH_RATE_WINDOW`)
-- réponse **429** `rate_limited` + headers `Retry-After`, `X-RateLimit-*`
+- default: **20 requests / minute** (`AUTH_RATE_LIMIT`, `AUTH_RATE_WINDOW`)
+- **429** `rate_limited` + `Retry-After`, `X-RateLimit-*` headers
 
-## Mot de passe
+## Password
 
-- 8 à 128 caractères
-- hash bcrypt (coût 12)
-- jamais renvoyé par l’API
+- 8–128 characters
+- bcrypt hash (cost 12)
+- never returned by the API

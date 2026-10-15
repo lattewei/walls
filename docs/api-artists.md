@@ -1,11 +1,11 @@
-# API Artistes
+# Artists API
 
 ## `POST /api/v1/artists` — T3.1
 
-Auth requise : `Authorization: Bearer <token>`
+Auth required: `Authorization: Bearer <token>`
 
-Crée une **page communautaire** (pas un compte officiel).  
-`claim_status` initial : `unclaimed`.
+Creates a **community page** (not an official account).  
+Initial `claim_status`: `unclaimed`.
 
 ### Body
 
@@ -13,17 +13,17 @@ Crée une **page communautaire** (pas un compte officiel).
 {
   "name": "Johnny",
   "slug": "johnny",
-  "bio": "optionnel",
+  "bio": "optional",
   "genres": ["rap", "drill"],
-  "looking_for": "optionnel"
+  "looking_for": "optional"
 }
 ```
 
-- `name` : obligatoire
-- `slug` : optionnel — dérivé du nom si absent (`Johnny Hallyday` → `johnny-hallyday`)
-- anti-doublon sur **slug** et sur **nom normalisé** (espaces / casse)
+- `name`: required
+- `slug`: optional — derived from name if omitted (`Johnny Hallyday` → `johnny-hallyday`)
+- duplicate prevention on **slug** and **normalized name** (whitespace / case)
 
-### Réponses
+### Responses
 
 **201**
 
@@ -40,11 +40,11 @@ Crée une **page communautaire** (pas un compte officiel).
 }
 ```
 
-**400** `validation_error` — nom/slug invalide  
-**401** — non connecté  
-**409** `conflict` — slug ou nom déjà pris
+**400** `validation_error` — invalid name/slug  
+**401** — not authenticated  
+**409** `conflict` — slug or name already taken
 
-### Exemple
+### Example
 
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/artists \
@@ -57,7 +57,7 @@ curl -s -X POST http://localhost:8080/api/v1/artists \
 
 ## `GET /api/v1/artists/{slug}` — T3.2
 
-Public, pas d’auth.
+Public, no auth.
 
 **200**
 
@@ -74,7 +74,7 @@ Public, pas d’auth.
 }
 ```
 
-**404** si slug inconnu ou invalide.
+**404** if slug is unknown or invalid.
 
 ```bash
 curl -s http://localhost:8080/api/v1/artists/johnny

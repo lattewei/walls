@@ -1,40 +1,40 @@
-# Architecture — Open Studio (provisoire)
+# Architecture — Open Studio (working name)
 
-## Vue d’ensemble
+## Overview
 
-Monolithe modulaire :
+Modular monolith:
 
-- **API Go** (`services/api`) : auth, users, artists, tracks, media, moderation
-- **Web Next.js** (`apps/web`) : UI + lecteur audio HTML5
-- **PostgreSQL** : source de vérité
-- **Stockage audio** : interface abstraite (local en dev, S3-compatible en prod)
+- **Go API** (`services/api`): auth, users, artists, tracks, media, moderation
+- **Next.js web** (`apps/web`): UI + HTML5 audio player
+- **PostgreSQL**: source of truth
+- **Audio storage**: abstract interface (local in dev, S3-compatible in prod)
 
 ```text
-Browser  →  Next.js  →  REST /api/v1  →  modules Go  →  PostgreSQL
-                                      ↘  media store (fichiers)
+Browser  →  Next.js  →  REST /api/v1  →  Go modules  →  PostgreSQL
+                                      ↘  media store (files)
 ```
 
-## Flux métier central
+## Core product flow
 
-1. Création / ouverture d’une page artiste (`artists`)
-2. Upload d’une track + liens `track_artists` (tags)
-3. Lecture audio via endpoint stream / URL signée
-4. Contact via champs publics du profil uploader
+1. Create or open an artist page (`artists`)
+2. Upload a track + `track_artists` links (tags / mentions)
+3. Play audio via stream endpoint / signed URL
+4. Contact via the uploader’s public profile fields
 
-## Modules API
+## API modules
 
-| Module       | Responsabilité                          |
-|--------------|-----------------------------------------|
-| `auth`       | Inscription, login, JWT / sessions      |
-| `users`      | Profils, contacts publics               |
-| `artists`    | Pages, slugs, revendications            |
-| `tracks`     | Productions, tags artistes              |
-| `media`      | Validation, stockage, streaming         |
-| `moderation` | Signalements, actions admin             |
+| Module       | Responsibility                         |
+|--------------|----------------------------------------|
+| `auth`       | Register, login, JWT                   |
+| `users`      | Profiles, public contacts              |
+| `artists`    | Pages, slugs, claims                   |
+| `tracks`     | Productions, artist tags               |
+| `media`      | Validation, storage, streaming         |
+| `moderation` | Reports, admin actions                 |
 
-## Principes
+## Principles
 
-- Contrôle d’accès **côté serveur** uniquement
-- Pas de microservices au MVP
-- Migrations SQL versionnées dans `/migrations`
-- Config uniquement via variables d’environnement
+- Access control **on the server only**
+- No microservices in the MVP
+- Versioned SQL migrations in `/migrations`
+- Config only via environment variables
