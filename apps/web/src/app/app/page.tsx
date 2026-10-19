@@ -5,13 +5,9 @@ import { appHome } from "@/content/app-home";
 export default function AppHomePage() {
   return (
     <AppChrome>
-      <div className="app-feed">
-        {appHome.rows.map((row) => (
-          <div key={row.id} id={row.id}>
-            <BlockRow row={row} />
-          </div>
-        ))}
-      </div>
+      {appHome.rows.map((row) => (
+        <BlockRow key={row.id} row={row} />
+      ))}
     </AppChrome>
   );
 }

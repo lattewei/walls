@@ -1,45 +1,41 @@
 import Link from "next/link";
 
-import { site } from "@/content/site";
 import { appHome } from "@/content/app-home";
+import { site } from "@/content/site";
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   return (
-    <div className="app-shell">
-      <header className="app-top">
-        <div className="app-top__inner">
-          <Link href="/" className="app-top__brand">
-            {site.name}
-          </Link>
-          <nav className="app-top__nav" aria-label="App">
-            <Link href="/app" className="app-top__link app-top__link--active">
-              Home
-            </Link>
-            <Link href="/app#artists" className="app-top__link">
-              Artists
-            </Link>
-            <Link href="/app#beatmakers" className="app-top__link">
-              Beatmakers
-            </Link>
-          </nav>
-          <div className="app-top__actions">
-            <Link href="/app/upload" className="app-top__cta">
-              Upload
-            </Link>
-          </div>
-        </div>
+    <div className="index">
+      <header className="index__bar">
+        <Link href="/" className="index__mark">
+          {site.name}
+        </Link>
+        <span className="index__slash">/</span>
+        <span className="index__here">index</span>
+        <Link href="/app/upload" className="index__upload">
+          Upload a prod
+        </Link>
       </header>
-      <main className="app-main">
-        <div className="app-main__inner">
-          <div className="app-heading">
-            <h1 className="app-heading__title">{appHome.title}</h1>
-            <p className="app-heading__hint">
-              Walls and producers — open a square to go deeper.
-            </p>
-          </div>
-          {children}
-        </div>
-      </main>
+
+      <div className="index__split">
+        <aside className="index__rail">
+          <p className="index__rail-label">Channels</p>
+          <ul>
+            {appHome.rows.map((row) => (
+              <li key={row.id}>
+                <a href={`#${row.id}`}>
+                  <span>{row.title}</span>
+                  <span>{row.blocks.length || "–"}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="index__rail-foot">
+            No ranking. These are the walls people opened this week.
+          </p>
+        </aside>
+        <div className="index__main">{children}</div>
+      </div>
     </div>
   );
 }

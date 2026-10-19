@@ -3,20 +3,24 @@ import { BlockCell } from "./block-cell";
 
 export function BlockRow({ row }: { row: AppRow }) {
   return (
-    <section className="block-row">
-      <header className="block-row__head">
-        <h2 className="block-row__title">{row.title}</h2>
-        {row.note ? <p className="block-row__note">{row.note}</p> : null}
+    <section className="channel" id={row.id}>
+      <header>
+        <h2>{row.title}</h2>
+        <span>{row.countLabel}</span>
       </header>
-      <div className="block-row__scroller">
-        <ul className="block-row__track">
+      {row.blocks.length === 0 ? (
+        <p className="channel__empty">
+          Nothing filed here yet. Shortlists and private rooms land in this channel later.
+        </p>
+      ) : (
+        <ul>
           {row.blocks.map((block) => (
-            <li key={block.id} className="block-row__item">
+            <li key={block.id}>
               <BlockCell block={block} />
             </li>
           ))}
         </ul>
-      </div>
+      )}
     </section>
   );
 }
