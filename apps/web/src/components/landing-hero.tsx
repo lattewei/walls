@@ -25,24 +25,17 @@ export function LandingHero() {
 
   return (
     <div className="relative h-[100dvh] w-full overflow-hidden text-[var(--ink)]">
-      {/* Background */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `linear-gradient(180deg, rgba(6,12,24,0.55) 0%, rgba(6,12,24,0.72) 45%, rgba(6,12,24,0.88) 100%), url(${site.backgroundImage})`,
-        }}
-      />
-      {/* Dot grid overlay */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
-        style={{
-          backgroundImage:
-            "radial-gradient(rgba(180,200,255,0.55) 0.6px, transparent 0.7px)",
-          backgroundSize: "3px 3px",
-        }}
-      />
-      {/* Soft vignette */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(4,8,16,0.55)_100%)]" />
+      <div className="hero-bg" aria-hidden>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="hero-bg__img"
+          src={site.backgroundImage}
+          alt=""
+          decoding="async"
+        />
+        <div className="hero-bg__dither" />
+        <div className="hero-bg__shade" />
+      </div>
 
       <div className="relative z-10 flex h-full flex-col">
         {/* Nav */}
