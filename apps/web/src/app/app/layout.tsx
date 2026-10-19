@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
 
+import { StudioShell } from "@/components/studio/shell";
+import { RoomProvider } from "@/components/studio/room";
 import { site } from "@/content/site";
 
 export const metadata: Metadata = {
-  title: `${site.name} — App`,
-  description: "Artist walls and beatmakers",
+  title: site.name,
 };
 
 export default function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return children;
+  return (
+    <RoomProvider>
+      <StudioShell>{children}</StudioShell>
+    </RoomProvider>
+  );
 }

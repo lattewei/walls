@@ -1,13 +1,38 @@
-import { AppChrome } from "@/components/app-chrome";
-import { BlockRow } from "@/components/block-row";
-import { appHome } from "@/content/app-home";
+"use client";
 
-export default function AppHomePage() {
+import Link from "next/link";
+import { useEffect } from "react";
+
+import { Cover } from "@/components/studio/shell";
+import { useRoom } from "@/components/studio/room";
+import { walls } from "@/content/library";
+
+export default function AppHome() {
+  const room = useRoom();
+
+  const setTone = room.setTone;
+  useEffect(() => {
+    setTone(null);
+  }, [setTone]);
+
   return (
-    <AppChrome>
-      {appHome.rows.map((row) => (
-        <BlockRow key={row.id} row={row} />
-      ))}
-    </AppChrome>
+    <div className="library">
+      <h1>Walls</h1>
+      <ul>
+        {walls.map((wall) => (
+          <li key={wall.slug}>
+            <Link href={`/app/artists/${wall.slug}`}>
+              <Cover wallTone={wall.tone} cover={wall.cover} small />
+              <span>
+                <strong>{wall.name}</strong>
+                <em>
+                  {wall.tracks.length} prods · {wall.genre}
+                </em>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
