@@ -17,7 +17,6 @@
 html,
 body {
   height: 100%;
-  overflow: hidden;
 }
 
 body {
@@ -25,6 +24,11 @@ body {
   background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Landing locks scroll; app pages scroll normally */
+body:has(.landing-root) {
+  overflow: hidden;
 }
 
 ::selection {
@@ -104,4 +108,256 @@ body {
   .rise-d5 {
     animation: none;
   }
+}
+
+/* ——— App (are.na-like blocks, same night theme) ——— */
+
+.app-shell {
+  min-height: 100dvh;
+  background:
+    radial-gradient(90% 60% at 50% -10%, rgba(40, 70, 120, 0.22), transparent 55%),
+    var(--bg);
+  color: var(--ink);
+}
+
+.app-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 18, 32, 0.82);
+  backdrop-filter: blur(14px);
+}
+
+.app-top__inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0.9rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.app-top__brand {
+  font-size: 1.15rem;
+  font-weight: 550;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-decoration: none;
+}
+
+.app-top__nav {
+  display: none;
+  gap: 1.25rem;
+  margin-left: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .app-top__nav {
+    display: flex;
+  }
+}
+
+.app-top__link {
+  font-size: 0.9rem;
+  color: var(--ink-faint);
+  text-decoration: none;
+  transition: color 0.25s var(--ease);
+}
+
+.app-top__link:hover,
+.app-top__link--active {
+  color: #fff;
+}
+
+.app-top__actions {
+  margin-left: auto;
+}
+
+.app-top__cta {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--surface-ink);
+  font-size: 0.85rem;
+  font-weight: 550;
+  padding: 0.45rem 0.95rem;
+  text-decoration: none;
+  transition: background 0.25s var(--ease), transform 0.2s var(--ease);
+}
+
+.app-top__cta:hover {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.app-top__cta:active {
+  transform: scale(0.98);
+}
+
+.app-main {
+  padding: 1.5rem 0 4rem;
+}
+
+.app-main__inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+.app-heading {
+  margin-bottom: 2rem;
+}
+
+.app-heading__title {
+  margin: 0;
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.app-heading__hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.92rem;
+  color: var(--ink-faint);
+}
+
+.app-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+.block-row__head {
+  margin-bottom: 0.85rem;
+}
+
+.block-row__title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.block-row__note {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.block-row__scroller {
+  margin: 0 -1.25rem;
+  padding: 0 1.25rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.block-row__track {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0.5rem;
+  display: flex;
+  gap: 0.85rem;
+  width: max-content;
+}
+
+.block-row__item {
+  width: min(42vw, 168px);
+}
+
+@media (min-width: 768px) {
+  .block-row__item {
+    width: 176px;
+  }
+}
+
+.block-cell {
+  display: block;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.35s var(--ease);
+}
+
+.block-cell:hover {
+  transform: translateY(-2px);
+}
+
+.block-cell--soon {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.block-cell__face {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #101826;
+}
+
+.block-cell__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.block-cell__mark {
+  position: absolute;
+  left: 0.7rem;
+  bottom: 0.65rem;
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
+  font-size: 1.6rem;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.88);
+  letter-spacing: -0.02em;
+  z-index: 1;
+}
+
+/* Same dither language as landing frames */
+.block-cell__dither {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  background-image: radial-gradient(#0e0a0759 0.55px, transparent 0.55px);
+  background-size: 3px 3px;
+  z-index: 2;
+}
+
+.block-cell__meta {
+  margin-top: 0.55rem;
+  min-width: 0;
+}
+
+.block-cell__title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.block-cell__sub {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.block-cell:hover .block-cell__face {
+  border-color: rgba(255, 255, 255, 0.28);
 }

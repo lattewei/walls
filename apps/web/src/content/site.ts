@@ -40,8 +40,8 @@ export const site = {
     "Content, outbound, revenue operations and account intelligence. Designed as one compounding system inside your stack.",
 
   primaryCta: {
-    label: "Book a Strategy Call",
-    href: "#contact",
+    label: "Enter Studio",
+    href: "/app",
   },
 
   socialProof: {

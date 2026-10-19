@@ -24,7 +24,7 @@ export function LandingHero() {
     site;
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden text-[var(--ink)]">
+    <div className="landing-root relative h-[100dvh] w-full overflow-hidden text-[var(--ink)]">
       <div className="hero-bg" aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
