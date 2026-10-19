@@ -67,11 +67,12 @@ body {
   animation-delay: 0.4s;
 }
 
-/* Lever-style background dither (from .gframe__art--dither) */
+/* Matches Lever .stage structure: painting + vignette (dither is in the image) */
 .hero-bg {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  background-color: #0e1218;
 }
 
 .hero-bg__img {
@@ -81,29 +82,17 @@ body {
   height: 100%;
   object-fit: cover;
   object-position: center;
-  filter: contrast(1.08) saturate(0.9);
+  pointer-events: none;
+  image-rendering: auto;
 }
 
-.hero-bg__dither {
-  content: "";
+/* Lever .stage__vignette */
+.hero-bg__vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  mix-blend-mode: overlay;
-  background-image: radial-gradient(#0e0a0759 0.6px, #0000 0.6px);
-  background-size: 3px 3px;
-}
-
-.hero-bg__shade {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    rgba(6, 12, 24, 0.42) 0%,
-    rgba(6, 12, 24, 0.58) 42%,
-    rgba(6, 12, 24, 0.78) 100%
-  );
+  z-index: 3;
+  background: radial-gradient(120% 70% at 50% 0%, transparent 60%, rgba(0, 0, 0, 0.18) 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {

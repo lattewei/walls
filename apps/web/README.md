@@ -20,12 +20,21 @@ Open `src/content/site.ts`:
 - “worked with” brands
 - `backgroundImage` → put a file in `public/` (default `public/hero-bg.jpg`)
 
-## Background image
+## Background image (Lever-style pixels)
 
-Drop a night city / moody photo at:
+Lever does **not** fake the pixel look only in CSS.  
+They ship a **pre-dithered** asset (`hero-painting-dither.webp`).
 
-```text
-public/hero-bg.jpg
+Same approach here:
+
+1. Put the source art at `public/bg.jpg`
+2. Run:
+
+```bash
+npm run dither
 ```
 
-If missing, the page still works (dark gradient + dots).
+3. That writes `public/bg-dither.jpg` (Bayer ordered dither + night palette)  
+4. `src/content/site.ts` points `backgroundImage` at `/bg-dither.jpg`
+
+A light vignette (Lever `.stage__vignette`) sits on top for text contrast.

@@ -32,9 +32,10 @@ export function LandingHero() {
           src={site.backgroundImage}
           alt=""
           decoding="async"
+          width={1024}
+          height={576}
         />
-        <div className="hero-bg__dither" />
-        <div className="hero-bg__shade" />
+        <div className="hero-bg__vignette" />
       </div>
 
       <div className="relative z-10 flex h-full flex-col">

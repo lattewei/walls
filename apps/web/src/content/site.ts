@@ -5,8 +5,12 @@
 
 export const site = {
   name: "Lever",
-  /** Local hero background (public/bg.jpg) */
-  backgroundImage: "/bg.jpg",
+  /**
+   * Hero background. Lever bakes the pixel look into the asset
+   * (`hero-painting-dither.webp`). We do the same with `bg-dither.jpg`
+   * (generated from `bg.jpg` via `npm run dither`).
+   */
+  backgroundImage: "/bg-dither.jpg",
 
   nav: [
     { label: "Services", href: "#services" },
