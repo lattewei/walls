@@ -5,9 +5,8 @@
 
 export const site = {
   name: "Lever",
-  /** Path under /public or full URL (Unsplash night city as default stand-in) */
-  backgroundImage:
-    "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=2400&q=80",
+  /** Local hero background (public/bg.jpg) */
+  backgroundImage: "/bg.jpg",
 
   nav: [
     { label: "Services", href: "#services" },
