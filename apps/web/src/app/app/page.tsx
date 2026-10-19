@@ -1,38 +1,35 @@
-"use client";
-
-import Link from "next/link";
-import { useEffect } from "react";
-
-import { Cover } from "@/components/studio/shell";
-import { useRoom } from "@/components/studio/room";
-import { walls } from "@/content/library";
+import { painting, shelves } from "@/content/home";
 
 export default function AppHome() {
-  const room = useRoom();
-
-  const setTone = room.setTone;
-  useEffect(() => {
-    setTone(null);
-  }, [setTone]);
-
   return (
-    <div className="library">
-      <h1>Walls</h1>
-      <ul>
-        {walls.map((wall) => (
-          <li key={wall.slug}>
-            <Link href={`/app/artists/${wall.slug}`}>
-              <Cover wallTone={wall.tone} cover={wall.cover} small />
-              <span>
-                <strong>{wall.name}</strong>
-                <em>
-                  {wall.tracks.length} prods · {wall.genre}
-                </em>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+    <div className="home">
+      {shelves.map((shelf) => (
+        <section key={shelf.id} id={shelf.id} className="shelf">
+          <h2>{shelf.title}</h2>
+          {shelf.tiles.length === 0 ? (
+            <p className="shelf__empty">Rien ici pour l’instant.</p>
+          ) : (
+            <ul>
+              {shelf.tiles.map((tile) => (
+                <li key={tile.id}>
+                  <article className="tile">
+                    <div className="tile__sq">
+                      {tile.crop ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={painting} alt="" style={{ objectPosition: tile.crop }} />
+                      ) : (
+                        <span>{tile.title.slice(0, 1).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <p className="tile__title">{tile.title}</p>
+                    <p className="tile__meta">{tile.meta}</p>
+                  </article>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ))}
     </div>
   );
 }
