@@ -10,17 +10,25 @@ Docker is **not** required. Without a database you can still code and run `go te
 
 ## Database
 
-### Option A - PostgreSQL on Windows
+### Option A - PostgreSQL native
 
-1. Install [PostgreSQL](https://www.postgresql.org/download/windows/)
-2. Create user/db:
+1. Install PostgreSQL and ensure `psql` is available
+2. Create user/db (as superuser, e.g. `postgres`):
 
 ```sql
 CREATE USER walls WITH PASSWORD 'walls_dev';
 CREATE DATABASE walls OWNER walls;
+\c walls
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 ```
 
-3. Use `DATABASE_URL` in `.env` (project default already matches)
+3. Copy `.env.example` to `.env` (defaults already match)
+4. Run migrations:
+
+```bash
+cd services/api
+go run ./cmd/migrate up
+```
 
 ### Option B - Docker Compose (if you have Docker later)
 
