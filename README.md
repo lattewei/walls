@@ -4,6 +4,12 @@ Open-source web platform: open artist pages, tagged beat submissions, in-app lis
 
 > Product name: **Walls**. Some technical identifiers still use `openstudio` (Go module, local DB user) until a full rename.
 
+## About this project
+
+I am not a web frontend developer. The **web UI** (`apps/web`) was built **with AI assistance** (layout, components, styling). I directed the product, reviewed the result, and own the decisions.
+
+The **backend** (Go API, auth, artists, tracks, Postgres) is the core of the engineering work on this repo.
+
 ## The problem
 
 A beatmaker makes a track for Johnny but cannot reach him easily. They create (or open) Johnny’s page, upload the prod, and tag it. Johnny sees every production that mentions him, listens in the browser, and contacts the creator (email / Instagram).
@@ -13,7 +19,7 @@ A beatmaker makes a track for Johnny but cannot reach him easily. They create (o
 | Layer        | Tech                            |
 |--------------|---------------------------------|
 | API          | Go, Gin, PostgreSQL             |
-| Web          | Next.js, TypeScript _(later)_   |
+| Web          | Next.js, TypeScript (UI via AI assistance) |
 | Local infra  | Docker Compose (optional)       |
 
 ## Prerequisites
@@ -60,7 +66,7 @@ curl http://localhost:8080/api/v1/health
 
 ```text
 .
-├── apps/web/           # Next.js frontend (upcoming)
+├── apps/web/           # Next.js frontend (UI built with AI assistance)
 ├── services/api/       # Go API
 ├── migrations/         # Versioned SQL
 ├── docs/               # Architecture, API, dev
