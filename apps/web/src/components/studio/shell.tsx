@@ -2,18 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { IconGrid, IconHome, IconPanel, IconSearch } from "./icons";
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const homeOn = path === "/app";
-  const [folded, setFolded] = useState(path !== "/app");
-
-  useEffect(() => {
-    setFolded(path !== "/app");
-  }, [path]);
+  const [folded, setFolded] = useState(false);
 
   return (
     <div className={folded ? "studio is-folded" : "studio"}>
