@@ -5,20 +5,20 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { site } from "@/content/site";
-import { IconGrid, IconHome, IconPanel, IconSearch } from "./icons";
+import { IconGrid, IconHome, IconPanel, IconSearch, IconUser } from "./icons";
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
-  const landing = path === "/";
+  const bare = path === "/" || path === "/login" || path === "/register";
   const homeOn = path === "/app";
   const [folded, setFolded] = useState(!homeOn);
 
   useEffect(() => {
-    if (path === "/") return;
+    if (path === "/" || path === "/login" || path === "/register") return;
     setFolded(path !== "/app");
   }, [path]);
 
-  const frame = landing ? "studio is-landing" : folded ? "studio is-folded" : "studio";
+  const frame = bare ? "studio is-landing" : folded ? "studio is-folded" : "studio";
 
   return (
     <div className={frame}>
@@ -47,6 +47,10 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           <Link href="/app#artists" className="studio__item">
             <IconGrid />
             <span className="studio__label">Browse</span>
+          </Link>
+          <Link href="/login" className="studio__item">
+            <IconUser />
+            <span className="studio__label">Log in</span>
           </Link>
         </nav>
       </aside>

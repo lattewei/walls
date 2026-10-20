@@ -141,6 +141,131 @@ body:has(.landing-root) {
   padding: 0;
 }
 
+.auth {
+  min-height: 100dvh;
+  background: #0a0a0c;
+  color: #f5f5f7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px 48px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+}
+
+.auth__back {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  color: #9a9aa3;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.auth__back:hover {
+  color: #fff;
+}
+
+.auth__card {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth__card h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+.auth__hint {
+  margin: -4px 0 8px;
+  color: #9a9aa3;
+  font-size: 0.9rem;
+}
+
+.auth__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.auth__field span {
+  font-size: 0.78rem;
+  color: #b4b4bb;
+  font-weight: 500;
+}
+
+.auth__field input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #121214;
+  color: #fff;
+  border-radius: 8px;
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.auth__field input:focus {
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+.auth__field input::placeholder {
+  color: #5c5c64;
+}
+
+.auth__error {
+  margin: 0;
+  color: #f0a8a8;
+  font-size: 0.86rem;
+}
+
+.auth__submit {
+  margin-top: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 11px 16px;
+  cursor: pointer;
+}
+
+.auth__submit:hover:not(:disabled) {
+  background: #f2f2f2;
+}
+
+.auth__submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth__alt {
+  margin: 4px 0 0;
+  text-align: center;
+  color: #9a9aa3;
+  font-size: 0.88rem;
+}
+
+.auth__alt a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.auth__alt a:hover {
+  text-decoration: underline;
+}
+
 .studio::before {
   content: "";
   pointer-events: none;

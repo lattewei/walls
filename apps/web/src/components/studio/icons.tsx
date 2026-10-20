@@ -24,6 +24,20 @@ export function IconPanel({ folded }: { folded: boolean }) {
   );
 }
 
+export function IconUser() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="9" r="3.25" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M5.5 19.2c1.4-2.6 3.6-3.9 6.5-3.9s5.1 1.3 6.5 3.9"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function IconSearch() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
