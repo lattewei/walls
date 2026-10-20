@@ -123,13 +123,19 @@ body:has(.landing-root) {
   --muted: #b4b4bb;
   --faint: #8e8e96;
   --line: rgba(255, 255, 255, 0.06);
+  --rail: 228px;
   position: relative;
   min-height: 100dvh;
   color: var(--ink);
   background: #0a0a0c;
   display: grid;
-  grid-template-columns: 228px minmax(0, 1fr);
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  transition: grid-template-columns 320ms var(--ease);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+}
+
+.studio.is-folded {
+  --rail: 152px;
 }
 
 .studio::before {
@@ -179,6 +185,24 @@ body:has(.landing-root) {
   text-decoration: none;
   font-size: 0.95rem;
   font-weight: 500;
+  transition: gap 320ms var(--ease);
+}
+
+.studio__label {
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 7.5rem;
+  opacity: 1;
+  transition: max-width 320ms var(--ease), opacity 200ms var(--ease);
+}
+
+.studio.is-folded .studio__item {
+  gap: 0;
+}
+
+.studio.is-folded .studio__label {
+  max-width: 0;
+  opacity: 0;
 }
 
 .studio__item.is-on {
@@ -201,31 +225,6 @@ a.studio__item:hover {
 .studio__main {
   min-width: 0;
   padding: 44px 48px 96px;
-}
-
-.studio--slim {
-  grid-template-columns: 140px minmax(0, 1fr);
-}
-
-.studio--slim .studio__word {
-  display: block;
-  text-align: center;
-  white-space: nowrap;
-  padding-left: 0;
-  padding-right: 0;
-}
-
-.studio--slim .studio__item {
-  justify-content: center;
-  gap: 0;
-  font-size: 0;
-  line-height: 0;
-}
-
-.studio--slim .studio__main {
-  display: flex;
-  justify-content: center;
-  padding: 56px 24px 120px;
 }
 
 .home {
@@ -502,8 +501,16 @@ a.studio__item:hover {
 }
 
 @media (max-width: 800px) {
-  .studio {
+  .studio,
+  .studio.is-folded {
     grid-template-columns: 1fr;
+  }
+  .studio.is-folded .studio__label {
+    max-width: 7.5rem;
+    opacity: 1;
+  }
+  .studio.is-folded .studio__item {
+    gap: 12px;
   }
   .studio__side {
     flex-direction: row;
@@ -523,9 +530,6 @@ a.studio__item:hover {
   }
   .home {
     gap: 56px;
-  }
-  .studio--slim {
-    grid-template-columns: 1fr;
   }
   .profile h1 {
     font-size: 1.9rem;

@@ -6,38 +6,29 @@ import { usePathname } from "next/navigation";
 import { site } from "@/content/site";
 import { IconGrid, IconHome, IconSearch } from "./icons";
 
-export function StudioShell({
-  children,
-  compact,
-}: {
-  children: React.ReactNode;
-  compact?: boolean;
-}) {
+export function StudioShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const homeOn = path === "/app";
+  const folded = path !== "/app";
 
   return (
-    <div className={compact ? "studio studio--slim" : "studio"}>
+    <div className={folded ? "studio is-folded" : "studio"}>
       <aside className="studio__side">
         <Link href="/" className="wordmark studio__word">
           {site.name}
         </Link>
         <nav>
-          <span className="studio__item studio__item--quiet" aria-label="Search">
+          <span className="studio__item studio__item--quiet">
             <IconSearch />
-            Search
+            <span className="studio__label">Search</span>
           </span>
-          <Link
-            href="/app"
-            className={homeOn ? "studio__item is-on" : "studio__item"}
-            aria-label="Home"
-          >
+          <Link href="/app" className={homeOn ? "studio__item is-on" : "studio__item"}>
             <IconHome />
-            Home
+            <span className="studio__label">Home</span>
           </Link>
-          <Link href="/app#artists" className="studio__item" aria-label="Browse">
+          <Link href="/app#artists" className="studio__item">
             <IconGrid />
-            Browse
+            <span className="studio__label">Browse</span>
           </Link>
         </nav>
       </aside>
