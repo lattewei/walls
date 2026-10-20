@@ -124,7 +124,7 @@ body:has(.landing-root) {
 }
 
 .studio.is-folded {
-  --rail: 52px;
+  --rail: 68px;
 }
 
 .studio::before {
@@ -180,13 +180,13 @@ body:has(.landing-root) {
 }
 
 .studio.is-folded .studio__side {
-  padding: 28px 7px;
+  padding: 28px 12px;
 }
 
 .studio.is-folded .studio__item {
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   gap: 0;
 }
