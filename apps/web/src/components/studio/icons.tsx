@@ -1,3 +1,29 @@
+export function IconPanel({ folded }: { folded: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M9.25 4.5v15" stroke="currentColor" strokeWidth="1.6" />
+      {folded ? (
+        <path
+          d="M13.2 9.75 16.4 12l-3.2 2.25"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ) : (
+        <path
+          d="M16.4 9.75 13.2 12l3.2 2.25"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+    </svg>
+  );
+}
+
 export function IconSearch() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>

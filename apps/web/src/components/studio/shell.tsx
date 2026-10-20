@@ -2,17 +2,31 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { IconGrid, IconHome, IconSearch } from "./icons";
+import { IconGrid, IconHome, IconPanel, IconSearch } from "./icons";
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const homeOn = path === "/app";
-  const folded = path !== "/app";
+  const [folded, setFolded] = useState(path !== "/app");
+
+  useEffect(() => {
+    setFolded(path !== "/app");
+  }, [path]);
 
   return (
     <div className={folded ? "studio is-folded" : "studio"}>
       <aside className="studio__side">
+        <button
+          type="button"
+          className="studio__item studio__fold"
+          onClick={() => setFolded((v) => !v)}
+          aria-expanded={!folded}
+          aria-label={folded ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <IconPanel folded={folded} />
+        </button>
         <nav>
           <span className="studio__item studio__item--quiet">
             <IconSearch />
