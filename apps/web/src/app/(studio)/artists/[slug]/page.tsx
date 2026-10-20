@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ProdList } from "@/components/studio/prod-list";
@@ -45,9 +46,9 @@ export default async function ArtistWallPage({ params }: Props) {
           )}
         </div>
         <h1>{wall.name}</h1>
-        <p className="profile__handle">
+        <span className={wall.badge === "claimed" ? "profile__badge is-claimed" : "profile__badge"}>
           {wall.badge === "claimed" ? "Claimed wall" : "Community wall"}
-        </p>
+        </span>
         {wall.bio ? <p className="profile__bio">{wall.bio}</p> : null}
         {wall.genres.length > 0 ? (
           <ul className="profile__genres">
@@ -56,6 +57,9 @@ export default async function ArtistWallPage({ params }: Props) {
             ))}
           </ul>
         ) : null}
+        <Link href="/app" className="profile__action">
+          Add a production
+        </Link>
       </section>
 
       <section className="prods">

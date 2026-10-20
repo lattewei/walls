@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { site } from "@/content/site";
 import { IconGrid, IconHome, IconPanel, IconSearch } from "./icons";
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
@@ -22,6 +23,9 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={frame}>
       <aside className="studio__side">
+        <Link href="/app" className="studio__brand">
+          {site.name}
+        </Link>
         <button
           type="button"
           className="studio__item studio__fold"
