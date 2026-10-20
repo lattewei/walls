@@ -13,15 +13,15 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
         <nav>
           <span className="studio__item">
             <IconSearch />
-            Rechercher
+            Search
           </span>
           <Link href="/app" className="studio__item is-on">
             <IconHome />
-            Accueil
+            Home
           </Link>
           <Link href="/app#artists" className="studio__item">
             <IconGrid />
-            Parcourir
+            Browse
           </Link>
         </nav>
       </aside>

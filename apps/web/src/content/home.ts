@@ -14,29 +14,29 @@ export type Shelf = {
 export const shelves: Shelf[] = [
   {
     id: "artists",
-    title: "Artistes populaires",
+    title: "Popular artists",
     tiles: [
-      { id: "ninho", title: "Ninho", meta: "8 prods", image: "/artists/ninho.jpg" },
-      { id: "damso", title: "Damso", meta: "5 prods", image: "/artists/damso.jpg" },
-      { id: "tiakola", title: "Tiakola", meta: "9 prods", image: "/artists/tiakola.jpg" },
-      { id: "sdm", title: "SDM", meta: "4 prods", image: "/artists/sdm.jpg" },
-      { id: "werenoi", title: "Werenoi", meta: "7 prods", image: "/artists/werenoi.jpg" },
+      { id: "kendrick", title: "Kendrick Lamar", meta: "12 prods", image: "/artists/kendrick.jpg" },
+      { id: "billie", title: "Billie Eilish", meta: "9 prods", image: "/artists/billie.jpg" },
+      { id: "daftpunk", title: "Daft Punk", meta: "7 prods", image: "/artists/daftpunk.jpg" },
+      { id: "frank", title: "Frank Ocean", meta: "6 prods", image: "/artists/frank.jpg" },
+      { id: "weeknd", title: "The Weeknd", meta: "11 prods", image: "/artists/weeknd.jpg" },
     ],
   },
   {
     id: "beatmakers",
-    title: "Beatmakers populaires",
+    title: "Popular producers",
     tiles: [
-      { id: "kay", title: "kay_beats", meta: "Paris" },
-      { id: "luna", title: "luna.wav", meta: "Bruxelles" },
-      { id: "volt", title: "volt808", meta: "Lyon" },
-      { id: "noir", title: "noirframe", meta: "Marseille" },
-      { id: "moss", title: "moss_prod", meta: "Lille" },
+      { id: "kay", title: "kay_beats", meta: "Los Angeles" },
+      { id: "luna", title: "luna.wav", meta: "London" },
+      { id: "volt", title: "volt808", meta: "Berlin" },
+      { id: "noir", title: "noirframe", meta: "Tokyo" },
+      { id: "moss", title: "moss_prod", meta: "Lagos" },
     ],
   },
   {
     id: "later",
-    title: "Plus tard",
+    title: "Coming later",
     tiles: [],
   },
 ];

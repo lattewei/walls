@@ -4,7 +4,7 @@ import { StudioShell } from "@/components/studio/shell";
 import { site } from "@/content/site";
 
 export const metadata: Metadata = {
-  title: `${site.name} — Accueil`,
+  title: `${site.name} — Home`,
 };
 
 export default function AppLayout({

@@ -7,7 +7,7 @@ export default function AppHome() {
         <section key={shelf.id} id={shelf.id} className="shelf">
           <h2>{shelf.title}</h2>
           {shelf.tiles.length === 0 ? (
-            <p className="shelf__empty">Rien ici pour l’instant.</p>
+            <p className="shelf__empty">Nothing here yet.</p>
           ) : (
             <ul>
               {shelf.tiles.map((tile) => (
