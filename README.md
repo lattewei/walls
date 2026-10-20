@@ -24,9 +24,9 @@ A beatmaker makes a track for Johnny but cannot reach him easily. They create (o
 
 ## Prerequisites
 
-- [Go](https://go.dev/dl/) â‰¥ 1.22
-- PostgreSQL (native install **or** Docker â€” optional for coding / `go test`)
-- [Node.js](https://nodejs.org/) â‰¥ 20 _(frontend, later)_
+- [Go](https://go.dev/dl/) >= 1.22
+- PostgreSQL (native install **or** Docker; optional for coding / `go test`)
+- [Node.js](https://nodejs.org/) >= 20
 
 Point `DATABASE_URL` at your local Postgres. See [docs/development.md](./docs/development.md).
 
@@ -66,14 +66,14 @@ curl http://localhost:8080/api/v1/health
 
 ```text
 .
-â”œâ”€â”€ apps/web/           # Next.js frontend (UI built with AI assistance)
-â”œâ”€â”€ services/api/       # Go API
-â”œâ”€â”€ migrations/         # Versioned SQL
-â”œâ”€â”€ docs/               # Architecture, API, dev
-â”œâ”€â”€ scripts/
-â”œâ”€â”€ docker-compose.yml
-â”œâ”€â”€ .env.example
-â””â”€â”€ README.md
+├── apps/web/           # Next.js frontend (UI built with AI assistance)
+├── services/api/       # Go API
+├── migrations/         # Versioned SQL
+├── docs/               # Architecture, API, dev
+├── scripts/
+├── docker-compose.yml
+├── .env.example
+└── README.md
 ```
 
 ## Documentation
