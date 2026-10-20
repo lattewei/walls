@@ -124,7 +124,7 @@ body:has(.landing-root) {
 }
 
 .studio.is-folded {
-  --rail: 152px;
+  --rail: 52px;
 }
 
 .studio::before {
@@ -148,6 +148,8 @@ body:has(.landing-root) {
   padding: 28px 16px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  transition: padding 320ms var(--ease);
 }
 
 .studio__side nav {
@@ -177,7 +179,15 @@ body:has(.landing-root) {
   transition: max-width 320ms var(--ease), opacity 200ms var(--ease);
 }
 
+.studio.is-folded .studio__side {
+  padding: 28px 7px;
+}
+
 .studio.is-folded .studio__item {
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
   gap: 0;
 }
 
