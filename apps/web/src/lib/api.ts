@@ -12,9 +12,19 @@ export class ApiRequestError extends Error {
 
   constructor(status: number, code: string, message: string) {
     super(message);
+    this.name = "ApiRequestError";
     this.status = status;
     this.code = code;
   }
+}
+
+export function isApiRequestError(err: unknown): err is ApiRequestError {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { name?: string }).name === "ApiRequestError" &&
+    typeof (err as { message?: string }).message === "string"
+  );
 }
 
 export async function apiFetch<T>(
@@ -23,17 +33,26 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const { token, headers: extra, ...rest } = init;
   const headers = new Headers(extra);
-  if (!headers.has("Content-Type") && rest.body) {
+  if (rest.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const res = await fetch(`${base()}${path}`, {
-    ...rest,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base()}${path}`, {
+      ...rest,
+      headers,
+    });
+  } catch {
+    throw new ApiRequestError(
+      0,
+      "network_error",
+      "Could not reach the API. Is it running on :8080?",
+    );
+  }
 
   const text = await res.text();
   let data: unknown = null;

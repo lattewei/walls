@@ -47,20 +47,26 @@ export function clearSession() {
 export async function login(handle: string, password: string) {
   const session = await apiFetch<AuthSession>("/api/v1/auth/login", {
     method: "POST",
-    body: JSON.stringify({ handle, password }),
+    body: JSON.stringify({
+      handle: handle.trim().toLowerCase(),
+      password,
+    }),
   });
   saveSession(session);
   return session;
 }
 
 export async function register(handle: string, password: string, displayName?: string) {
+  const body: Record<string, string> = {
+    handle: handle.trim().toLowerCase(),
+    password,
+  };
+  const name = displayName?.trim();
+  if (name) body.display_name = name;
+
   const session = await apiFetch<AuthSession>("/api/v1/auth/register", {
     method: "POST",
-    body: JSON.stringify({
-      handle,
-      password,
-      display_name: displayName || undefined,
-    }),
+    body: JSON.stringify(body),
   });
   saveSession(session);
   return session;

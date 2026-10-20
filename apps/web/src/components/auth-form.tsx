@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
-import { ApiRequestError } from "@/lib/api";
+import { isApiRequestError } from "@/lib/api";
 import { login, register } from "@/lib/auth";
 
 type Mode = "login" | "register";
@@ -30,10 +30,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
       router.push("/app");
       router.refresh();
     } catch (err) {
-      if (err instanceof ApiRequestError) {
+      if (isApiRequestError(err)) {
+        setError(err.message);
+      } else if (err instanceof Error && err.message) {
         setError(err.message);
       } else {
-        setError("Could not reach the API. Is it running on :8080?");
+        setError("Something went wrong. Try again.");
       }
     } finally {
       setBusy(false);
