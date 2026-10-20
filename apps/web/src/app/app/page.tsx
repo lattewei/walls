@@ -1,4 +1,4 @@
-import { painting, shelves } from "@/content/home";
+import { shelves } from "@/content/home";
 
 export default function AppHome() {
   return (
@@ -14,9 +14,9 @@ export default function AppHome() {
                 <li key={tile.id}>
                   <article className="tile">
                     <div className="tile__sq">
-                      {tile.crop ? (
+                      {tile.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={painting} alt="" style={{ objectPosition: tile.crop }} />
+                        <img src={tile.image} alt={tile.title} />
                       ) : (
                         <span>{tile.title.slice(0, 1).toUpperCase()}</span>
                       )}
