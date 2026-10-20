@@ -26,17 +26,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.wordmark {
-  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
-  font-weight: 400;
-  font-style: italic;
-  font-size: 1.55rem;
-  letter-spacing: -0.02em;
-  color: #fff;
-  text-decoration: none;
-  line-height: 1;
-}
-
 body:has(.landing-root) {
   overflow: hidden;
 }
@@ -159,14 +148,6 @@ body:has(.landing-root) {
   padding: 28px 16px;
   display: flex;
   flex-direction: column;
-  gap: 36px;
-}
-
-.studio__word {
-  display: inline-block;
-  padding: 2px 10px;
-  font-size: 1.9rem;
-  font-weight: 500;
 }
 
 .studio__side nav {
@@ -203,18 +184,6 @@ body:has(.landing-root) {
 .studio.is-folded .studio__label {
   max-width: 0;
   opacity: 0;
-}
-
-.studio.is-folded .studio__word {
-  height: 0;
-  opacity: 0;
-  overflow: hidden;
-  padding: 0;
-  pointer-events: none;
-}
-
-.studio.is-folded .studio__side {
-  gap: 18px;
 }
 
 .studio__item.is-on {

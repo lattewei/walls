@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { site } from "@/content/site";
 import { IconGrid, IconHome, IconSearch } from "./icons";
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
@@ -14,9 +13,6 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={folded ? "studio is-folded" : "studio"}>
       <aside className="studio__side">
-        <Link href="/" className="wordmark studio__word">
-          {site.name}
-        </Link>
         <nav>
           <span className="studio__item studio__item--quiet">
             <IconSearch />
