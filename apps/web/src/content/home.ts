@@ -8,6 +8,7 @@ export type Tile = {
 export type Shelf = {
   id: string;
   title: string;
+  kind: "artist" | "producer";
   tiles: Tile[];
 };
 
@@ -15,6 +16,7 @@ export const shelves: Shelf[] = [
   {
     id: "artists",
     title: "Popular artists",
+    kind: "artist",
     tiles: [
       { id: "kendrick", title: "Kendrick Lamar", meta: "12 prods", image: "/artists/kendrick.jpg" },
       { id: "billie", title: "Billie Eilish", meta: "9 prods", image: "/artists/billie.jpg" },
@@ -26,6 +28,7 @@ export const shelves: Shelf[] = [
   {
     id: "beatmakers",
     title: "Popular producers",
+    kind: "producer",
     tiles: [
       { id: "kay", title: "kay_beats", meta: "Los Angeles" },
       { id: "luna", title: "luna.wav", meta: "London" },
@@ -33,10 +36,5 @@ export const shelves: Shelf[] = [
       { id: "noir", title: "noirframe", meta: "Tokyo" },
       { id: "moss", title: "moss_prod", meta: "Lagos" },
     ],
-  },
-  {
-    id: "later",
-    title: "Coming later",
-    tiles: [],
   },
 ];

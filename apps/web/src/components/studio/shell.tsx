@@ -11,7 +11,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           {site.name}
         </Link>
         <nav>
-          <span className="studio__item">
+          <span className="studio__item studio__item--quiet">
             <IconSearch />
             Search
           </span>
