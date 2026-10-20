@@ -1,4 +1,4 @@
-# Architecture — Open Studio (working name)
+# Architecture — Walls
 
 ## Overview
 

@@ -1,4 +1,4 @@
--- Open Studio — initial schema
+-- Walls — initial schema
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 

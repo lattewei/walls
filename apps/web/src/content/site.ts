@@ -3,8 +3,7 @@
  */
 
 export const site = {
-  /** Product name still TBD — temporary label until you pick one */
-  name: "Open Studio",
+  name: "Walls",
 
   backgroundImage: "/bg-dither.jpg",
 
@@ -17,7 +16,7 @@ export const site = {
     "Create a page for any artist. Upload your production. They listen in the browser and contact you directly — no marketplace, no middleman.",
 
   primaryCta: {
-    label: "Open the walls",
+    label: "Enter Walls",
     href: "/app",
   },
 } as const;

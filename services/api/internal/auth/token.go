@@ -27,7 +27,7 @@ func NewTokenService(secret string, ttl time.Duration) *TokenService {
 	return &TokenService{
 		secret: []byte(secret),
 		ttl:    ttl,
-		issuer: "openstudio",
+		issuer: "walls",
 	}
 }
 

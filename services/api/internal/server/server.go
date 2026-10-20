@@ -157,7 +157,7 @@ func (s *Server) HTTPServer() *http.Server {
 func (s *Server) handleProcessHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "ok",
-		"service": "openstudio-api",
+		"service": "walls-api",
 	})
 }
 
@@ -168,7 +168,7 @@ func (s *Server) handleHealth(c *gin.Context) {
 	if s.pool == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"status":  "degraded",
-			"service": "openstudio-api",
+			"service": "walls-api",
 			"db":      "unavailable",
 		})
 		return
@@ -177,7 +177,7 @@ func (s *Server) handleHealth(c *gin.Context) {
 		s.log.Error("health db ping failed", "err", err)
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"status":  "degraded",
-			"service": "openstudio-api",
+			"service": "walls-api",
 			"db":      "unavailable",
 		})
 		return
@@ -185,7 +185,7 @@ func (s *Server) handleHealth(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "ok",
-		"service": "openstudio-api",
+		"service": "walls-api",
 		"db":      "ok",
 	})
 }

@@ -1,8 +1,8 @@
-# Open Studio _(working name)_
+# Walls
 
 Open-source web platform: open artist pages, tagged beat submissions, in-app listening, and direct contact with producers.
 
-> Product name is still TBD. Technical repo name is `openstudio` for now.
+> Product name: **Walls**. Some technical identifiers still use `openstudio` (Go module, local DB user) until a full rename.
 
 ## The problem
 
