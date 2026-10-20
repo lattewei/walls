@@ -30,11 +30,11 @@ export const shelves: Shelf[] = [
     title: "Popular producers",
     kind: "producer",
     tiles: [
-      { id: "kay", title: "kay_beats", meta: "Los Angeles" },
-      { id: "luna", title: "luna.wav", meta: "London" },
-      { id: "volt", title: "volt808", meta: "Berlin" },
-      { id: "noir", title: "noirframe", meta: "Tokyo" },
-      { id: "moss", title: "moss_prod", meta: "Lagos" },
+      { id: "kay_beats", title: "kay_beats", meta: "Los Angeles" },
+      { id: "luna_wav", title: "luna.wav", meta: "London" },
+      { id: "volt808", title: "volt808", meta: "Berlin" },
+      { id: "noirframe", title: "noirframe", meta: "Tokyo" },
+      { id: "moss_prod", title: "moss_prod", meta: "Lagos" },
     ],
   },
 ];
