@@ -203,6 +203,33 @@ a.studio__item:hover {
   padding: 44px 48px 96px;
 }
 
+.studio--slim {
+  grid-template-columns: 168px minmax(0, 1fr);
+}
+
+.studio--slim .studio__side {
+  background: transparent;
+  padding: 24px 10px;
+  gap: 28px;
+}
+
+.studio--slim .studio__word {
+  font-size: 1.5rem;
+  padding: 2px 8px;
+}
+
+.studio--slim .studio__item {
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 0.88rem;
+}
+
+.studio--slim .studio__main {
+  display: flex;
+  justify-content: center;
+  padding: 56px 24px 120px;
+}
+
 .home {
   max-width: 1080px;
   display: flex;
@@ -293,62 +320,33 @@ a.studio__item:hover {
 }
 
 .profile {
-  --ink: #f5f5f7;
-  --muted: #b4b4bb;
-  min-height: 100dvh;
-  color: var(--ink);
-  background: #0a0a0c;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-  position: relative;
-}
-
-.profile::before {
-  content: "";
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  z-index: 2;
-  opacity: 0.04;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='80' height='80' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-}
-
-.profile__bar,
-.profile__body {
-  position: relative;
-  z-index: 3;
-}
-
-.profile__bar {
-  padding: 28px 48px 0;
-}
-
-.profile__body {
-  max-width: 640px;
-  padding: 56px 48px 120px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .profile__head {
   display: flex;
-  gap: 28px;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
 }
 
 .profile__avatar {
-  width: 88px;
-  height: 88px;
+  width: 96px;
+  height: 96px;
   border-radius: 999px;
   background: #1a1a1d;
   display: grid;
   place-items: center;
   color: #fff;
-  font-size: 1.7rem;
+  font-size: 1.85rem;
   font-weight: 500;
   letter-spacing: -0.04em;
-  flex-shrink: 0;
 }
 
-.profile__id h1 {
-  margin: 4px 0 0;
+.profile h1 {
+  margin: 22px 0 0;
   font-family: var(--font-serif), Georgia, "Times New Roman", serif;
   font-size: 2.35rem;
   font-weight: 400;
@@ -365,19 +363,20 @@ a.studio__item:hover {
 }
 
 .profile__bio {
-  margin: 14px 0 0;
+  margin: 16px auto 0;
   color: #c8c8ce;
   font-size: 0.95rem;
   line-height: 1.45;
-  max-width: 36ch;
+  max-width: 34ch;
 }
 
 .profile__genres {
   list-style: none;
-  margin: 16px 0 0;
+  margin: 18px 0 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
 }
 
@@ -393,10 +392,11 @@ a.studio__item:hover {
 
 .profile__links {
   list-style: none;
-  margin: 18px 0 0;
+  margin: 20px 0 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 14px 20px;
 }
 
@@ -419,7 +419,8 @@ a.studio__item:hover {
 }
 
 .prods {
-  margin-top: 80px;
+  margin-top: 72px;
+  text-align: left;
 }
 
 .prods h2 {
@@ -428,12 +429,14 @@ a.studio__item:hover {
   font-weight: 500;
   letter-spacing: -0.02em;
   color: #fff;
+  text-align: center;
 }
 
 .prods__empty {
   margin: 0;
   color: var(--muted);
   font-size: 0.92rem;
+  text-align: center;
 }
 
 .prods__list {
@@ -523,16 +526,10 @@ a.studio__item:hover {
   .home {
     gap: 56px;
   }
-  .profile__bar,
-  .profile__body {
-    padding-left: 20px;
-    padding-right: 20px;
+  .studio--slim {
+    grid-template-columns: 1fr;
   }
-  .profile__head {
-    flex-direction: column;
-    gap: 20px;
-  }
-  .profile__id h1 {
+  .profile h1 {
     font-size: 1.9rem;
   }
   .prods {

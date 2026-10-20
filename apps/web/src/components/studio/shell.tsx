@@ -1,11 +1,23 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { site } from "@/content/site";
 import { IconGrid, IconHome, IconSearch } from "./icons";
 
-export function StudioShell({ children }: { children: React.ReactNode }) {
+export function StudioShell({
+  children,
+  compact,
+}: {
+  children: React.ReactNode;
+  compact?: boolean;
+}) {
+  const path = usePathname();
+  const homeOn = path === "/app";
+
   return (
-    <div className="studio">
+    <div className={compact ? "studio studio--slim" : "studio"}>
       <aside className="studio__side">
         <Link href="/" className="wordmark studio__word">
           {site.name}
@@ -15,7 +27,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
             <IconSearch />
             Search
           </span>
-          <Link href="/app" className="studio__item is-on">
+          <Link href="/app" className={homeOn ? "studio__item is-on" : "studio__item"}>
             <IconHome />
             Home
           </Link>

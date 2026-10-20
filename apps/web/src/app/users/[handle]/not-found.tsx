@@ -1,20 +1,15 @@
 import Link from "next/link";
 
-import { site } from "@/content/site";
+import { StudioShell } from "@/components/studio/shell";
 
 export default function UserNotFound() {
   return (
-    <div className="profile">
-      <header className="profile__bar">
-        <Link href="/app" className="wordmark">
-          {site.name}
-        </Link>
-      </header>
-      <main className="profile__body">
+    <StudioShell compact>
+      <div className="profile">
         <p className="profile__missing">
           No one under that name. <Link href="/app">Back</Link>
         </p>
-      </main>
-    </div>
+      </div>
+    </StudioShell>
   );
 }
