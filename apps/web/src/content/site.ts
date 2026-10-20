@@ -8,15 +8,15 @@ export const site = {
   backgroundImage: "/bg-dither.jpg",
 
   headline: {
-    before: "Every beat tagged for an artist,",
-    accent: "on one open wall.",
+    before: "You made the beat for them.",
+    accent: "Put it on their wall.",
   },
 
   subhead:
-    "Create a page for any artist. Upload your production. They listen in the browser and contact you directly — no marketplace, no middleman.",
+    "Open an artist page, upload the instrumental, tag their name. They play it in the browser and write you if they want it.",
 
   primaryCta: {
-    label: "Enter Walls",
+    label: "See the walls",
     href: "/app",
   },
 } as const;
