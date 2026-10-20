@@ -127,6 +127,20 @@ body:has(.landing-root) {
   --rail: 68px;
 }
 
+.studio.is-landing {
+  display: block;
+  background: transparent;
+}
+
+.studio.is-landing::before,
+.studio.is-landing .studio__side {
+  display: none;
+}
+
+.studio.is-landing .studio__main {
+  padding: 0;
+}
+
 .studio::before {
   content: "";
   pointer-events: none;

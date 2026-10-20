@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Instrument_Serif } from "next/font/google";
 
+import { StudioShell } from "@/components/studio/shell";
 import { site } from "@/content/site";
 
 import "./globals.css";
@@ -30,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable}`}>
       <body className="font-[family-name:var(--font-sans)] antialiased">
-        {children}
+        <StudioShell>{children}</StudioShell>
       </body>
     </html>
   );

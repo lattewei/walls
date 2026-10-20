@@ -2,17 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { IconGrid, IconHome, IconPanel, IconSearch } from "./icons";
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  const landing = path === "/";
   const homeOn = path === "/app";
-  const [folded, setFolded] = useState(false);
+  const [folded, setFolded] = useState(!homeOn);
+
+  useEffect(() => {
+    if (path === "/") return;
+    setFolded(path !== "/app");
+  }, [path]);
+
+  const frame = landing ? "studio is-landing" : folded ? "studio is-folded" : "studio";
 
   return (
-    <div className={folded ? "studio is-folded" : "studio"}>
+    <div className={frame}>
       <aside className="studio__side">
         <button
           type="button"
@@ -38,7 +46,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           </Link>
         </nav>
       </aside>
-      <main className="studio__main">{children}</main>
+      <div className="studio__main">{children}</div>
     </div>
   );
 }
