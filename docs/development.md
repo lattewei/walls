@@ -72,7 +72,7 @@ curl -s http://localhost:8080/api/v1/me \
   -H "Authorization: Bearer <access_token>"
 ```
 
-See [api-auth.md](./api-auth.md). Backlog: [tasks.md](./tasks.md).
+See [api-auth.md](./api-auth.md).
 
 ## Frontend (Next.js)
 

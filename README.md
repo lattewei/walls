@@ -67,20 +67,18 @@ curl http://localhost:8080/api/v1/health
 ├── scripts/
 ├── docker-compose.yml
 ├── .env.example
-├── cdc.md              # Product requirements (spec)
 └── README.md
 ```
 
 ## Documentation
 
-- [Product requirements](./cdc.md)
 - [Architecture](./docs/architecture.md)
 - [Local development](./docs/development.md)
 - [Auth API (handles)](./docs/api-auth.md)
 - [Artists API](./docs/api-artists.md)
 - [Tracks API](./docs/api-tracks.md)
 - [Claims, reports & admin](./docs/api-moderation.md)
-- [Task backlog](./docs/tasks.md)
+- [Image credits](./CREDITS.md)
 
 ## Auth (MVP)
 
