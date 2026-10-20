@@ -20,10 +20,7 @@ export function LandingHero() {
 
       <div className="relative z-10 flex h-full flex-col">
         <header className="rise flex items-center px-5 py-5 md:px-10">
-          <a
-            href="/"
-            className="text-[1.35rem] font-medium tracking-[-0.03em] text-white"
-          >
+          <a href="/" className="wordmark">
             {name}
           </a>
         </header>
@@ -31,7 +28,7 @@ export function LandingHero() {
         <main className="flex flex-1 flex-col items-center justify-center px-5 pb-16 pt-2 text-center">
           <h1 className="rise rise-d2 max-w-[18ch] text-balance text-[2.35rem] font-medium leading-[1.08] tracking-[-0.03em] text-white sm:text-[3.1rem] md:max-w-[22ch] md:text-[3.75rem] lg:text-[4.25rem]">
             <span className="block">{headline.before}</span>
-            <span className="mt-1 block font-[family-name:var(--font-serif)] text-[1.05em] font-normal italic tracking-[-0.02em]">
+            <span className="mt-1 block text-[1.05em] font-normal italic tracking-[-0.02em]">
               {headline.accent}
             </span>
           </h1>

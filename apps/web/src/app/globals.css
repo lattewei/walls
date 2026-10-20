@@ -26,6 +26,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.wordmark {
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 1.55rem;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-decoration: none;
+  line-height: 1;
+}
+
 /* Landing locks scroll; app pages scroll normally */
 body:has(.landing-root) {
   overflow: hidden;
@@ -135,12 +146,8 @@ body:has(.landing-root) {
 }
 
 .studio__word {
-  color: #fff;
-  text-decoration: none;
-  font-weight: 650;
-  letter-spacing: -0.04em;
-  font-size: 1.35rem;
   padding: 0 10px;
+  display: inline-block;
 }
 
 .studio__side nav {

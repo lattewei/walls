@@ -7,7 +7,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="studio">
       <aside className="studio__side">
-        <Link href="/" className="studio__word">
+        <Link href="/" className="wordmark studio__word">
           {site.name}
         </Link>
         <nav>
