@@ -1,5 +1,9 @@
-const base = () =>
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/\/$/, "");
+function apiBase() {
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, "");
+  // Empty / unset: same-origin requests, proxied by Next.js rewrites (no CORS).
+  if (!configured) return "";
+  return configured;
+}
 
 export type ApiError = {
   code: string;
@@ -40,9 +44,11 @@ export async function apiFetch<T>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
+  const url = `${apiBase()}${path}`;
+
   let res: Response;
   try {
-    res = await fetch(`${base()}${path}`, {
+    res = await fetch(url, {
       ...rest,
       headers,
     });
@@ -50,7 +56,7 @@ export async function apiFetch<T>(
     throw new ApiRequestError(
       0,
       "network_error",
-      "Could not reach the API. Is it running on :8080?",
+      "Could not reach the API. Is go run ./cmd/api running, and did you restart next dev?",
     );
   }
 
