@@ -27,8 +27,8 @@ export default function AppHome() {
               );
               return (
                 <li key={tile.id}>
-                  {shelf.kind === "producer" ? (
-                    <Link href={`/users/${tile.id}`} className="tile">
+                  {tile.href ? (
+                    <Link href={tile.href} className="tile">
                       {inner}
                     </Link>
                   ) : (

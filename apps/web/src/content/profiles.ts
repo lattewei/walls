@@ -1,7 +1,8 @@
 export type Prod = {
   id: string;
   title: string;
-  artists: string[];
+  meta: string;
+  metaHref?: string;
   duration: string;
 };
 
@@ -26,10 +27,10 @@ export const profiles: Profile[] = [
     instagram: "https://instagram.com/kay_beats",
     links: [{ label: "SoundCloud", url: "https://soundcloud.com/kay_beats" }],
     tracks: [
-      { id: "k1", title: "Quai", artists: ["Kendrick Lamar"], duration: "2:41" },
-      { id: "k2", title: "After hours", artists: ["The Weeknd"], duration: "3:02" },
-      { id: "k3", title: "Glass", artists: ["Frank Ocean"], duration: "2:18" },
-      { id: "k4", title: "Low moon", artists: ["Billie Eilish"], duration: "2:55" },
+      { id: "k1", title: "Quai", meta: "Kendrick Lamar", metaHref: "/artists/kendrick", duration: "2:41" },
+      { id: "k2", title: "After hours", meta: "The Weeknd", metaHref: "/artists/weeknd", duration: "3:02" },
+      { id: "k3", title: "Glass", meta: "Frank Ocean", metaHref: "/artists/frank", duration: "2:18" },
+      { id: "k4", title: "Low moon", meta: "Billie Eilish", metaHref: "/artists/billie", duration: "2:55" },
     ],
   },
   {
@@ -39,8 +40,8 @@ export const profiles: Profile[] = [
     genres: ["alt", "electronic"],
     links: [],
     tracks: [
-      { id: "l1", title: "Harbour", artists: ["Billie Eilish"], duration: "2:33" },
-      { id: "l2", title: "Wire", artists: ["Daft Punk"], duration: "2:58" },
+      { id: "l1", title: "Harbour", meta: "Billie Eilish", metaHref: "/artists/billie", duration: "2:33" },
+      { id: "l2", title: "Wire", meta: "Daft Punk", metaHref: "/artists/daftpunk", duration: "2:58" },
     ],
   },
   {
@@ -51,8 +52,8 @@ export const profiles: Profile[] = [
     instagram: "https://instagram.com/volt808",
     links: [],
     tracks: [
-      { id: "v1", title: "Grid", artists: ["Daft Punk"], duration: "3:11" },
-      { id: "v2", title: "Kite", artists: ["The Weeknd"], duration: "2:27" },
+      { id: "v1", title: "Grid", meta: "Daft Punk", metaHref: "/artists/daftpunk", duration: "3:11" },
+      { id: "v2", title: "Kite", meta: "The Weeknd", metaHref: "/artists/weeknd", duration: "2:27" },
     ],
   },
   {
@@ -61,7 +62,7 @@ export const profiles: Profile[] = [
     genres: ["rap"],
     links: [{ label: "Bandcamp", url: "https://bandcamp.com" }],
     tracks: [
-      { id: "n1", title: "Ink", artists: ["Kendrick Lamar"], duration: "2:44" },
+      { id: "n1", title: "Ink", meta: "Kendrick Lamar", metaHref: "/artists/kendrick", duration: "2:44" },
     ],
   },
   {

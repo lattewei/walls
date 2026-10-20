@@ -1,8 +1,11 @@
+import { walls } from "./walls";
+
 export type Tile = {
   id: string;
   title: string;
   meta: string;
   image?: string;
+  href?: string;
 };
 
 export type Shelf = {
@@ -17,24 +20,24 @@ export const shelves: Shelf[] = [
     id: "artists",
     title: "Popular artists",
     kind: "artist",
-    tiles: [
-      { id: "kendrick", title: "Kendrick Lamar", meta: "12 prods", image: "/artists/kendrick.jpg" },
-      { id: "billie", title: "Billie Eilish", meta: "9 prods", image: "/artists/billie.jpg" },
-      { id: "daftpunk", title: "Daft Punk", meta: "7 prods", image: "/artists/daftpunk.jpg" },
-      { id: "frank", title: "Frank Ocean", meta: "6 prods", image: "/artists/frank.jpg" },
-      { id: "weeknd", title: "The Weeknd", meta: "11 prods", image: "/artists/weeknd.jpg" },
-    ],
+    tiles: walls.map((w) => ({
+      id: w.slug,
+      title: w.name,
+      meta: `${w.tracks.length} prods`,
+      image: w.image,
+      href: `/artists/${w.slug}`,
+    })),
   },
   {
     id: "beatmakers",
     title: "Popular producers",
     kind: "producer",
     tiles: [
-      { id: "kay_beats", title: "kay_beats", meta: "Los Angeles" },
-      { id: "luna_wav", title: "luna.wav", meta: "London" },
-      { id: "volt808", title: "volt808", meta: "Berlin" },
-      { id: "noirframe", title: "noirframe", meta: "Tokyo" },
-      { id: "moss_prod", title: "moss_prod", meta: "Lagos" },
+      { id: "kay_beats", title: "kay_beats", meta: "Los Angeles", href: "/users/kay_beats" },
+      { id: "luna_wav", title: "luna.wav", meta: "London", href: "/users/luna_wav" },
+      { id: "volt808", title: "volt808", meta: "Berlin", href: "/users/volt808" },
+      { id: "noirframe", title: "noirframe", meta: "Tokyo", href: "/users/noirframe" },
+      { id: "moss_prod", title: "moss_prod", meta: "Lagos", href: "/users/moss_prod" },
     ],
   },
 ];

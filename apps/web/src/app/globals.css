@@ -347,10 +347,8 @@ a.studio__item:hover {
   align-items: center;
 }
 
-.profile__avatar {
-  width: 96px;
-  height: 96px;
-  border-radius: 999px;
+.profile__avatar,
+.profile__cover {
   background: #1a1a1d;
   display: grid;
   place-items: center;
@@ -358,6 +356,27 @@ a.studio__item:hover {
   font-size: 1.85rem;
   font-weight: 500;
   letter-spacing: -0.04em;
+  overflow: hidden;
+}
+
+.profile__avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 999px;
+}
+
+.profile__cover {
+  width: 160px;
+  height: 160px;
+  border-radius: 8px;
+}
+
+.profile__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+  display: block;
 }
 
 .profile h1 {
@@ -468,12 +487,6 @@ a.studio__item:hover {
   align-items: center;
   padding: 14px 8px;
   margin: 0 -8px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
   border-radius: 6px;
 }
 
@@ -483,9 +496,15 @@ a.studio__item:hover {
 }
 
 .prod__play {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
   color: var(--muted);
   display: grid;
   place-items: center;
+  cursor: pointer;
+  padding: 0;
 }
 
 .prod:hover .prod__play,
@@ -506,10 +525,16 @@ a.studio__item:hover {
   font-size: 0.95rem;
 }
 
-.prod__copy em {
+.prod__copy em,
+.prod__meta {
   font-style: normal;
   color: var(--muted);
   font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.prod__meta:hover {
+  color: #fff;
 }
 
 .prod__dur {

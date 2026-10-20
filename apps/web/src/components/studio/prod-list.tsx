@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import type { Prod } from "@/content/profiles";
@@ -18,20 +19,27 @@ export function ProdList({ tracks }: { tracks: Prod[] }) {
         const playing = on === track.id;
         return (
           <li key={track.id}>
-            <button
-              type="button"
-              className={playing ? "prod is-on" : "prod"}
-              onClick={() => setOn(playing ? null : track.id)}
-            >
-              <span className="prod__play" aria-hidden>
+            <div className={playing ? "prod is-on" : "prod"}>
+              <button
+                type="button"
+                className="prod__play"
+                onClick={() => setOn(playing ? null : track.id)}
+                aria-label={playing ? "Pause" : `Play ${track.title}`}
+              >
                 {playing ? <IconPause size={12} /> : <IconPlay size={12} />}
-              </span>
+              </button>
               <span className="prod__copy">
                 <strong>{track.title}</strong>
-                <em>{track.artists.join(", ")}</em>
+                {track.metaHref ? (
+                  <Link href={track.metaHref} className="prod__meta">
+                    {track.meta}
+                  </Link>
+                ) : (
+                  <em>{track.meta}</em>
+                )}
               </span>
               <span className="prod__dur">{track.duration}</span>
-            </button>
+            </div>
           </li>
         );
       })}
