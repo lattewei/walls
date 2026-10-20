@@ -3,7 +3,6 @@ package migrate
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -12,10 +11,9 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-// Runner applies SQL migrations from a filesystem path.
 type Runner struct {
 	DatabaseURL string
-	Path        string // directory containing NNN_name.up.sql files
+	Path        string
 }
 
 func (r Runner) open() (*migrate.Migrate, error) {
@@ -30,7 +28,6 @@ func (r Runner) open() (*migrate.Migrate, error) {
 	return m, nil
 }
 
-// Up applies all pending migrations.
 func (r Runner) Up() error {
 	m, err := r.open()
 	if err != nil {
@@ -45,7 +42,6 @@ func (r Runner) Up() error {
 	return nil
 }
 
-// Down rolls back one migration.
 func (r Runner) Down() error {
 	m, err := r.open()
 	if err != nil {
@@ -60,7 +56,6 @@ func (r Runner) Down() error {
 	return nil
 }
 
-// Version returns the current migration version and dirty flag.
 func (r Runner) Version() (uint, bool, error) {
 	m, err := r.open()
 	if err != nil {
@@ -78,18 +73,21 @@ func (r Runner) Version() (uint, bool, error) {
 	return v, dirty, nil
 }
 
-// fileSourceURL builds a file:// URL compatible with golang-migrate on Windows and Unix.
 func fileSourceURL(path string) (string, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return "", fmt.Errorf("resolve migrations path: %w", err)
 	}
-	// Convert to slash path then URL-encode for drive letters / spaces.
 	slash := filepath.ToSlash(abs)
+
+	// Windows drive path: C:/foo -> file://C:/foo (two slashes after file:).
+	// file:///C:/foo breaks the file source driver on Windows.
+	if len(slash) >= 2 && slash[1] == ':' {
+		return "file://" + slash, nil
+	}
+
 	if !strings.HasPrefix(slash, "/") {
-		// Windows absolute path e.g. C:/foo → /C:/foo
 		slash = "/" + slash
 	}
-	u := url.URL{Scheme: "file", Path: slash}
-	return u.String(), nil
+	return "file://" + slash, nil
 }
