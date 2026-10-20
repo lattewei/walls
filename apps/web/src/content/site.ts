@@ -1,5 +1,5 @@
 /**
- * Landing content — edit this file only.
+ * Landing copy. Edit this file only for the first screen.
  */
 
 export const site = {
