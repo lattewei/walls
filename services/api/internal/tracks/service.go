@@ -10,9 +10,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/openstudio/openstudio/services/api/internal/artists"
-	"github.com/openstudio/openstudio/services/api/internal/domain"
-	"github.com/openstudio/openstudio/services/api/internal/media"
+	"github.com/lattewei/walls/services/api/internal/artists"
+	"github.com/lattewei/walls/services/api/internal/domain"
+	"github.com/lattewei/walls/services/api/internal/media"
 )
 
 const (

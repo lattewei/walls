@@ -2,27 +2,27 @@
 
 ## Prerequisites
 
-1. Go ≥ 1.22
+1. Go â‰¥ 1.22
 2. Local PostgreSQL (native install **or** Docker Compose)
-3. Copy `.env.example` → `.env`
+3. Copy `.env.example` â†’ `.env`
 
 Docker is **not** required. Without a database you can still code and run `go test ./...` (unit tests need no DB).
 
 ## Database
 
-### Option A — PostgreSQL on Windows
+### Option A â€” PostgreSQL on Windows
 
 1. Install [PostgreSQL](https://www.postgresql.org/download/windows/)
 2. Create user/db:
 
 ```sql
-CREATE USER openstudio WITH PASSWORD 'openstudio_dev';
-CREATE DATABASE openstudio OWNER openstudio;
+CREATE USER walls WITH PASSWORD 'walls_dev';
+CREATE DATABASE walls OWNER walls;
 ```
 
 3. Use `DATABASE_URL` in `.env` (project default already matches)
 
-### Option B — Docker Compose (if you have Docker later)
+### Option B â€” Docker Compose (if you have Docker later)
 
 ```bash
 docker compose up -d db
@@ -49,8 +49,8 @@ go run ./cmd/api
 
 Health checks:
 
-- `GET /health` — process up
-- `GET /api/v1/health` — process + DB
+- `GET /health` â€” process up
+- `GET /api/v1/health` â€” process + DB
 
 ## Tests
 

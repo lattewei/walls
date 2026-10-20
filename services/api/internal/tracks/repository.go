@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/openstudio/openstudio/services/api/internal/domain"
+	"github.com/lattewei/walls/services/api/internal/domain"
 )
 
 var ErrNotFound = errors.New("track not found")

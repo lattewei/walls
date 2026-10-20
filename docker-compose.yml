@@ -1,21 +1,21 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: openstudio-db
+    container_name: walls-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-openstudio}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openstudio_dev}
-      POSTGRES_DB: ${POSTGRES_DB:-openstudio}
+      POSTGRES_USER: ${POSTGRES_USER:-walls}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-walls_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-walls}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - openstudio_pgdata:/var/lib/postgresql/data
+      - walls_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openstudio} -d ${POSTGRES_DB:-openstudio}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-walls} -d ${POSTGRES_DB:-walls}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
 volumes:
-  openstudio_pgdata:
+  walls_pgdata:

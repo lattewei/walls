@@ -9,14 +9,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/openstudio/openstudio/services/api/internal/artists"
-	"github.com/openstudio/openstudio/services/api/internal/auth"
-	"github.com/openstudio/openstudio/services/api/internal/config"
-	"github.com/openstudio/openstudio/services/api/internal/httpx"
-	"github.com/openstudio/openstudio/services/api/internal/media"
-	"github.com/openstudio/openstudio/services/api/internal/moderation"
-	"github.com/openstudio/openstudio/services/api/internal/tracks"
-	"github.com/openstudio/openstudio/services/api/internal/users"
+	"github.com/lattewei/walls/services/api/internal/artists"
+	"github.com/lattewei/walls/services/api/internal/auth"
+	"github.com/lattewei/walls/services/api/internal/config"
+	"github.com/lattewei/walls/services/api/internal/httpx"
+	"github.com/lattewei/walls/services/api/internal/media"
+	"github.com/lattewei/walls/services/api/internal/moderation"
+	"github.com/lattewei/walls/services/api/internal/tracks"
+	"github.com/lattewei/walls/services/api/internal/users"
 )
 
 type Server struct {

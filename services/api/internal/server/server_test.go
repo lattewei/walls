@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/openstudio/openstudio/services/api/internal/config"
+	"github.com/lattewei/walls/services/api/internal/config"
 )
 
 func TestProcessHealth(t *testing.T) {

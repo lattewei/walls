@@ -2,7 +2,7 @@
 
 Open-source web platform: open artist pages, tagged beat submissions, in-app listening, and direct contact with producers.
 
-> Product name: **Walls**. Some technical identifiers still use `openstudio` (Go module, local DB user) until a full rename.
+> Product name: **Walls**. Module path: `github.com/lattewei/walls`.
 
 ## About this project
 
@@ -12,7 +12,7 @@ The **backend** (Go API, auth, artists, tracks, Postgres) is the core of the eng
 
 ## The problem
 
-A beatmaker makes a track for Johnny but cannot reach him easily. They create (or open) Johnny’s page, upload the prod, and tag it. Johnny sees every production that mentions him, listens in the browser, and contacts the creator (email / Instagram).
+A beatmaker makes a track for Johnny but cannot reach him easily. They create (or open) Johnny's page, upload the prod, and tag it. Johnny sees every production that mentions him, listens in the browser, and contacts the creator (email / Instagram).
 
 ## Stack
 
@@ -24,9 +24,9 @@ A beatmaker makes a track for Johnny but cannot reach him easily. They create (o
 
 ## Prerequisites
 
-- [Go](https://go.dev/dl/) ≥ 1.22
-- PostgreSQL (native install **or** Docker — optional for coding / `go test`)
-- [Node.js](https://nodejs.org/) ≥ 20 _(frontend, later)_
+- [Go](https://go.dev/dl/) â‰¥ 1.22
+- PostgreSQL (native install **or** Docker â€” optional for coding / `go test`)
+- [Node.js](https://nodejs.org/) â‰¥ 20 _(frontend, later)_
 
 Point `DATABASE_URL` at your local Postgres. See [docs/development.md](./docs/development.md).
 
@@ -66,14 +66,14 @@ curl http://localhost:8080/api/v1/health
 
 ```text
 .
-├── apps/web/           # Next.js frontend (UI built with AI assistance)
-├── services/api/       # Go API
-├── migrations/         # Versioned SQL
-├── docs/               # Architecture, API, dev
-├── scripts/
-├── docker-compose.yml
-├── .env.example
-└── README.md
+â”œâ”€â”€ apps/web/           # Next.js frontend (UI built with AI assistance)
+â”œâ”€â”€ services/api/       # Go API
+â”œâ”€â”€ migrations/         # Versioned SQL
+â”œâ”€â”€ docs/               # Architecture, API, dev
+â”œâ”€â”€ scripts/
+â”œâ”€â”€ docker-compose.yml
+â”œâ”€â”€ .env.example
+â””â”€â”€ README.md
 ```
 
 ## Documentation

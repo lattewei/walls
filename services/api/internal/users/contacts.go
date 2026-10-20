@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/openstudio/openstudio/services/api/internal/domain"
+	"github.com/lattewei/walls/services/api/internal/domain"
 )
 
 func (r *Repository) EnsureProducerProfile(ctx context.Context, userID string) error {

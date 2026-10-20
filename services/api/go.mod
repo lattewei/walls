@@ -1,4 +1,4 @@
-module github.com/openstudio/openstudio/services/api
+module github.com/lattewei/walls/services/api
 
 go 1.22.0
 

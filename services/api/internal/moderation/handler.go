@@ -8,9 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/openstudio/openstudio/services/api/internal/auth"
-	"github.com/openstudio/openstudio/services/api/internal/httpx"
-	"github.com/openstudio/openstudio/services/api/internal/tracks"
+	"github.com/lattewei/walls/services/api/internal/auth"
+	"github.com/lattewei/walls/services/api/internal/httpx"
+	"github.com/lattewei/walls/services/api/internal/tracks"
 )
 
 type Handler struct {

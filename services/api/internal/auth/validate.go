@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/openstudio/openstudio/services/api/internal/users"
+	"github.com/lattewei/walls/services/api/internal/users"
 )
 
 const (

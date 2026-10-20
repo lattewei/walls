@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/openstudio/openstudio/services/api/internal/httpx"
+	"github.com/lattewei/walls/services/api/internal/httpx"
 )
 
 const (

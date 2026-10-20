@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openstudio/openstudio/services/api/internal/domain"
-	"github.com/openstudio/openstudio/services/api/internal/users"
+	"github.com/lattewei/walls/services/api/internal/domain"
+	"github.com/lattewei/walls/services/api/internal/users"
 )
 
 type Service struct {

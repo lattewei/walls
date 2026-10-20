@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/openstudio/openstudio/services/api/internal/config"
-	"github.com/openstudio/openstudio/services/api/internal/envfile"
-	"github.com/openstudio/openstudio/services/api/internal/migrate"
+	"github.com/lattewei/walls/services/api/internal/config"
+	"github.com/lattewei/walls/services/api/internal/envfile"
+	"github.com/lattewei/walls/services/api/internal/migrate"
 )
 
 func main() {
