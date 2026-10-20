@@ -23,15 +23,19 @@ export function StudioShell({
           {site.name}
         </Link>
         <nav>
-          <span className="studio__item studio__item--quiet">
+          <span className="studio__item studio__item--quiet" aria-label="Search">
             <IconSearch />
             Search
           </span>
-          <Link href="/app" className={homeOn ? "studio__item is-on" : "studio__item"}>
+          <Link
+            href="/app"
+            className={homeOn ? "studio__item is-on" : "studio__item"}
+            aria-label="Home"
+          >
             <IconHome />
             Home
           </Link>
-          <Link href="/app#artists" className="studio__item">
+          <Link href="/app#artists" className="studio__item" aria-label="Browse">
             <IconGrid />
             Browse
           </Link>

@@ -204,24 +204,32 @@ a.studio__item:hover {
 }
 
 .studio--slim {
-  grid-template-columns: 168px minmax(0, 1fr);
+  grid-template-columns: 76px minmax(0, 1fr);
 }
 
 .studio--slim .studio__side {
-  background: transparent;
-  padding: 24px 10px;
+  align-items: center;
+  padding: 24px 8px;
   gap: 28px;
 }
 
 .studio--slim .studio__word {
-  font-size: 1.5rem;
-  padding: 2px 8px;
+  font-size: 1.2rem;
+  padding: 0;
+}
+
+.studio--slim .studio__side nav {
+  align-items: center;
 }
 
 .studio--slim .studio__item {
-  gap: 8px;
-  padding: 8px 10px;
-  font-size: 0.88rem;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  gap: 0;
+  font-size: 0;
+  line-height: 0;
 }
 
 .studio--slim .studio__main {
