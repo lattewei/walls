@@ -205,6 +205,18 @@ body:has(.landing-root) {
   opacity: 0;
 }
 
+.studio.is-folded .studio__word {
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  pointer-events: none;
+}
+
+.studio.is-folded .studio__side {
+  gap: 18px;
+}
+
 .studio__item.is-on {
   background: #1c1c1f;
   color: #fff;
