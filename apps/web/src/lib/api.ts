@@ -63,11 +63,12 @@ export async function apiFetch<T>(
       headers,
       cache: "no-store",
     });
-  } catch {
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : "network error";
     throw new ApiRequestError(
       0,
       "network_error",
-      "Could not reach the API. Is go run ./cmd/api running, and did you restart next dev?",
+      `Could not reach the API (${detail}). Check go run ./cmd/api on :8080 and restart npm run dev.`,
     );
   }
 

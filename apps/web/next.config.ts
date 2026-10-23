@@ -6,12 +6,10 @@ const apiOrigin = (process.env.WALLS_API_PROXY ?? "http://127.0.0.1:8080").repla
 );
 
 const nextConfig: NextConfig = {
+  // /api/v1/* is handled by src/app/api/v1/[...path]/route.ts (multipart-safe).
+  // Keep health rewrite only.
   async rewrites() {
     return [
-      {
-        source: "/api/:path*",
-        destination: `${apiOrigin}/api/:path*`,
-      },
       {
         source: "/health",
         destination: `${apiOrigin}/health`,
