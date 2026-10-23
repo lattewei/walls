@@ -834,6 +834,229 @@ a.studio__item:hover {
   cursor: default;
 }
 
+.studio:has(.now) .studio__main {
+  padding-bottom: 120px;
+}
+
+.now {
+  position: fixed;
+  left: var(--rail, 228px);
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 10px 14px 14px;
+  pointer-events: none;
+  transition: left 320ms var(--ease);
+}
+
+.now__inner {
+  pointer-events: auto;
+  height: 72px;
+  border-radius: 12px;
+  background: rgba(28, 28, 30, 0.92);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(220px, 1.4fr) minmax(100px, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.now__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.now__art {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #2a2a2e;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.now__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.now__text {
+  min-width: 0;
+}
+
+.now__text strong,
+.now__text span {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.now__text strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.now__text span {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: #9a9aa3;
+}
+
+.now__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.now__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.now__btn {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #d8d8de;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.now__btn:hover {
+  color: #fff;
+}
+
+.now__btn--main {
+  width: 36px;
+  height: 36px;
+  background: #fff;
+  color: #111;
+}
+
+.now__btn--main:hover {
+  background: #f2f2f2;
+  color: #111;
+}
+
+.now__scrub {
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.now__time {
+  font-size: 0.68rem;
+  color: #8e8e96;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.now__range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #fff 0%,
+    #fff var(--progress, 0%),
+    rgba(255, 255, 255, 0.2) var(--progress, 0%),
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+
+.now__range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+.now__range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 0;
+}
+
+.now__side {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.now__chip {
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #d0d0d6;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.now__chip:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+@media (max-width: 800px) {
+  .now {
+    left: 0;
+  }
+  .now__inner {
+    grid-template-columns: 1fr auto;
+    height: auto;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .now__center {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .now__side {
+    display: none;
+  }
+  .prod {
+    grid-template-columns: 32px minmax(0, 1fr) 44px;
+  }
+  .prod__n {
+    display: none;
+  }
+}
+
 .profile__missing {
   color: var(--muted);
 }
@@ -877,11 +1100,18 @@ a.studio__item:hover {
 .prod {
   width: 100%;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 40px;
-  column-gap: 10px;
+  grid-template-columns: 32px 28px minmax(0, 1fr) 48px;
+  column-gap: 8px;
   align-items: center;
   padding: 11px 6px;
   border-radius: 8px;
+}
+
+.prod__n {
+  color: #6a6a72;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .prod:hover,

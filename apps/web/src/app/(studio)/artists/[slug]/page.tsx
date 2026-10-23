@@ -43,6 +43,8 @@ export default async function ArtistWallPage({ params }: Props) {
 
   if (!artist) notFound();
 
+  const cover = artist.cover_url || artist.avatar_url;
+
   let tracks: ProdRow[] = [];
   try {
     const list = await listArtistTracks(artist.slug);
@@ -52,13 +54,14 @@ export default async function ArtistWallPage({ params }: Props) {
       meta: t.uploader_display_name || t.uploader_handle || "Unknown",
       metaHref: t.uploader_handle ? `/users/${t.uploader_handle}` : undefined,
       duration: formatDuration(t.duration_seconds),
+      durationSeconds: t.duration_seconds,
       audioUrl: t.audio_url,
+      coverUrl: cover || undefined,
+      wallName: artist.name,
     }));
   } catch {
     tracks = [];
   }
-
-  const cover = artist.cover_url || artist.avatar_url;
 
   return (
     <div className="profile">

@@ -54,13 +54,17 @@ export type ProdRow = {
   meta: string;
   metaHref?: string;
   duration: string;
+  durationSeconds?: number | null;
   audioUrl?: string;
+  coverUrl?: string;
+  wallName?: string;
 };
 
 export function formatDuration(seconds?: number | null): string {
-  if (seconds == null || seconds < 0 || !Number.isFinite(seconds)) return "—";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
+  if (seconds == null || seconds < 0 || !Number.isFinite(seconds)) return "0:00";
+  const total = Math.floor(seconds);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
