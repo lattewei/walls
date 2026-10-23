@@ -6,7 +6,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { isApiRequestError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import { listArtists, uploadTrack } from "@/lib/catalog";
+import { listArtists } from "@/lib/catalog";
+import { uploadTrack } from "@/lib/tracks";
 import type { PublicArtist } from "@/lib/types";
 
 function parseTags(raw: string): string[] {
