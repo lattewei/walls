@@ -82,3 +82,9 @@ export async function logout() {
     clearSession();
   }
 }
+
+export function updateStoredUser(partial: Partial<AuthUser>) {
+  const current = getStoredUser();
+  if (!current) return;
+  localStorage.setItem(USER_KEY, JSON.stringify({ ...current, ...partial }));
+}

@@ -207,6 +207,56 @@ type ListResult struct {
 	Offset int                  `json:"offset"`
 }
 
+func (s *Service) ListByUploaderHandle(ctx context.Context, handle string, limit, offset int) (ListResult, error) {
+	handle = strings.TrimSpace(strings.ToLower(handle))
+	if handle == "" {
+		return ListResult{}, ErrNotFound
+	}
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+	if limit > maxLimit {
+		limit = maxLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	rows, total, err := s.repo.ListByUploaderHandle(ctx, handle, limit, offset)
+	if err != nil {
+		return ListResult{}, err
+	}
+	items := make([]domain.PublicTrack, 0, len(rows))
+	for _, t := range rows {
+		items = append(items, t.ToPublic())
+	}
+	return ListResult{Tracks: items, Total: total, Limit: limit, Offset: offset}, nil
+}
+
+type ProducersResult struct {
+	Producers []domain.PublicProfileUser `json:"producers"`
+	Total     int                        `json:"total"`
+	Limit     int                        `json:"limit"`
+	Offset    int                        `json:"offset"`
+}
+
+func (s *Service) ListProducers(ctx context.Context, limit, offset int) (ProducersResult, error) {
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+	if limit > maxLimit {
+		limit = maxLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	rows, total, err := s.repo.ListProducers(ctx, limit, offset)
+	if err != nil {
+		return ProducersResult{}, err
+	}
+	return ProducersResult{Producers: rows, Total: total, Limit: limit, Offset: offset}, nil
+}
+
 func (s *Service) Withdraw(ctx context.Context, trackID, userID string) error {
 	t, err := s.repo.GetByID(ctx, trackID)
 	if errors.Is(err, ErrNotFound) {

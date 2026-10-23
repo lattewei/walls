@@ -35,6 +35,7 @@ export type PublicProfileUser = {
   avatar_url?: string | null;
   bio?: string | null;
   created_at: string;
+  track_count?: number;
 };
 
 export type ExternalLink = {
@@ -58,6 +59,7 @@ export type ProdRow = {
   audioUrl?: string;
   coverUrl?: string;
   wallName?: string;
+  canWithdraw?: boolean;
 };
 
 export function formatDuration(seconds?: number | null): string {

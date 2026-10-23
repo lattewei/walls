@@ -149,6 +149,97 @@ func (r *Repository) ListByArtistSlug(ctx context.Context, slug string, limit, o
 	return out, total, nil
 }
 
+func (r *Repository) ListByUploaderHandle(ctx context.Context, handle string, limit, offset int) ([]domain.Track, int, error) {
+	const countQ = `
+		SELECT COUNT(*)
+		FROM tracks t
+		JOIN users u ON u.id = t.uploader_user_id
+		WHERE lower(u.handle) = lower($1) AND t.status = 'ready' AND u.deleted_at IS NULL
+	`
+	var total int
+	if err := r.pool.QueryRow(ctx, countQ, handle).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count uploader tracks: %w", err)
+	}
+
+	const listQ = `
+		SELECT t.id, t.uploader_user_id, t.title, t.description, t.audio_object_key, t.audio_format,
+		       t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at,
+		       u.handle, u.display_name
+		FROM tracks t
+		JOIN users u ON u.id = t.uploader_user_id
+		WHERE lower(u.handle) = lower($1) AND t.status = 'ready' AND u.deleted_at IS NULL
+		ORDER BY t.created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+	rows, err := r.pool.Query(ctx, listQ, handle, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list uploader tracks: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]domain.Track, 0, limit)
+	for rows.Next() {
+		t, err := scanTrackWithUploader(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	for i := range out {
+		if err := r.attachMeta(ctx, &out[i]); err != nil {
+			return nil, 0, err
+		}
+	}
+	return out, total, nil
+}
+
+func (r *Repository) ListProducers(ctx context.Context, limit, offset int) ([]domain.PublicProfileUser, int, error) {
+	const countQ = `
+		SELECT COUNT(DISTINCT u.id)
+		FROM users u
+		JOIN tracks t ON t.uploader_user_id = u.id AND t.status = 'ready'
+		WHERE u.deleted_at IS NULL
+	`
+	var total int
+	if err := r.pool.QueryRow(ctx, countQ).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count producers: %w", err)
+	}
+
+	const listQ = `
+		SELECT u.id, u.handle, u.display_name, u.avatar_url, u.bio, u.created_at,
+		       COUNT(t.id) AS track_count
+		FROM users u
+		JOIN tracks t ON t.uploader_user_id = u.id AND t.status = 'ready'
+		WHERE u.deleted_at IS NULL
+		GROUP BY u.id, u.handle, u.display_name, u.avatar_url, u.bio, u.created_at
+		ORDER BY track_count DESC, u.created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+	rows, err := r.pool.Query(ctx, listQ, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list producers: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]domain.PublicProfileUser, 0, limit)
+	for rows.Next() {
+		var u domain.PublicProfileUser
+		var created time.Time
+		if err := rows.Scan(&u.ID, &u.Handle, &u.DisplayName, &u.AvatarURL, &u.Bio, &created, &u.TrackCount); err != nil {
+			return nil, 0, fmt.Errorf("scan producer: %w", err)
+		}
+		u.CreatedAt = created.UTC().Format(time.RFC3339)
+		out = append(out, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	return out, total, nil
+}
+
 func (r *Repository) SoftDelete(ctx context.Context, id, uploaderID string) error {
 	const q = `
 		UPDATE tracks

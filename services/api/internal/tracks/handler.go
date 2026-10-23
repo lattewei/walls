@@ -89,6 +89,46 @@ func (h *Handler) ListByArtist(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+func (h *Handler) ListByUploader(c *gin.Context) {
+	limit, err := parseNonNegInt(c.Query("limit"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid limit")
+		return
+	}
+	offset, err := parseNonNegInt(c.Query("offset"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid offset")
+		return
+	}
+
+	res, err := h.svc.ListByUploaderHandle(c.Request.Context(), c.Param("handle"), limit, offset)
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *Handler) ListProducers(c *gin.Context) {
+	limit, err := parseNonNegInt(c.Query("limit"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid limit")
+		return
+	}
+	offset, err := parseNonNegInt(c.Query("offset"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid offset")
+		return
+	}
+
+	res, err := h.svc.ListProducers(c.Request.Context(), limit, offset)
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
 func (h *Handler) Withdraw(c *gin.Context) {
 	uid := auth.UserIDFromContext(c)
 	if err := h.svc.Withdraw(c.Request.Context(), c.Param("id"), uid); err != nil {

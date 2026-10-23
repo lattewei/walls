@@ -108,6 +108,8 @@ func (s *Server) routes() {
 			me.PATCH("", s.authHandler.UpdateMe)
 		}
 
+		v1.GET("/producers", s.tracksHandler.ListProducers)
+		v1.GET("/users/:handle/tracks", s.tracksHandler.ListByUploader)
 		v1.GET("/users/:handle", s.usersHandler.GetByHandle)
 		v1.GET("/media/:key", s.handleMedia)
 

@@ -9,6 +9,7 @@ type PublicProfileUser struct {
 	AvatarURL   *string `json:"avatar_url,omitempty"`
 	Bio         *string `json:"bio,omitempty"`
 	CreatedAt   string  `json:"created_at"`
+	TrackCount  int     `json:"track_count,omitempty"`
 }
 
 type PublicProfile struct {

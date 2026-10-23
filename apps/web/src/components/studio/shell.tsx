@@ -88,6 +88,13 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
                   <IconUser />
                   <span className="studio__label">@{user.handle}</span>
                 </Link>
+                <Link
+                  href="/settings"
+                  className={path === "/settings" ? "studio__item is-on" : "studio__item"}
+                >
+                  <span aria-hidden>✎</span>
+                  <span className="studio__label">Settings</span>
+                </Link>
                 <button type="button" className="studio__item" onClick={onLogout} aria-label="Log out">
                   <span aria-hidden>×</span>
                   <span className="studio__label">Log out</span>

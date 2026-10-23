@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 
-import { ProdList } from "@/components/studio/prod-list";
+import { EditProfileGate } from "@/components/edit-profile-gate";
+import { ProfileTracks } from "@/components/profile-tracks";
 import { isApiRequestError } from "@/lib/api";
-import { getPublicProfile } from "@/lib/catalog";
+import { getPublicProfile, listUserTracks } from "@/lib/catalog";
 import { site } from "@/content/site";
+import { formatDuration, type ProdRow } from "@/lib/types";
 
 type Props = {
   params: Promise<{ handle: string }>;
@@ -48,6 +50,26 @@ export default async function UserPage({ params }: Props) {
     Boolean(contacts.instagram_url) ||
     (contacts.other_links?.length ?? 0) > 0;
 
+  let tracks: ProdRow[] = [];
+  try {
+    const list = await listUserTracks(user.handle);
+    tracks = list.tracks.map((t) => {
+      const wall = t.artist_slugs?.[0];
+      return {
+        id: t.id,
+        title: t.title,
+        meta: wall ?? "Wall",
+        metaHref: wall ? `/artists/${wall}` : undefined,
+        duration: formatDuration(t.duration_seconds),
+        durationSeconds: t.duration_seconds,
+        audioUrl: t.audio_url,
+        wallName: wall,
+      };
+    });
+  } catch {
+    tracks = [];
+  }
+
   return (
     <div className="profile">
       <section className="profile__head">
@@ -87,11 +109,14 @@ export default async function UserPage({ params }: Props) {
             ))}
           </ul>
         ) : null}
+        <div className="profile__actions">
+          <EditProfileGate handle={user.handle} />
+        </div>
       </section>
 
       <section className="prods">
         <h2>Productions</h2>
-        <ProdList tracks={[]} />
+        <ProfileTracks handle={user.handle} tracks={tracks} />
       </section>
     </div>
   );

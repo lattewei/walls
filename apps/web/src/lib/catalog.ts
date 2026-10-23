@@ -43,6 +43,57 @@ export async function getPublicProfile(handle: string) {
   }
 }
 
+export async function listUserTracks(handle: string, limit = 50) {
+  return apiFetch<{
+    tracks: PublicTrack[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/api/v1/users/${encodeURIComponent(handle)}/tracks?limit=${limit}&offset=0`);
+}
+
+export async function listProducers(limit = 24) {
+  return apiFetch<{
+    producers: PublicProfileUser[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/api/v1/producers?limit=${limit}&offset=0`);
+}
+
+export async function withdrawTrack(trackId: string, token: string) {
+  return apiFetch<{ status: string }>(`/api/v1/tracks/${encodeURIComponent(trackId)}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export type UpdateMeInput = {
+  display_name?: string;
+  bio?: string | null;
+  public_contact_email?: string | null;
+  instagram_url?: string | null;
+  other_links?: { label: string; url: string }[] | null;
+};
+
+export async function getMe(token: string) {
+  return apiFetch<{
+    user: PublicProfileUser & { role?: string };
+    contacts: PublicContacts;
+  }>("/api/v1/me", { token });
+}
+
+export async function updateMe(input: UpdateMeInput, token: string) {
+  return apiFetch<{
+    user: PublicProfileUser & { role?: string };
+    contacts: PublicContacts;
+  }>("/api/v1/me", {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(input),
+  });
+}
+
 export type CreateArtistInput = {
   name: string;
   slug?: string;

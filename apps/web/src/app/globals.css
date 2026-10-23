@@ -1100,11 +1100,43 @@ a.studio__item:hover {
 .prod {
   width: 100%;
   display: grid;
-  grid-template-columns: 32px 28px minmax(0, 1fr) 48px;
+  grid-template-columns: 32px 28px minmax(0, 1fr) 48px auto;
   column-gap: 8px;
   align-items: center;
   padding: 11px 6px;
   border-radius: 8px;
+}
+
+.prod__rm {
+  border: 0;
+  background: transparent;
+  color: #8e8e96;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.prod__rm:hover:not(:disabled) {
+  color: #f0a8a8;
+}
+
+.prod__rm:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.prods__err {
+  margin: 0 0 10px;
+  color: #f0a8a8;
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.settings__ok {
+  margin: 0;
+  color: #a8f0b8;
+  font-size: 0.86rem;
 }
 
 .prod__n {
