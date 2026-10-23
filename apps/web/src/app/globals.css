@@ -490,6 +490,36 @@ a.studio__item:hover {
   gap: 14px;
 }
 
+.wall-form__cover {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wall-form__preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #1a1a1d;
+  display: grid;
+  place-items: center;
+  color: #6a6a72;
+  font-size: 1.6rem;
+}
+
+.wall-form__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.wall-form__cover input[type="file"] {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .auth__field textarea {
   width: 100%;
   box-sizing: border-box;

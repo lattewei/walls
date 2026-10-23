@@ -22,6 +22,8 @@ export function CreateWallForm() {
   const [slug, setSlug] = useState("");
   const [bio, setBio] = useState("");
   const [genres, setGenres] = useState("");
+  const [cover, setCover] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
@@ -33,6 +35,16 @@ export function CreateWallForm() {
     }
     setReady(true);
   }, [router]);
+
+  useEffect(() => {
+    if (!cover) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(cover);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [cover]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -51,6 +63,7 @@ export function CreateWallForm() {
           slug: slug || undefined,
           bio: bio || undefined,
           genres: parseGenres(genres),
+          cover,
         },
         token,
       );
@@ -87,6 +100,34 @@ export function CreateWallForm() {
 
         <form onSubmit={onSubmit}>
           <label className="auth__field">
+            <span>Cover photo (optional)</span>
+            <div className="wall-form__cover">
+              <div className="wall-form__preview" aria-hidden>
+                {preview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={preview} alt="" />
+                ) : (
+                  <span>+</span>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  if (file && file.size > 5 * 1024 * 1024) {
+                    setError("Cover image must be under 5MB");
+                    setCover(null);
+                    return;
+                  }
+                  setError(null);
+                  setCover(file);
+                }}
+              />
+            </div>
+          </label>
+
+          <label className="auth__field">
             <span>Artist name</span>
             <input
               name="name"
@@ -95,7 +136,6 @@ export function CreateWallForm() {
               placeholder="Kendrick Lamar"
               required
               maxLength={80}
-              autoFocus
             />
           </label>
 

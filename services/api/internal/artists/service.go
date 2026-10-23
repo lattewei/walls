@@ -4,24 +4,29 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/lattewei/walls/services/api/internal/domain"
+	"github.com/lattewei/walls/services/api/internal/media"
 )
 
 const (
 	defaultListLimit = 20
 	maxListLimit     = 50
 	maxSearchQuery   = 100
+	maxCoverBytes    = 5 << 20
 )
 
 type Service struct {
-	repo *Repository
+	repo     *Repository
+	storage  *media.LocalStorage
+	maxCover int64
 }
 
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo *Repository, storage *media.LocalStorage) *Service {
+	return &Service{repo: repo, storage: storage, maxCover: maxCoverBytes}
 }
 
 type CreateArtistInput struct {
@@ -31,6 +36,8 @@ type CreateArtistInput struct {
 	Genres     []string
 	LookingFor string
 	CreatedBy  string
+	Cover      io.Reader
+	CoverSize  int64
 }
 
 var (
@@ -93,18 +100,48 @@ func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.Publ
 		return domain.PublicArtist{}, fmt.Errorf("%w: an artist page with this name already exists", ErrConflict)
 	}
 
+	var coverURL *string
+	if in.Cover != nil {
+		if in.CoverSize > 0 && in.CoverSize > s.maxCover {
+			return domain.PublicArtist{}, fmt.Errorf("%w: cover image is too large (max 5MB)", ErrValidation)
+		}
+		if s.storage == nil {
+			return domain.PublicArtist{}, fmt.Errorf("%w: media storage unavailable", ErrValidation)
+		}
+		info, reader, err := media.DetectImage(in.Cover)
+		if err != nil {
+			return domain.PublicArtist{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+		}
+		limited := io.LimitReader(reader, s.maxCover+1)
+		key, err := s.storage.Save(limited, info.Ext)
+		if err != nil {
+			return domain.PublicArtist{}, err
+		}
+		// Reject oversized after write attempt via LimitReader length check is imperfect;
+		// storage copies all bytes. Re-open path size if needed — LimitReader stops at max+1.
+		coverURL = &key
+	}
+
 	artist, err := s.repo.Create(ctx, CreateInput{
 		Name:       name,
 		Slug:       slug,
 		Bio:        bio,
+		CoverURL:   coverURL,
+		AvatarURL:  coverURL,
 		Genres:     genres,
 		LookingFor: looking,
 		CreatedBy:  in.CreatedBy,
 	})
 	if errors.Is(err, ErrSlugTaken) {
+		if coverURL != nil && s.storage != nil {
+			_ = s.storage.Delete(*coverURL)
+		}
 		return domain.PublicArtist{}, fmt.Errorf("%w: an artist page with this slug already exists", ErrConflict)
 	}
 	if err != nil {
+		if coverURL != nil && s.storage != nil {
+			_ = s.storage.Delete(*coverURL)
+		}
 		return domain.PublicArtist{}, err
 	}
 

@@ -20,10 +20,11 @@ import (
 )
 
 type Server struct {
-	cfg    config.Config
-	log    *slog.Logger
-	pool   *pgxpool.Pool
-	engine *gin.Engine
+	cfg     config.Config
+	log     *slog.Logger
+	pool    *pgxpool.Pool
+	engine  *gin.Engine
+	storage *media.LocalStorage
 
 	authHandler       *auth.Handler
 	authMW            *auth.Middleware
@@ -63,7 +64,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
 	tokens := auth.NewTokenService(cfg.JWTSecret, cfg.JWTAccessTTL)
 	authSvc := auth.NewService(userRepo, tokens)
 	usersSvc := users.NewService(userRepo)
-	artistsSvc := artists.NewService(artistRepo)
+	artistsSvc := artists.NewService(artistRepo, storage)
 	tracksSvc := tracks.NewService(trackRepo, artistRepo, storage, cfg.MediaMaxBytes, cfg.TrackDailyLimit)
 	modSvc := moderation.NewService(reportRepo)
 
@@ -72,6 +73,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
 		log:               log,
 		pool:              pool,
 		engine:            r,
+		storage:           storage,
 		authHandler:       auth.NewHandler(authSvc),
 		authMW:            auth.NewMiddleware(tokens),
 		usersHandler:      users.NewHandler(usersSvc),
@@ -107,6 +109,7 @@ func (s *Server) routes() {
 		}
 
 		v1.GET("/users/:handle", s.usersHandler.GetByHandle)
+		v1.GET("/media/:key", s.handleMedia)
 
 		artistsGroup := v1.Group("/artists")
 		{
@@ -188,4 +191,27 @@ func (s *Server) handleHealth(c *gin.Context) {
 		"service": "walls-api",
 		"db":      "ok",
 	})
+}
+
+func (s *Server) handleMedia(c *gin.Context) {
+	key := c.Param("key")
+	if s.storage == nil {
+		httpx.NotFound(c, "media not found")
+		return
+	}
+	f, err := s.storage.Open(key)
+	if err != nil {
+		httpx.NotFound(c, "media not found")
+		return
+	}
+	defer f.Close()
+
+	stat, err := f.Stat()
+	if err != nil {
+		httpx.Internal(c)
+		return
+	}
+	c.Header("Content-Type", media.MIMEFromKey(key))
+	c.Header("Cache-Control", "public, max-age=86400")
+	http.ServeContent(c.Writer, c.Request, stat.Name(), stat.ModTime(), f)
 }

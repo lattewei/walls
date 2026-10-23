@@ -31,6 +31,8 @@ type CreateInput struct {
 	Name       string
 	Slug       string
 	Bio        *string
+	CoverURL   *string
+	AvatarURL  *string
 	Genres     []string
 	LookingFor *string
 	CreatedBy  string
@@ -43,13 +45,13 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Artist,
 	}
 
 	const q = `
-		INSERT INTO artists (name, slug, bio, genres, looking_for, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO artists (name, slug, bio, avatar_url, cover_url, genres, looking_for, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, name, slug, bio, avatar_url, cover_url, genres, looking_for,
 		          claim_status, created_by, claimed_by, created_at, updated_at
 	`
 	a, err := scanArtist(r.pool.QueryRow(ctx, q,
-		in.Name, in.Slug, in.Bio, genres, in.LookingFor, in.CreatedBy,
+		in.Name, in.Slug, in.Bio, in.AvatarURL, in.CoverURL, genres, in.LookingFor, in.CreatedBy,
 	))
 	if err != nil {
 		var pgErr *pgconn.PgError

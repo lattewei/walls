@@ -29,21 +29,46 @@ type createRequest struct {
 }
 
 func (h *Handler) Create(c *gin.Context) {
-	var req createRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.BadRequest(c, "invalid JSON body")
-		return
+	uid := auth.UserIDFromContext(c)
+	ct := c.ContentType()
+
+	var in CreateArtistInput
+	in.CreatedBy = uid
+
+	if strings.HasPrefix(ct, "multipart/form-data") {
+		in.Name = c.PostForm("name")
+		in.Slug = c.PostForm("slug")
+		in.Bio = c.PostForm("bio")
+		in.LookingFor = c.PostForm("looking_for")
+		in.Genres = splitCSV(c.PostForm("genres"))
+		if len(in.Genres) == 0 {
+			in.Genres = c.PostFormArray("genres")
+		}
+
+		if fh, err := c.FormFile("cover"); err == nil && fh != nil {
+			f, err := fh.Open()
+			if err != nil {
+				httpx.BadRequest(c, "cannot read cover image")
+				return
+			}
+			defer f.Close()
+			in.Cover = f
+			in.CoverSize = fh.Size
+		}
+	} else {
+		var req createRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			httpx.BadRequest(c, "invalid JSON body")
+			return
+		}
+		in.Name = req.Name
+		in.Slug = req.Slug
+		in.Bio = req.Bio
+		in.Genres = req.Genres
+		in.LookingFor = req.LookingFor
 	}
 
-	uid := auth.UserIDFromContext(c)
-	artist, err := h.svc.Create(c.Request.Context(), CreateArtistInput{
-		Name:       req.Name,
-		Slug:       req.Slug,
-		Bio:        req.Bio,
-		Genres:     req.Genres,
-		LookingFor: req.LookingFor,
-		CreatedBy:  uid,
-	})
+	artist, err := h.svc.Create(c.Request.Context(), in)
 	if err != nil {
 		h.mapError(c, err)
 		return
@@ -136,6 +161,21 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, res)
+}
+
+func splitCSV(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func parseNonNegInt(raw string, fallback int) (int, error) {

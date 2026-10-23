@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 const (
 	ClaimUnclaimed = "unclaimed"
@@ -68,8 +71,8 @@ func (a Artist) ToPublic() PublicArtist {
 		Name:        a.Name,
 		Slug:        a.Slug,
 		Bio:         a.Bio,
-		AvatarURL:   a.AvatarURL,
-		CoverURL:    a.CoverURL,
+		AvatarURL:   publicMediaURL(a.AvatarURL),
+		CoverURL:    publicMediaURL(a.CoverURL),
 		Genres:      genres,
 		LookingFor:  a.LookingFor,
 		ClaimStatus: status,
@@ -77,4 +80,19 @@ func (a Artist) ToPublic() PublicArtist {
 		IsOfficial:  status == ClaimClaimed,
 		CreatedAt:   a.CreatedAt.UTC().Format(time.RFC3339),
 	}
+}
+
+func publicMediaURL(raw *string) *string {
+	if raw == nil {
+		return nil
+	}
+	v := strings.TrimSpace(*raw)
+	if v == "" {
+		return nil
+	}
+	if strings.HasPrefix(v, "http://") || strings.HasPrefix(v, "https://") || strings.HasPrefix(v, "/") {
+		return &v
+	}
+	u := "/api/v1/media/" + v
+	return &u
 }

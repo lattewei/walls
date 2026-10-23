@@ -49,9 +49,27 @@ export type CreateArtistInput = {
   bio?: string;
   genres?: string[];
   looking_for?: string;
+  cover?: File | null;
 };
 
 export async function createArtist(input: CreateArtistInput, token: string) {
+  if (input.cover) {
+    const form = new FormData();
+    form.set("name", input.name.trim());
+    if (input.slug?.trim()) form.set("slug", input.slug.trim().toLowerCase());
+    if (input.bio?.trim()) form.set("bio", input.bio.trim());
+    if (input.looking_for?.trim()) form.set("looking_for", input.looking_for.trim());
+    if (input.genres?.length) form.set("genres", input.genres.join(","));
+    form.set("cover", input.cover);
+
+    const data = await apiFetch<{ artist: PublicArtist }>("/api/v1/artists", {
+      method: "POST",
+      token,
+      body: form,
+    });
+    return data.artist;
+  }
+
   const body: Record<string, unknown> = {
     name: input.name.trim(),
   };
