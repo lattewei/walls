@@ -41,7 +41,7 @@ export function PlayerBar() {
           </div>
           <div className="now__text">
             <strong>{track.title}</strong>
-            <span>{track.wallName || track.meta}</span>
+            <span>{track.meta}</span>
           </div>
         </div>
 
