@@ -94,6 +94,20 @@ export async function updateMe(input: UpdateMeInput, token: string) {
   });
 }
 
+export async function uploadAvatar(file: File, token: string) {
+  const form = new FormData();
+  form.set("avatar", file);
+  const data = await apiFetch<{ user: PublicProfileUser & { role?: string } }>(
+    "/api/v1/me/avatar",
+    {
+      method: "POST",
+      token,
+      body: form,
+    },
+  );
+  return data.user;
+}
+
 export type CreateArtistInput = {
   name: string;
   slug?: string;

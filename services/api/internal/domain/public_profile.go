@@ -22,7 +22,7 @@ func (u User) ToPublicProfile() PublicProfileUser {
 		ID:          u.ID,
 		Handle:      u.Handle,
 		DisplayName: u.DisplayName,
-		AvatarURL:   u.AvatarURL,
+		AvatarURL:   publicMediaURL(u.AvatarURL),
 		Bio:         u.Bio,
 		CreatedAt:   u.CreatedAt.UTC().Format(time.RFC3339),
 	}

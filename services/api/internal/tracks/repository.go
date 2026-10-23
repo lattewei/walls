@@ -226,13 +226,16 @@ func (r *Repository) ListProducers(ctx context.Context, limit, offset int) ([]do
 
 	out := make([]domain.PublicProfileUser, 0, limit)
 	for rows.Next() {
-		var u domain.PublicProfileUser
+		var u domain.User
 		var created time.Time
-		if err := rows.Scan(&u.ID, &u.Handle, &u.DisplayName, &u.AvatarURL, &u.Bio, &created, &u.TrackCount); err != nil {
+		var trackCount int
+		if err := rows.Scan(&u.ID, &u.Handle, &u.DisplayName, &u.AvatarURL, &u.Bio, &created, &trackCount); err != nil {
 			return nil, 0, fmt.Errorf("scan producer: %w", err)
 		}
-		u.CreatedAt = created.UTC().Format(time.RFC3339)
-		out = append(out, u)
+		u.CreatedAt = created
+		p := u.ToPublicProfile()
+		p.TrackCount = trackCount
+		out = append(out, p)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, err

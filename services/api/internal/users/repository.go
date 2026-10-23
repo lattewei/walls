@@ -114,6 +114,25 @@ func (r *Repository) UpdateProfile(ctx context.Context, id string, displayName s
 	return u, nil
 }
 
+func (r *Repository) UpdateAvatar(ctx context.Context, id string, avatarURL *string) (domain.User, error) {
+	const q = `
+		UPDATE users
+		SET avatar_url = $2,
+		    updated_at = now()
+		WHERE id = $1 AND deleted_at IS NULL
+		RETURNING id, handle, password_hash, display_name, avatar_url, bio, role,
+		          created_at, updated_at, deleted_at
+	`
+	u, err := scanUser(r.pool.QueryRow(ctx, q, id, avatarURL))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.User{}, ErrNotFound
+	}
+	if err != nil {
+		return domain.User{}, fmt.Errorf("update avatar: %w", err)
+	}
+	return u, nil
+}
+
 type scannable interface {
 	Scan(dest ...any) error
 }

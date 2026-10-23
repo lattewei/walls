@@ -63,7 +63,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
 
 	tokens := auth.NewTokenService(cfg.JWTSecret, cfg.JWTAccessTTL)
 	authSvc := auth.NewService(userRepo, tokens)
-	usersSvc := users.NewService(userRepo)
+	usersSvc := users.NewService(userRepo, storage)
 	artistsSvc := artists.NewService(artistRepo, storage)
 	tracksSvc := tracks.NewService(trackRepo, artistRepo, storage, cfg.MediaMaxBytes, cfg.TrackDailyLimit)
 	modSvc := moderation.NewService(reportRepo)
@@ -106,6 +106,7 @@ func (s *Server) routes() {
 		{
 			me.GET("", s.authHandler.Me)
 			me.PATCH("", s.authHandler.UpdateMe)
+			me.POST("/avatar", s.usersHandler.UploadAvatar)
 		}
 
 		v1.GET("/producers", s.tracksHandler.ListProducers)

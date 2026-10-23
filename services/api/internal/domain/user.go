@@ -30,7 +30,7 @@ func (u User) ToPublic() PublicUser {
 		ID:          u.ID,
 		Handle:      u.Handle,
 		DisplayName: u.DisplayName,
-		AvatarURL:   u.AvatarURL,
+		AvatarURL:   publicMediaURL(u.AvatarURL),
 		Bio:         u.Bio,
 		Role:        u.Role,
 		CreatedAt:   u.CreatedAt.UTC().Format(time.RFC3339),

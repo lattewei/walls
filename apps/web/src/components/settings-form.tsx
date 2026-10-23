@@ -6,7 +6,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { isApiRequestError } from "@/lib/api";
 import { getToken, getStoredUser, updateStoredUser } from "@/lib/auth";
-import { getMe, updateMe } from "@/lib/catalog";
+import { getMe, updateMe, uploadAvatar } from "@/lib/catalog";
 
 export function SettingsForm() {
   const router = useRouter();
@@ -17,6 +17,9 @@ export function SettingsForm() {
   const [instagram, setInstagram] = useState("");
   const [linkLabel, setLinkLabel] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,6 +39,7 @@ export function SettingsForm() {
         const me = await getMe(token);
         setDisplayName(me.user.display_name || stored.display_name);
         setBio(me.user.bio ?? "");
+        setAvatarUrl(me.user.avatar_url ?? null);
         setEmail(me.contacts.public_contact_email ?? "");
         setInstagram(me.contacts.instagram_url ?? "");
         const first = me.contacts.other_links?.[0];
@@ -51,6 +55,16 @@ export function SettingsForm() {
     })();
   }, [router]);
 
+  useEffect(() => {
+    if (!avatarFile) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(avatarFile);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [avatarFile]);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -63,6 +77,15 @@ export function SettingsForm() {
 
     setBusy(true);
     try {
+      if (avatarFile) {
+        if (avatarFile.size > 5 * 1024 * 1024) {
+          throw new Error("Avatar must be under 5MB");
+        }
+        const user = await uploadAvatar(avatarFile, token);
+        setAvatarUrl(user.avatar_url ?? null);
+        setAvatarFile(null);
+      }
+
       const other_links =
         linkLabel.trim() && linkUrl.trim()
           ? [{ label: linkLabel.trim(), url: linkUrl.trim() }]
@@ -83,10 +106,11 @@ export function SettingsForm() {
         display_name: res.user.display_name,
         handle: res.user.handle,
       });
+      if (res.user.avatar_url) setAvatarUrl(res.user.avatar_url);
       setOk("Saved.");
       router.refresh();
     } catch (err) {
-      setError(isApiRequestError(err) ? err.message : "Could not save profile.");
+      setError(isApiRequestError(err) ? err.message : err instanceof Error ? err.message : "Could not save profile.");
     } finally {
       setBusy(false);
     }
@@ -100,6 +124,9 @@ export function SettingsForm() {
     );
   }
 
+  const shown = preview || avatarUrl;
+  const initial = displayName.slice(0, 1).toUpperCase() || handle.slice(0, 1).toUpperCase() || "?";
+
   return (
     <div className="wall-form">
       <div className="wall-form__inner">
@@ -109,6 +136,34 @@ export function SettingsForm() {
         </p>
 
         <form onSubmit={onSubmit}>
+          <label className="auth__field">
+            <span>Profile photo</span>
+            <div className="wall-form__cover wall-form__cover--round">
+              <div className="wall-form__preview wall-form__preview--round" aria-hidden>
+                {shown ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={shown} alt="" />
+                ) : (
+                  <span>{initial}</span>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  if (file && file.size > 5 * 1024 * 1024) {
+                    setError("Avatar must be under 5MB");
+                    setAvatarFile(null);
+                    return;
+                  }
+                  setError(null);
+                  setAvatarFile(file);
+                }}
+              />
+            </div>
+          </label>
+
           <label className="auth__field">
             <span>Display name</span>
             <input

@@ -515,6 +515,16 @@ a.studio__item:hover {
   display: block;
 }
 
+.wall-form__preview--round {
+  border-radius: 999px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.wall-form__cover--round {
+  align-items: flex-start;
+}
+
 .wall-form__cover input[type="file"] {
   color: var(--muted);
   font-size: 0.85rem;
