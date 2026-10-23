@@ -42,3 +42,28 @@ export async function getPublicProfile(handle: string) {
     throw err;
   }
 }
+
+export type CreateArtistInput = {
+  name: string;
+  slug?: string;
+  bio?: string;
+  genres?: string[];
+  looking_for?: string;
+};
+
+export async function createArtist(input: CreateArtistInput, token: string) {
+  const body: Record<string, unknown> = {
+    name: input.name.trim(),
+  };
+  if (input.slug?.trim()) body.slug = input.slug.trim().toLowerCase();
+  if (input.bio?.trim()) body.bio = input.bio.trim();
+  if (input.looking_for?.trim()) body.looking_for = input.looking_for.trim();
+  if (input.genres?.length) body.genres = input.genres;
+
+  const data = await apiFetch<{ artist: PublicArtist }>("/api/v1/artists", {
+    method: "POST",
+    token,
+    body: JSON.stringify(body),
+  });
+  return data.artist;
+}

@@ -419,7 +419,98 @@ a.studio__item:hover {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 72px;
+  gap: 56px;
+}
+
+.home__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.home__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+.home__cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.home__cta:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.shelf__link {
+  color: #fff;
+  text-decoration: none;
+}
+
+.shelf__link:hover {
+  text-decoration: underline;
+}
+
+.wall-form {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.wall-form__inner h1 {
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+.wall-form__hint {
+  margin: 0 0 22px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.wall-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth__field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #141416;
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  resize: vertical;
+  min-height: 88px;
+}
+
+.auth__field textarea:focus {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.auth__field textarea::placeholder {
+  color: #5c5c64;
 }
 
 .shelf h2 {

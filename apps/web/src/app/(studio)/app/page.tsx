@@ -20,12 +20,25 @@ export default async function AppHome() {
 
   return (
     <div className="home">
+      <div className="home__bar">
+        <h1 className="home__title">Walls</h1>
+        <Link href="/artists/new" className="home__cta">
+          Create a wall
+        </Link>
+      </div>
+
       <section id="artists" className="shelf shelf--artist">
         <h2>Popular artists</h2>
         {loadError ? (
           <p className="shelf__empty">{loadError}</p>
         ) : artists.length === 0 ? (
-          <p className="shelf__empty">No walls yet. Create one after you log in.</p>
+          <p className="shelf__empty">
+            No walls yet.{" "}
+            <Link href="/artists/new" className="shelf__link">
+              Create the first one
+            </Link>
+            .
+          </p>
         ) : (
           <ul>
             {artists.map((artist) => {

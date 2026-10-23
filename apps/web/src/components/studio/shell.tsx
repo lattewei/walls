@@ -65,6 +65,13 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           {user ? (
             <>
               <Link
+                href="/artists/new"
+                className={path === "/artists/new" ? "studio__item is-on" : "studio__item"}
+              >
+                <span aria-hidden>+</span>
+                <span className="studio__label">New wall</span>
+              </Link>
+              <Link
                 href={`/users/${user.handle}`}
                 className={path.startsWith("/users/") ? "studio__item is-on" : "studio__item"}
               >

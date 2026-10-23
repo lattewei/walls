@@ -83,8 +83,8 @@ export default async function ArtistWallPage({ params }: Props) {
             ))}
           </ul>
         ) : null}
-        <Link href="/login" className="profile__action">
-          Add a production
+        <Link href="/artists/new" className="profile__action">
+          Create another wall
         </Link>
       </section>
 
