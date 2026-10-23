@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import { isApiRequestError } from "@/lib/api";
@@ -11,6 +11,8 @@ type Mode = "login" | "register";
 
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
+  const search = useSearchParams();
+  const nextPath = search.get("next") || "/app";
   const [handle, setHandle] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -27,7 +29,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       } else {
         await register(handle.trim(), password, displayName.trim() || undefined);
       }
-      router.push("/app");
+      router.push(nextPath.startsWith("/") ? nextPath : "/app");
       router.refresh();
     } catch (err) {
       if (isApiRequestError(err)) {

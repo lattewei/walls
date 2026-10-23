@@ -770,25 +770,68 @@ a.studio__item:hover {
   border-bottom-color: rgba(255, 255, 255, 0.35);
 }
 
-.profile__action {
+.profile__actions {
   margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.profile__action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 8px 16px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: transparent;
-  color: #e8e8ec;
+  background: #fff;
+  color: #111;
   text-decoration: none;
   font-size: 0.86rem;
   font-weight: 500;
 }
 
 .profile__action:hover {
+  background: #f2f2f2;
+}
+
+.profile__action--ghost {
+  background: transparent;
+  color: #e8e8ec;
+}
+
+.profile__action--ghost:hover {
   border-color: rgba(255, 255, 255, 0.28);
   color: #fff;
   background: rgba(255, 255, 255, 0.04);
+}
+
+.auth__field select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #141416;
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.auth__field select:focus {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.upload__file {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.prod__play:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .profile__missing {

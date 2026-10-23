@@ -83,9 +83,14 @@ export default async function ArtistWallPage({ params }: Props) {
             ))}
           </ul>
         ) : null}
-        <Link href="/artists/new" className="profile__action">
-          Create another wall
-        </Link>
+        <div className="profile__actions">
+          <Link href={`/upload?artist=${artist.slug}`} className="profile__action">
+            Add a production
+          </Link>
+          <Link href="/artists/new" className="profile__action profile__action--ghost">
+            Create another wall
+          </Link>
+        </div>
       </section>
 
       <section className="prods">
