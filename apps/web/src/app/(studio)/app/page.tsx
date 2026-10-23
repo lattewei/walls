@@ -1,45 +1,64 @@
 import Link from "next/link";
 
-import { shelves } from "@/content/home";
+import { isApiRequestError } from "@/lib/api";
+import { listArtists } from "@/lib/catalog";
 
-export default function AppHome() {
+export const dynamic = "force-dynamic";
+
+export default async function AppHome() {
+  let artists: Awaited<ReturnType<typeof listArtists>>["artists"] = [];
+  let loadError: string | null = null;
+
+  try {
+    const data = await listArtists(24);
+    artists = data.artists;
+  } catch (err) {
+    loadError = isApiRequestError(err)
+      ? err.message
+      : "Could not load artists. Is the API running?";
+  }
+
   return (
     <div className="home">
-      {shelves.map((shelf) => (
-        <section key={shelf.id} id={shelf.id} className={`shelf shelf--${shelf.kind}`}>
-          <h2>{shelf.title}</h2>
+      <section id="artists" className="shelf shelf--artist">
+        <h2>Popular artists</h2>
+        {loadError ? (
+          <p className="shelf__empty">{loadError}</p>
+        ) : artists.length === 0 ? (
+          <p className="shelf__empty">No walls yet. Create one after you log in.</p>
+        ) : (
           <ul>
-            {shelf.tiles.map((tile) => {
-              const initial = tile.title.slice(0, 1).toUpperCase();
-              const inner = (
-                <>
-                  <div className="tile__face">
-                    {tile.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={tile.image} alt={tile.title} />
-                    ) : (
-                      <span aria-hidden>{initial}</span>
-                    )}
-                  </div>
-                  <p className="tile__title">{tile.title}</p>
-                  <p className="tile__meta">{tile.meta}</p>
-                </>
-              );
+            {artists.map((artist) => {
+              const initial = artist.name.slice(0, 1).toUpperCase();
+              const cover = artist.cover_url || artist.avatar_url;
               return (
-                <li key={tile.id}>
-                  {tile.href ? (
-                    <Link href={tile.href} className="tile">
-                      {inner}
-                    </Link>
-                  ) : (
-                    <article className="tile">{inner}</article>
-                  )}
+                <li key={artist.id}>
+                  <Link href={`/artists/${artist.slug}`} className="tile">
+                    <div className="tile__face">
+                      {cover ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={cover} alt="" />
+                      ) : (
+                        <span aria-hidden>{initial}</span>
+                      )}
+                    </div>
+                    <p className="tile__title">{artist.name}</p>
+                    <p className="tile__meta">
+                      {artist.is_official ? "Claimed" : "Community"}
+                      {artist.genres?.length ? ` · ${artist.genres.slice(0, 2).join(", ")}` : ""}
+                    </p>
+                  </Link>
                 </li>
               );
             })}
           </ul>
-        </section>
-      ))}
+        )}
+      </section>
+
+      <section id="beatmakers" className="shelf shelf--producer">
+        <h2>Popular producers</h2>
+        <p className="shelf__empty">Producer directory comes next. Open a wall to see who uploaded.</p>
+      </section>
     </div>
   );
 }

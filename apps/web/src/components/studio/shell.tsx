@@ -1,22 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { site } from "@/content/site";
+import { getStoredUser, logout, type AuthUser } from "@/lib/auth";
 import { IconGrid, IconHome, IconPanel, IconSearch, IconUser } from "./icons";
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  const router = useRouter();
   const bare = path === "/" || path === "/login" || path === "/register";
   const homeOn = path === "/app";
   const [folded, setFolded] = useState(!homeOn);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     if (path === "/" || path === "/login" || path === "/register") return;
     setFolded(path !== "/app");
   }, [path]);
+
+  useEffect(() => {
+    setUser(getStoredUser());
+  }, [path]);
+
+  async function onLogout() {
+    await logout();
+    setUser(null);
+    router.push("/app");
+    router.refresh();
+  }
 
   const frame = bare ? "studio is-landing" : folded ? "studio is-folded" : "studio";
 
@@ -48,10 +62,26 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
             <IconGrid />
             <span className="studio__label">Browse</span>
           </Link>
-          <Link href="/login" className="studio__item">
-            <IconUser />
-            <span className="studio__label">Log in</span>
-          </Link>
+          {user ? (
+            <>
+              <Link
+                href={`/users/${user.handle}`}
+                className={path.startsWith("/users/") ? "studio__item is-on" : "studio__item"}
+              >
+                <IconUser />
+                <span className="studio__label">@{user.handle}</span>
+              </Link>
+              <button type="button" className="studio__item" onClick={onLogout} aria-label="Log out">
+                <span aria-hidden>×</span>
+                <span className="studio__label">Log out</span>
+              </button>
+            </>
+          ) : (
+            <Link href="/login" className={path === "/login" ? "studio__item is-on" : "studio__item"}>
+              <IconUser />
+              <span className="studio__label">Log in</span>
+            </Link>
+          )}
         </nav>
       </aside>
       <div className="studio__main">{children}</div>

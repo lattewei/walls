@@ -1,6 +1,12 @@
 function apiBase() {
+  if (typeof window === "undefined") {
+    return (
+      process.env.WALLS_API_PROXY?.trim() ||
+      process.env.NEXT_PUBLIC_API_URL?.trim() ||
+      "http://127.0.0.1:8080"
+    ).replace(/\/$/, "");
+  }
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, "");
-  // Empty / unset: same-origin requests, proxied by Next.js rewrites (no CORS).
   if (!configured) return "";
   return configured;
 }
@@ -51,6 +57,7 @@ export async function apiFetch<T>(
     res = await fetch(url, {
       ...rest,
       headers,
+      cache: "no-store",
     });
   } catch {
     throw new ApiRequestError(

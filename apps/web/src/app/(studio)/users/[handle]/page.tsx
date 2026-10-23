@@ -1,65 +1,84 @@
 import { notFound } from "next/navigation";
 
 import { ProdList } from "@/components/studio/prod-list";
+import { isApiRequestError } from "@/lib/api";
+import { getPublicProfile } from "@/lib/catalog";
 import { site } from "@/content/site";
-import { getProfile } from "@/content/profiles";
 
 type Props = {
   params: Promise<{ handle: string }>;
 };
 
-export async function generateStaticParams() {
-  const { profiles } = await import("@/content/profiles");
-  return profiles.map((p) => ({ handle: p.handle }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props) {
   const { handle } = await params;
-  const profile = getProfile(handle);
-  if (!profile) return { title: site.name };
-  return { title: `${profile.displayName} · ${site.name}` };
+  try {
+    const profile = await getPublicProfile(handle);
+    if (!profile) return { title: site.name };
+    return { title: `${profile.user.display_name} · ${site.name}` };
+  } catch {
+    return { title: site.name };
+  }
 }
 
 export default async function UserPage({ params }: Props) {
   const { handle } = await params;
-  const profile = getProfile(handle);
+
+  let profile;
+  try {
+    profile = await getPublicProfile(handle);
+  } catch (err) {
+    if (isApiRequestError(err) && err.status === 0) {
+      return (
+        <div className="profile">
+          <p className="profile__missing">{err.message}</p>
+        </div>
+      );
+    }
+    throw err;
+  }
+
   if (!profile) notFound();
 
-  const initial = profile.displayName.slice(0, 1).toUpperCase();
+  const { user, contacts } = profile;
+  const initial = user.display_name.slice(0, 1).toUpperCase();
   const hasContacts =
-    Boolean(profile.email) || Boolean(profile.instagram) || profile.links.length > 0;
+    Boolean(contacts.public_contact_email) ||
+    Boolean(contacts.instagram_url) ||
+    (contacts.other_links?.length ?? 0) > 0;
 
   return (
     <div className="profile">
       <section className="profile__head">
         <div className="profile__avatar" aria-hidden>
-          {initial}
+          {user.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.avatar_url} alt="" />
+          ) : (
+            initial
+          )}
         </div>
-        <h1>{profile.displayName}</h1>
-        <p className="profile__handle">@{profile.handle}</p>
-        {profile.bio ? <p className="profile__bio">{profile.bio}</p> : null}
-        {profile.genres.length > 0 ? (
-          <ul className="profile__genres">
-            {profile.genres.map((g) => (
-              <li key={g}>{g}</li>
-            ))}
-          </ul>
-        ) : null}
+        <h1>{user.display_name}</h1>
+        <p className="profile__handle">@{user.handle}</p>
+        {user.bio ? <p className="profile__bio">{user.bio}</p> : null}
         {hasContacts ? (
           <ul className="profile__links">
-            {profile.email ? (
+            {contacts.public_contact_email ? (
               <li>
-                <a href={`mailto:${profile.email}`}>{profile.email}</a>
+                <a href={`mailto:${contacts.public_contact_email}`}>
+                  {contacts.public_contact_email}
+                </a>
               </li>
             ) : null}
-            {profile.instagram ? (
+            {contacts.instagram_url ? (
               <li>
-                <a href={profile.instagram} rel="noreferrer" target="_blank">
+                <a href={contacts.instagram_url} rel="noreferrer" target="_blank">
                   Instagram
                 </a>
               </li>
             ) : null}
-            {profile.links.map((link) => (
+            {(contacts.other_links ?? []).map((link) => (
               <li key={link.url}>
                 <a href={link.url} rel="noreferrer" target="_blank">
                   {link.label}
@@ -72,7 +91,7 @@ export default async function UserPage({ params }: Props) {
 
       <section className="prods">
         <h2>Productions</h2>
-        <ProdList tracks={profile.tracks} />
+        <ProdList tracks={[]} />
       </section>
     </div>
   );

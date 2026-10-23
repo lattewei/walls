@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import type { Prod } from "@/content/profiles";
+import type { ProdRow } from "@/lib/types";
 import { IconPause, IconPlay } from "./icons";
 
-export function ProdList({ tracks }: { tracks: Prod[] }) {
+export function ProdList({ tracks }: { tracks: ProdRow[] }) {
   const [on, setOn] = useState<string | null>(null);
 
   if (tracks.length === 0) {

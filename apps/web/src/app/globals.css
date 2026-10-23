@@ -336,10 +336,15 @@ body:has(.landing-root) {
   gap: 12px;
   padding: 10px 12px;
   border-radius: 8px;
+  border: 0;
+  background: transparent;
   color: var(--muted);
   text-decoration: none;
+  font: inherit;
   font-size: 0.95rem;
   font-weight: 500;
+  cursor: pointer;
+  text-align: left;
   transition: gap 320ms var(--ease);
 }
 
@@ -432,6 +437,13 @@ a.studio__item:hover {
   display: flex;
   gap: 14px;
   overflow-x: auto;
+}
+
+.shelf__empty {
+  margin: 0;
+  padding: 8px 0 4px;
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 
 .shelf--artist .tile {
@@ -530,6 +542,13 @@ a.studio__item:hover {
   width: 88px;
   height: 88px;
   border-radius: 999px;
+}
+
+.profile__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .profile__cover {
