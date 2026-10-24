@@ -94,4 +94,4 @@ npm run dev
 App: `http://localhost:3000`  
 API must be running on `:8080`.
 
-In local dev the browser calls `/api/...` on the same origin. Next.js rewrites those requests to the Go API (`WALLS_API_PROXY`, default `http://127.0.0.1:8080`), so you avoid CORS. Leave `NEXT_PUBLIC_API_URL` empty unless the API is on another host.
+The browser calls the Go API directly (`NEXT_PUBLIC_API_URL`, default `http://127.0.0.1:8080`). CORS origins are set on the API (`API_CORS_ORIGINS`).

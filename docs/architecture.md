@@ -10,8 +10,9 @@ Modular monolith:
 - **Audio storage**: local files in this version (`MEDIA_STORAGE=local` only)
 
 ```text
-Browser  →  Next.js  →  REST /api/v1  →  Go modules  →  PostgreSQL
-                                      ↘  media store (files)
+Browser  →  Next.js (UI)
+         →  Go API /api/v1  →  PostgreSQL
+                            ↘  media store (files)
 ```
 
 ## Core product flow

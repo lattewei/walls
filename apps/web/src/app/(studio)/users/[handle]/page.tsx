@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { EditProfileGate } from "@/components/edit-profile-gate";
 import { ProfileTracks } from "@/components/profile-tracks";
-import { isApiRequestError } from "@/lib/api";
+import { apiUrl, isApiRequestError } from "@/lib/api";
 import { getPublicProfile, listUserTracks } from "@/lib/catalog";
 import { site } from "@/content/site";
 import { toProdRow, type ProdRow } from "@/lib/types";
@@ -70,7 +70,7 @@ export default async function UserPage({ params }: Props) {
       <section className="profile__head">
         <div className="profile__avatar" aria-hidden>
           {user.avatar_url ? (
-            <img src={user.avatar_url} alt="" />
+            <img src={apiUrl(user.avatar_url)} alt="" />
           ) : (
             initial
           )}

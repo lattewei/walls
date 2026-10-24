@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ClaimWall } from "@/components/claim-wall";
 import { ProdList } from "@/components/studio/prod-list";
-import { isApiRequestError } from "@/lib/api";
+import { apiUrl, isApiRequestError } from "@/lib/api";
 import { getArtist, listArtistTracks } from "@/lib/catalog";
 import { site } from "@/content/site";
 import { badgeLabel, toProdRow, type ProdRow } from "@/lib/types";
@@ -66,7 +66,7 @@ export default async function ArtistWallPage({ params }: Props) {
       <section className="profile__head">
         <div className="profile__cover">
           {cover ? (
-            <img src={cover} alt="" />
+            <img src={apiUrl(cover)} alt="" />
           ) : (
             <span aria-hidden>{artist.name.slice(0, 1).toUpperCase()}</span>
           )}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
-import { isApiRequestError } from "@/lib/api";
+import { apiUrl, isApiRequestError } from "@/lib/api";
 import { getToken, updateStoredUser } from "@/lib/auth";
 import { getMe, updateMe, uploadAvatar } from "@/lib/catalog";
 import { useSessionToken, useSessionUser } from "@/lib/session";
@@ -127,7 +127,7 @@ export function SettingsForm() {
   }
 
   const handle = stored.handle;
-  const shown = preview || avatarUrl;
+  const shown = preview || apiUrl(avatarUrl);
   const initial = displayName.slice(0, 1).toUpperCase() || handle.slice(0, 1).toUpperCase() || "?";
 
   return (

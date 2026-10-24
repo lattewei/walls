@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { isApiRequestError } from "@/lib/api";
+import { apiUrl, isApiRequestError } from "@/lib/api";
 import { listArtists, listProducers } from "@/lib/catalog";
 import { site } from "@/content/site";
 
@@ -68,7 +68,7 @@ export default async function AppHome({
                   <Link href={`/artists/${artist.slug}`} className="tile">
                     <div className="tile__face">
                       {cover ? (
-                        <img src={cover} alt="" />
+                        <img src={apiUrl(cover)} alt="" />
                       ) : (
                         <span aria-hidden>{initial}</span>
                       )}
@@ -101,7 +101,7 @@ export default async function AppHome({
                   <Link href={`/users/${p.handle}`} className="tile">
                     <div className="tile__face">
                       {p.avatar_url ? (
-                        <img src={p.avatar_url} alt="" />
+                        <img src={apiUrl(p.avatar_url)} alt="" />
                       ) : (
                         <span aria-hidden>{initial}</span>
                       )}

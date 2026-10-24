@@ -12,4 +12,4 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The API must be running on `:8080`. In local dev the browser calls `/api/v1/*` on the same origin; Next proxies those requests to Go.
+The API must be running on `:8080`. The browser calls it directly (`NEXT_PUBLIC_API_URL`).

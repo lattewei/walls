@@ -49,6 +49,8 @@ export type PublicContacts = {
   other_links: ExternalLink[];
 };
 
+import { apiUrl } from "./api";
+
 export type ProdRow = {
   id: string;
   title: string;
@@ -71,8 +73,8 @@ export function toProdRow(
     meta: extra.meta,
     metaHref: extra.metaHref,
     durationSeconds: t.duration_seconds,
-    audioUrl: t.audio_url,
-    coverUrl: extra.coverUrl,
+    audioUrl: apiUrl(t.audio_url),
+    coverUrl: apiUrl(extra.coverUrl),
     detail: [t.description, t.tags?.length ? t.tags.join(", ") : ""]
       .filter(Boolean)
       .join(" · "),

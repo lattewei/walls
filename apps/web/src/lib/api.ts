@@ -1,14 +1,14 @@
-function apiBase() {
-  if (typeof window === "undefined") {
-    return (
-      process.env.WALLS_API_PROXY?.trim() ||
-      process.env.NEXT_PUBLIC_API_URL?.trim() ||
-      "http://127.0.0.1:8080"
-    ).replace(/\/$/, "");
-  }
-  const configured = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, "");
-  if (!configured) return "";
-  return configured;
+export function apiBase() {
+  return (
+    process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:8080"
+  ).replace(/\/$/, "");
+}
+
+export function apiUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined;
+  if (/^https?:\/\//i.test(path) || path.startsWith("blob:")) return path;
+  if (path.startsWith("/")) return `${apiBase()}${path}`;
+  return `${apiBase()}/${path}`;
 }
 
 export type ApiError = {
