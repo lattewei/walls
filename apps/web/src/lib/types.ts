@@ -1,3 +1,5 @@
+import { apiUrl } from "./api";
+
 export type PublicArtist = {
   id: string;
   name: string;
@@ -48,8 +50,6 @@ export type PublicContacts = {
   instagram_url?: string | null;
   other_links: ExternalLink[];
 };
-
-import { apiUrl } from "./api";
 
 export type ProdRow = {
   id: string;

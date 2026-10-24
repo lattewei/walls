@@ -4,6 +4,8 @@ export function apiBase() {
   ).replace(/\/$/, "");
 }
 
+export function apiUrl(path: string): string;
+export function apiUrl(path: string | null | undefined): string | undefined;
 export function apiUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined;
   if (/^https?:\/\//i.test(path) || path.startsWith("blob:")) return path;
