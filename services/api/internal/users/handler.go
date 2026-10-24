@@ -7,11 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/lattewei/walls/services/api/internal/dberr"
 	"github.com/lattewei/walls/services/api/internal/httpx"
+	"github.com/lattewei/walls/services/api/internal/media"
 )
-
-// Same key as auth.ContextUserID — kept local to avoid import cycles.
-const contextUserID = "auth_user_id"
 
 type Handler struct {
 	svc *Service
@@ -38,6 +37,10 @@ func (h *Handler) GetByHandle(c *gin.Context) {
 func (h *Handler) UploadAvatar(c *gin.Context) {
 	fh, err := c.FormFile("avatar")
 	if err != nil {
+		if httpx.IsBodyTooLarge(err) {
+			httpx.JSONError(c, http.StatusRequestEntityTooLarge, "validation_error", "file too large")
+			return
+		}
 		httpx.BadRequest(c, "avatar file is required (multipart field: avatar)")
 		return
 	}
@@ -48,20 +51,24 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 	}
 	defer f.Close()
 
-	uid, _ := c.Get(contextUserID)
-	userID, _ := uid.(string)
-	user, err := h.svc.UploadAvatar(c.Request.Context(), userID, f, fh.Size)
+	user, err := h.svc.UploadAvatar(c.Request.Context(), httpx.UserID(c), f, fh.Size)
 	if err != nil {
-		msg := err.Error()
-		if strings.Contains(msg, "unsupported") || strings.Contains(msg, "too large") || strings.Contains(msg, "required") {
-			httpx.JSONError(c, http.StatusBadRequest, "validation_error", msg)
-			return
-		}
-		if errors.Is(err, ErrNotFound) {
+		switch {
+		case errors.Is(err, media.ErrUnsupported):
+			httpx.JSONError(c, http.StatusBadRequest, "validation_error", "unsupported image type")
+		case errors.Is(err, media.ErrTooLarge):
+			httpx.JSONError(c, http.StatusRequestEntityTooLarge, "validation_error", "avatar image is too large (max 5MB)")
+		case errors.Is(err, ErrNotFound):
 			httpx.Unauthorized(c, "authentication required")
-			return
+		case dberr.IsInvalidSyntax(err):
+			httpx.BadRequest(c, "invalid id")
+		default:
+			if strings.Contains(err.Error(), "required") {
+				httpx.JSONError(c, http.StatusBadRequest, "validation_error", "avatar file is required")
+				return
+			}
+			httpx.Internal(c)
 		}
-		httpx.Internal(c)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"user": user})

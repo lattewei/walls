@@ -24,7 +24,14 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
   }, [path]);
 
   useEffect(() => {
-    setUser(getStoredUser());
+    const sync = () => setUser(getStoredUser());
+    sync();
+    window.addEventListener("walls:session", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("walls:session", sync);
+      window.removeEventListener("storage", sync);
+    };
   }, [path]);
 
   async function onLogout() {
@@ -53,10 +60,10 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
             <IconPanel folded={folded} />
           </button>
           <nav>
-            <span className="studio__item studio__item--quiet">
+            <form className="studio__search" action="/app" method="get">
               <IconSearch />
-              <span className="studio__label">Search</span>
-            </span>
+              <input name="q" placeholder="Search walls" aria-label="Search walls" />
+            </form>
             <Link href="/app" className={homeOn ? "studio__item is-on" : "studio__item"}>
               <IconHome />
               <span className="studio__label">Home</span>

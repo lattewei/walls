@@ -11,9 +11,10 @@ import (
 var ErrInvalidToken = errors.New("invalid token")
 
 type Claims struct {
-	UserID string `json:"uid"`
-	Handle string `json:"handle"`
-	Role   string `json:"role"`
+	UserID         string `json:"uid"`
+	Handle         string `json:"handle"`
+	Role           string `json:"role"`
+	SessionVersion int    `json:"sv"`
 	jwt.RegisteredClaims
 }
 
@@ -31,13 +32,17 @@ func NewTokenService(secret string, ttl time.Duration) *TokenService {
 	}
 }
 
-func (s *TokenService) IssueAccessToken(userID, handle, role string) (string, time.Time, error) {
+func (s *TokenService) IssueAccessToken(userID, handle, role string, sessionVersion int) (string, time.Time, error) {
 	now := time.Now().UTC()
 	exp := now.Add(s.ttl)
+	if sessionVersion < 1 {
+		sessionVersion = 1
+	}
 	claims := Claims{
-		UserID: userID,
-		Handle: handle,
-		Role:   role,
+		UserID:         userID,
+		Handle:         handle,
+		Role:           role,
+		SessionVersion: sessionVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    s.issuer,
 			Subject:   userID,
@@ -67,7 +72,7 @@ func (s *TokenService) ParseAccessToken(tokenStr string) (Claims, error) {
 	if !ok || !token.Valid {
 		return Claims{}, ErrInvalidToken
 	}
-	if claims.UserID == "" {
+	if claims.UserID == "" || claims.Issuer != s.issuer || claims.SessionVersion < 1 {
 		return Claims{}, ErrInvalidToken
 	}
 	return *claims, nil

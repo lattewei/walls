@@ -2,6 +2,7 @@ import { apiFetch } from "./api";
 
 const TOKEN_KEY = "walls_token";
 const USER_KEY = "walls_user";
+const EXP_KEY = "walls_expires";
 
 export type AuthUser = {
   id: string;
@@ -18,15 +19,28 @@ export type AuthSession = {
   expires_at: string;
 };
 
+export function sessionExpired(): boolean {
+  if (typeof window === "undefined") return true;
+  const exp = localStorage.getItem(EXP_KEY);
+  if (!exp) return true;
+  const at = Date.parse(exp);
+  if (Number.isNaN(at)) return true;
+  return Date.now() >= at - 5_000;
+}
+
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
+  if (sessionExpired()) {
+    clearSession();
+    return null;
+  }
   return localStorage.getItem(TOKEN_KEY);
 }
 
 export function getStoredUser(): AuthUser | null {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(USER_KEY);
-  if (!raw) return null;
+  if (!raw || sessionExpired()) return null;
   try {
     return JSON.parse(raw) as AuthUser;
   } catch {
@@ -37,11 +51,13 @@ export function getStoredUser(): AuthUser | null {
 export function saveSession(session: AuthSession) {
   localStorage.setItem(TOKEN_KEY, session.access_token);
   localStorage.setItem(USER_KEY, JSON.stringify(session.user));
+  localStorage.setItem(EXP_KEY, session.expires_at);
 }
 
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(EXP_KEY);
 }
 
 export async function login(handle: string, password: string) {

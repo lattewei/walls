@@ -63,12 +63,11 @@ export async function apiFetch<T>(
       headers,
       cache: "no-store",
     });
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : "network error";
+  } catch {
     throw new ApiRequestError(
       0,
       "network_error",
-      `Could not reach the API (${detail}). Check go run ./cmd/api on :8080 and restart npm run dev.`,
+      "Could not reach the server. Try again.",
     );
   }
 
@@ -80,6 +79,12 @@ export async function apiFetch<T>(
     } catch {
       data = null;
     }
+  }
+
+  if (token && res.status === 401 && typeof window !== "undefined") {
+    const { clearSession } = await import("./auth");
+    clearSession();
+    window.dispatchEvent(new Event("walls:session"));
   }
 
   if (!res.ok) {

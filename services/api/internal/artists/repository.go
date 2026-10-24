@@ -11,12 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/lattewei/walls/services/api/internal/dberr"
 	"github.com/lattewei/walls/services/api/internal/domain"
 )
 
 var (
-	ErrNotFound  = errors.New("artist not found")
-	ErrSlugTaken = errors.New("slug already taken")
+	ErrNotFound        = errors.New("artist not found")
+	ErrSlugTaken       = errors.New("slug already taken")
+	ErrNameTaken       = errors.New("name already taken")
+	ErrClaimNotPending = errors.New("claim is not pending")
+	ErrAlreadyClaimed  = errors.New("artist already claimed")
+	ErrClaimExists     = errors.New("pending claim already exists")
 )
 
 type Repository struct {
@@ -56,6 +61,9 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Artist,
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			if pgErr.ConstraintName == "artists_name_norm_unique" {
+				return domain.Artist{}, ErrNameTaken
+			}
 			return domain.Artist{}, ErrSlugTaken
 		}
 		return domain.Artist{}, fmt.Errorf("create artist: %w", err)
@@ -124,6 +132,7 @@ type Claim struct {
 	ID                 string
 	ArtistID           string
 	UserID             string
+	UserHandle         string
 	VerificationMethod string
 	ProofURL           *string
 	Status             string
@@ -150,6 +159,9 @@ func (r *Repository) CreateClaim(ctx context.Context, artistID, userID, method s
 		&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
 	)
 	if err != nil {
+		if dberr.IsUnique(err) {
+			return Claim{}, ErrClaimExists
+		}
 		return Claim{}, fmt.Errorf("create claim: %w", err)
 	}
 
@@ -194,9 +206,11 @@ func (r *Repository) ListPendingClaims(ctx context.Context, limit, offset int) (
 		return nil, 0, err
 	}
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, artist_id, user_id, verification_method, proof_url, status, reviewed_by, created_at, reviewed_at
-		FROM artist_claims WHERE status = 'pending'
-		ORDER BY created_at ASC
+		SELECT c.id, c.artist_id, c.user_id, u.handle, c.verification_method, c.proof_url, c.status, c.reviewed_by, c.created_at, c.reviewed_at
+		FROM artist_claims c
+		JOIN users u ON u.id = c.user_id
+		WHERE c.status = 'pending'
+		ORDER BY c.created_at ASC
 		LIMIT $1 OFFSET $2
 	`, limit, offset)
 	if err != nil {
@@ -207,7 +221,7 @@ func (r *Repository) ListPendingClaims(ctx context.Context, limit, offset int) (
 	for rows.Next() {
 		var cl Claim
 		if err := rows.Scan(
-			&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ProofURL,
+			&cl.ID, &cl.ArtistID, &cl.UserID, &cl.UserHandle, &cl.VerificationMethod, &cl.ProofURL,
 			&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
 		); err != nil {
 			return nil, 0, err
@@ -227,18 +241,56 @@ func (r *Repository) ReviewClaim(ctx context.Context, claimID, reviewerID, statu
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
-	cl, err := r.GetClaim(ctx, claimID)
+	const lockClaim = `
+		SELECT id, artist_id, user_id, verification_method, proof_url, status, reviewed_by, created_at, reviewed_at
+		FROM artist_claims
+		WHERE id = $1
+		FOR UPDATE
+	`
+	var cl Claim
+	err = tx.QueryRow(ctx, lockClaim, claimID).Scan(
+		&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ProofURL,
+		&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Claim{}, ErrNotFound
+	}
 	if err != nil {
 		return Claim{}, err
 	}
 	if cl.Status != "pending" {
-		return Claim{}, fmt.Errorf("claim is not pending")
+		return Claim{}, ErrClaimNotPending
+	}
+
+	var claimStatus string
+	var claimedBy *string
+	err = tx.QueryRow(ctx, `
+		SELECT claim_status, claimed_by FROM artists WHERE id = $1 FOR UPDATE
+	`, cl.ArtistID).Scan(&claimStatus, &claimedBy)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Claim{}, ErrNotFound
+	}
+	if err != nil {
+		return Claim{}, err
+	}
+	if status == "accepted" && claimStatus == "claimed" && (claimedBy == nil || *claimedBy != cl.UserID) {
+		return Claim{}, ErrAlreadyClaimed
+	}
+
+	var otherPending bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM artist_claims
+			WHERE artist_id = $1 AND status = 'pending' AND id <> $2
+		)
+	`, cl.ArtistID, claimID).Scan(&otherPending); err != nil {
+		return Claim{}, err
 	}
 
 	const upd = `
 		UPDATE artist_claims
 		SET status = $2, reviewed_by = $3, reviewed_at = now()
-		WHERE id = $1
+		WHERE id = $1 AND status = 'pending'
 		RETURNING id, artist_id, user_id, verification_method, proof_url, status, reviewed_by, created_at, reviewed_at
 	`
 	var out Claim
@@ -246,6 +298,9 @@ func (r *Repository) ReviewClaim(ctx context.Context, claimID, reviewerID, statu
 		&out.ID, &out.ArtistID, &out.UserID, &out.VerificationMethod, &out.ProofURL,
 		&out.Status, &out.ReviewedBy, &out.CreatedAt, &out.ReviewedAt,
 	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Claim{}, ErrClaimNotPending
+	}
 	if err != nil {
 		return Claim{}, err
 	}
@@ -259,12 +314,9 @@ func (r *Repository) ReviewClaim(ctx context.Context, claimID, reviewerID, statu
 	} else {
 		_, err = tx.Exec(ctx, `
 			UPDATE artists
-			SET claim_status = CASE
-				WHEN EXISTS (SELECT 1 FROM artist_claims WHERE artist_id = $1 AND status = 'pending' AND id <> $2)
-				THEN 'pending' ELSE 'unclaimed' END,
-			    updated_at = now()
+			SET claim_status = $2, updated_at = now()
 			WHERE id = $1
-		`, out.ArtistID, claimID)
+		`, out.ArtistID, NextClaimStatus(claimStatus, otherPending))
 	}
 	if err != nil {
 		return Claim{}, err

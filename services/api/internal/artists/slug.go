@@ -8,17 +8,17 @@ import (
 )
 
 var (
-	slugCleanRe  = regexp.MustCompile(`[^a-z0-9]+`)
-	slugTrimRe   = regexp.MustCompile(`^-+|-+$`)
-	slugValidRe  = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+	slugCleanRe = regexp.MustCompile(`[^a-z0-9]+`)
+	slugTrimRe  = regexp.MustCompile(`^-+|-+$`)
+	slugValidRe = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 )
 
 const (
-	minSlugLen = 2
-	maxSlugLen = 64
-	maxNameLen = 100
-	maxBioLen  = 2000
-	maxGenres  = 20
+	minSlugLen  = 2
+	maxSlugLen  = 64
+	maxNameLen  = 100
+	maxBioLen   = 2000
+	maxGenres   = 20
 	maxGenreLen = 40
 )
 

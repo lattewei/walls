@@ -56,6 +56,17 @@ func ValidateInstagramURL(raw string) error {
 	if err := ValidateHTTPURL(raw); err != nil {
 		return fmt.Errorf("instagram_url: %s", err.Error())
 	}
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return fmt.Errorf("instagram_url: invalid url")
+	}
+	host := strings.ToLower(u.Hostname())
+	if host != "instagram.com" && host != "www.instagram.com" {
+		return fmt.Errorf("instagram_url must be an instagram.com link")
+	}
 	return nil
 }
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ClaimWall } from "@/components/claim-wall";
 import { ProdList } from "@/components/studio/prod-list";
 import { isApiRequestError } from "@/lib/api";
 import { getArtist, listArtistTracks } from "@/lib/catalog";
@@ -46,6 +47,7 @@ export default async function ArtistWallPage({ params }: Props) {
   const cover = artist.cover_url || artist.avatar_url;
 
   let tracks: ProdRow[] = [];
+  let tracksError: string | null = null;
   try {
     const list = await listArtistTracks(artist.slug);
     tracks = list.tracks.map((t) => ({
@@ -58,9 +60,12 @@ export default async function ArtistWallPage({ params }: Props) {
       audioUrl: t.audio_url,
       coverUrl: cover || undefined,
       wallName: artist.name,
+      detail: [t.description, t.tags?.length ? t.tags.join(", ") : ""]
+        .filter(Boolean)
+        .join(" · "),
     }));
-  } catch {
-    tracks = [];
+  } catch (err) {
+    tracksError = isApiRequestError(err) ? err.message : "Could not load productions.";
   }
 
   return (
@@ -68,7 +73,7 @@ export default async function ArtistWallPage({ params }: Props) {
       <section className="profile__head">
         <div className="profile__cover">
           {cover ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            // eslint-disable-next-line @next/next/no-img-element -- API media url, not an optimizer source
             <img src={cover} alt="" />
           ) : (
             <span aria-hidden>{artist.name.slice(0, 1).toUpperCase()}</span>
@@ -79,6 +84,7 @@ export default async function ArtistWallPage({ params }: Props) {
           {badgeLabel(artist.badge, artist.is_official)}
         </span>
         {artist.bio ? <p className="profile__bio">{artist.bio}</p> : null}
+        {artist.looking_for ? <p className="profile__bio">Looking for: {artist.looking_for}</p> : null}
         {artist.genres?.length ? (
           <ul className="profile__genres">
             {artist.genres.map((g) => (
@@ -93,12 +99,13 @@ export default async function ArtistWallPage({ params }: Props) {
           <Link href="/artists/new" className="profile__action profile__action--ghost">
             Create another wall
           </Link>
+          <ClaimWall slug={artist.slug} official={artist.is_official} />
         </div>
       </section>
 
       <section className="prods">
         <h2>Productions</h2>
-        <ProdList tracks={tracks} />
+        <ProdList tracks={tracks} loadError={tracksError} />
       </section>
     </div>
   );

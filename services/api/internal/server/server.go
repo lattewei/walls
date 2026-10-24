@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -35,12 +36,19 @@ type Server struct {
 	authLimiter       *httpx.MemoryRateLimiter
 }
 
-func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
+func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) (*Server, error) {
 	if !cfg.IsDev() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	r := gin.New()
+	proxies := cfg.TrustedProxies
+	if proxies == nil {
+		proxies = []string{"127.0.0.1", "::1"}
+	}
+	if err := r.SetTrustedProxies(proxies); err != nil {
+		return nil, fmt.Errorf("trusted proxies: %w", err)
+	}
 	r.Use(gin.Recovery())
 	r.Use(httpx.SecureHeaders())
 	r.Use(httpx.CORS(cfg.CORSOrigins))
@@ -52,8 +60,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
 	}
 	storage, err := media.NewLocalStorage(mediaPath)
 	if err != nil {
-		log.Error("media storage", "err", err)
-		panic(err)
+		return nil, fmt.Errorf("media storage: %w", err)
 	}
 
 	userRepo := users.NewRepository(pool)
@@ -75,7 +82,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
 		engine:            r,
 		storage:           storage,
 		authHandler:       auth.NewHandler(authSvc),
-		authMW:            auth.NewMiddleware(tokens),
+		authMW:            auth.NewMiddleware(tokens, userRepo),
 		usersHandler:      users.NewHandler(usersSvc),
 		artistsHandler:    artists.NewHandler(artistsSvc),
 		tracksHandler:     tracks.NewHandler(tracksSvc),
@@ -83,7 +90,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) *Server {
 		authLimiter:       httpx.NewMemoryRateLimiter(cfg.AuthRateLimit, cfg.AuthRateWindow),
 	}
 	s.routes()
-	return s
+	return s, nil
 }
 
 func (s *Server) routes() {
@@ -98,7 +105,7 @@ func (s *Server) routes() {
 		{
 			authGroup.POST("/register", authLimit, s.authHandler.Register)
 			authGroup.POST("/login", authLimit, s.authHandler.Login)
-			authGroup.POST("/logout", s.authHandler.Logout)
+			authGroup.POST("/logout", s.authMW.RequireAuth(), s.authHandler.Logout)
 		}
 
 		me := v1.Group("/me")
@@ -106,7 +113,7 @@ func (s *Server) routes() {
 		{
 			me.GET("", s.authHandler.Me)
 			me.PATCH("", s.authHandler.UpdateMe)
-			me.POST("/avatar", s.usersHandler.UploadAvatar)
+			me.POST("/avatar", httpx.LimitBody(5<<20+1<<16), s.usersHandler.UploadAvatar)
 		}
 
 		v1.GET("/producers", s.tracksHandler.ListProducers)
@@ -117,7 +124,7 @@ func (s *Server) routes() {
 		artistsGroup := v1.Group("/artists")
 		{
 			artistsGroup.GET("", s.artistsHandler.List)
-			artistsGroup.POST("", s.authMW.RequireAuth(), s.artistsHandler.Create)
+			artistsGroup.POST("", s.authMW.RequireAuth(), httpx.LimitBody((5<<20)+1<<20), s.artistsHandler.Create)
 			artistsGroup.GET("/:slug", s.artistsHandler.GetBySlug)
 			artistsGroup.GET("/:slug/tracks", s.tracksHandler.ListByArtist)
 			artistsGroup.POST("/:slug/claims", s.authMW.RequireAuth(), s.artistsHandler.RequestClaim)
@@ -125,7 +132,7 @@ func (s *Server) routes() {
 
 		tracksGroup := v1.Group("/tracks")
 		{
-			tracksGroup.POST("", s.authMW.RequireAuth(), s.tracksHandler.Create)
+			tracksGroup.POST("", s.authMW.RequireAuth(), httpx.LimitBody(s.cfg.MediaMaxBytes+1<<20), s.tracksHandler.Create)
 			tracksGroup.GET("/:id", s.tracksHandler.Get)
 			tracksGroup.GET("/:id/audio", s.tracksHandler.StreamAudio)
 			tracksGroup.DELETE("/:id", s.authMW.RequireAuth(), s.tracksHandler.Withdraw)
@@ -198,6 +205,10 @@ func (s *Server) handleHealth(c *gin.Context) {
 
 func (s *Server) handleMedia(c *gin.Context) {
 	key := c.Param("key")
+	if media.IsAudioKey(key) {
+		httpx.NotFound(c, "media not found")
+		return
+	}
 	if s.storage == nil {
 		httpx.NotFound(c, "media not found")
 		return

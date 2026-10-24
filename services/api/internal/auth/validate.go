@@ -10,7 +10,7 @@ import (
 
 const (
 	minPasswordLen = 8
-	maxPasswordLen = 128
+	maxPasswordLen = 72
 	maxDisplayName = 64
 	maxBioLen      = 500
 )
@@ -24,8 +24,8 @@ func ValidatePassword(password string) error {
 	if n < minPasswordLen {
 		return fmt.Errorf("password must be at least %d characters", minPasswordLen)
 	}
-	if n > maxPasswordLen {
-		return fmt.Errorf("password must be at most %d characters", maxPasswordLen)
+	if len(password) > maxPasswordLen {
+		return fmt.Errorf("password must be at most %d bytes", maxPasswordLen)
 	}
 	return nil
 }

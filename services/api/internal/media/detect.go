@@ -23,11 +23,12 @@ func DetectAudio(r io.Reader) (AudioInfo, io.Reader, error) {
 	if n >= 12 && string(header[0:4]) == "RIFF" && string(header[8:12]) == "WAVE" {
 		return AudioInfo{Format: "wav", Ext: "wav"}, rest, nil
 	}
+	// Header only. ConfirmMP3 rejects a file that is not a real Layer III stream.
 	if n >= 3 && header[0] == 0xFF && (header[1]&0xE0) == 0xE0 {
 		return AudioInfo{Format: "mp3", Ext: "mp3"}, rest, nil
 	}
 	if n >= 3 && string(header[0:3]) == "ID3" {
 		return AudioInfo{Format: "mp3", Ext: "mp3"}, rest, nil
 	}
-	return AudioInfo{}, nil, fmt.Errorf("unsupported audio type (allowed: mp3, wav)")
+	return AudioInfo{}, nil, fmt.Errorf("%w: allowed audio types are mp3 and wav", ErrUnsupported)
 }

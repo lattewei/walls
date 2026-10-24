@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { isApiRequestError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
@@ -15,7 +15,7 @@ function parseTags(raw: string): string[] {
     .split(/[,/|]/)
     .map((t) => t.trim().toLowerCase())
     .filter(Boolean)
-    .slice(0, 12);
+    .slice(0, 20);
 }
 
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
@@ -34,6 +34,7 @@ export function UploadProdForm() {
   const [audio, setAudio] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,6 +77,8 @@ export function UploadProdForm() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
     setError(null);
     const token = getToken();
     if (!token) {
@@ -118,6 +121,7 @@ export function UploadProdForm() {
         setError("Upload failed.");
       }
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }

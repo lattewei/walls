@@ -24,6 +24,8 @@ export function SettingsForm() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [handle, setHandle] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [extraLinks, setExtraLinks] = useState<{ label: string; url: string }[]>([]);
 
   useEffect(() => {
     const token = getToken();
@@ -42,13 +44,16 @@ export function SettingsForm() {
         setAvatarUrl(me.user.avatar_url ?? null);
         setEmail(me.contacts.public_contact_email ?? "");
         setInstagram(me.contacts.instagram_url ?? "");
-        const first = me.contacts.other_links?.[0];
+        const links = me.contacts.other_links ?? [];
+        const [first, ...rest] = links;
         if (first) {
           setLinkLabel(first.label);
           setLinkUrl(first.url);
         }
+        setExtraLinks(rest);
+        setLoaded(true);
       } catch {
-        // keep stored values
+        setError("Could not load your profile. Refresh before saving, or your contacts may be overwritten.");
       } finally {
         setReady(true);
       }
@@ -74,6 +79,10 @@ export function SettingsForm() {
       router.push("/login");
       return;
     }
+    if (!loaded) {
+      setError("Profile did not load. Refresh before saving.");
+      return;
+    }
 
     setBusy(true);
     try {
@@ -86,10 +95,11 @@ export function SettingsForm() {
         setAvatarFile(null);
       }
 
-      const other_links =
+      const firstLink =
         linkLabel.trim() && linkUrl.trim()
           ? [{ label: linkLabel.trim(), url: linkUrl.trim() }]
           : [];
+      const other_links = [...firstLink, ...extraLinks];
 
       const res = await updateMe(
         {
@@ -141,7 +151,7 @@ export function SettingsForm() {
             <div className="wall-form__cover wall-form__cover--round">
               <div className="wall-form__preview wall-form__preview--round" aria-hidden>
                 {shown ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                  // eslint-disable-next-line @next/next/no-img-element -- blob or API avatar, not an optimizer source
                   <img src={shown} alt="" />
                 ) : (
                   <span>{initial}</span>
@@ -226,7 +236,7 @@ export function SettingsForm() {
           {error ? <p className="auth__error">{error}</p> : null}
           {ok ? <p className="settings__ok">{ok}</p> : null}
 
-          <button type="submit" className="auth__submit" disabled={busy}>
+          <button type="submit" className="auth__submit" disabled={busy || !loaded}>
             {busy ? "Saving…" : "Save profile"}
           </button>
         </form>

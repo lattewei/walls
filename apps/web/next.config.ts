@@ -6,7 +6,19 @@ const apiOrigin = (process.env.WALLS_API_PROXY ?? "http://127.0.0.1:8080").repla
 );
 
 const nextConfig: NextConfig = {
-  // /api/v1/* is handled by src/app/api/v1/[...path]/route.ts (multipart-safe).
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
+    ];
+  },
+  // /api/v1/* is streamed by src/app/api/v1/[...path]/route.ts so Range and multipart survive.
   // Keep health rewrite only.
   async rewrites() {
     return [

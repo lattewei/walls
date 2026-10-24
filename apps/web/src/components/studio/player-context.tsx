@@ -35,12 +35,16 @@ const PlayerContext = createContext<PlayerState | null>(null);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const indexRef = useRef(-1);
+  const queueRef = useRef<ProdRow[]>([]);
   const [queue, setQueue] = useState<ProdRow[]>([]);
   const [index, setIndex] = useState(-1);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  indexRef.current = index;
+  queueRef.current = queue;
   const track = index >= 0 && index < queue.length ? queue[index] : null;
 
   useEffect(() => {
@@ -50,12 +54,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const onTime = () => setCurrentTime(audio.currentTime || 0);
     const onMeta = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
     const onEnded = () => {
-      setIndex((i) => {
-        if (i < 0) return i;
-        if (i + 1 < queue.length) return i + 1;
+      const q = queueRef.current;
+      const i = indexRef.current;
+      if (i < 0 || i + 1 >= q.length) {
         setPlaying(false);
-        return i;
-      });
+        return;
+      }
+      const nextTrack = q[i + 1];
+      const audio = audioRef.current;
+      if (audio && nextTrack.audioUrl) {
+        audio.src = nextTrack.audioUrl;
+        void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      }
+      setIndex(i + 1);
     };
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
@@ -74,7 +85,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
     };
-  }, [queue.length]);
+  }, []);
 
   useEffect(() => {
     if (!track?.audioUrl) {
@@ -97,16 +108,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setCurrentTime(0);
       setDuration(track.durationSeconds ?? 0);
     }
-    void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
   }, [track?.id, track?.audioUrl, track?.durationSeconds]);
+
+  const start = useCallback((next: ProdRow) => {
+    const audio = audioRef.current;
+    if (!audio || !next.audioUrl) return;
+    const absolute = new URL(next.audioUrl, window.location.origin).href;
+    if (audio.src !== absolute) audio.src = next.audioUrl;
+    void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  }, []);
 
   const playQueue = useCallback((tracks: ProdRow[], startId: string) => {
     const playable = tracks.filter((t) => t.audioUrl);
     const i = playable.findIndex((t) => t.id === startId);
     if (i < 0) return;
+    start(playable[i]);
     setQueue(playable);
     setIndex(i);
-  }, []);
+  }, [start]);
 
   const toggle = useCallback(() => {
     const audio = audioRef.current;
@@ -131,11 +150,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const next = useCallback(() => {
-    setIndex((i) => {
-      if (i < 0 || i + 1 >= queue.length) return i;
-      return i + 1;
-    });
-  }, [queue.length]);
+    if (index < 0 || index + 1 >= queue.length) return;
+    start(queue[index + 1]);
+    setIndex(index + 1);
+  }, [index, queue, start]);
 
   const prev = useCallback(() => {
     const audio = audioRef.current;
@@ -144,8 +162,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setCurrentTime(0);
       return;
     }
-    setIndex((i) => (i > 0 ? i - 1 : i));
-  }, []);
+    if (index > 0) {
+      start(queue[index - 1]);
+      setIndex(index - 1);
+    }
+  }, [index, queue, start]);
 
   const seek = useCallback((seconds: number) => {
     const audio = audioRef.current;

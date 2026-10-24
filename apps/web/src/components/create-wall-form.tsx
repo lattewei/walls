@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { isApiRequestError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
@@ -13,7 +13,7 @@ function parseGenres(raw: string): string[] {
     .split(/[,/|]/)
     .map((g) => g.trim().toLowerCase())
     .filter(Boolean)
-    .slice(0, 8);
+    .slice(0, 20);
 }
 
 export function CreateWallForm() {
@@ -22,15 +22,17 @@ export function CreateWallForm() {
   const [slug, setSlug] = useState("");
   const [bio, setBio] = useState("");
   const [genres, setGenres] = useState("");
+  const [lookingFor, setLookingFor] = useState("");
   const [cover, setCover] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!getToken()) {
-      router.replace("/login");
+      router.replace("/login?next=/artists/new");
       return;
     }
     setReady(true);
@@ -48,6 +50,8 @@ export function CreateWallForm() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
     setError(null);
     const token = getToken();
     if (!token) {
@@ -63,6 +67,7 @@ export function CreateWallForm() {
           slug: slug || undefined,
           bio: bio || undefined,
           genres: parseGenres(genres),
+          looking_for: lookingFor || undefined,
           cover,
         },
         token,
@@ -78,6 +83,7 @@ export function CreateWallForm() {
         setError("Could not create the wall.");
       }
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
@@ -104,7 +110,7 @@ export function CreateWallForm() {
             <div className="wall-form__cover">
               <div className="wall-form__preview" aria-hidden>
                 {preview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                  // eslint-disable-next-line @next/next/no-img-element -- blob preview, not an optimizer source
                   <img src={preview} alt="" />
                 ) : (
                   <span>+</span>
@@ -135,7 +141,7 @@ export function CreateWallForm() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Kendrick Lamar"
               required
-              maxLength={80}
+              maxLength={100}
             />
           </label>
 
@@ -146,7 +152,7 @@ export function CreateWallForm() {
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               placeholder="kendrick-lamar"
-              pattern="[a-z0-9\-]*"
+              pattern="[a-z0-9]+(-[a-z0-9]+)*"
               maxLength={64}
               autoCapitalize="none"
               spellCheck={false}
@@ -161,7 +167,18 @@ export function CreateWallForm() {
               onChange={(e) => setBio(e.target.value)}
               placeholder="Short note about this wall"
               rows={3}
-              maxLength={500}
+              maxLength={2000}
+            />
+          </label>
+
+          <label className="auth__field">
+            <span>Looking for (optional)</span>
+            <input
+              name="looking_for"
+              value={lookingFor}
+              onChange={(e) => setLookingFor(e.target.value)}
+              placeholder="Melodic hooks, dark 808s"
+              maxLength={2000}
             />
           </label>
 

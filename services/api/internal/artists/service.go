@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/lattewei/walls/services/api/internal/auth"
 	"github.com/lattewei/walls/services/api/internal/domain"
 	"github.com/lattewei/walls/services/api/internal/media"
 )
@@ -17,6 +18,7 @@ const (
 	maxListLimit     = 50
 	maxSearchQuery   = 100
 	maxCoverBytes    = 5 << 20
+	maxOffset        = 10000
 )
 
 type Service struct {
@@ -110,15 +112,18 @@ func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.Publ
 		}
 		info, reader, err := media.DetectImage(in.Cover)
 		if err != nil {
+			if errors.Is(err, media.ErrUnsupported) {
+				return domain.PublicArtist{}, fmt.Errorf("%w: unsupported image type", ErrValidation)
+			}
 			return domain.PublicArtist{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
 		}
-		limited := io.LimitReader(reader, s.maxCover+1)
-		key, err := s.storage.Save(limited, info.Ext)
+		key, err := s.storage.SaveCapped(reader, info.Ext, s.maxCover)
+		if errors.Is(err, media.ErrTooLarge) {
+			return domain.PublicArtist{}, fmt.Errorf("%w: cover image is too large (max 5MB)", ErrValidation)
+		}
 		if err != nil {
 			return domain.PublicArtist{}, err
 		}
-		// Reject oversized after write attempt via LimitReader length check is imperfect;
-		// storage copies all bytes. Re-open path size if needed — LimitReader stops at max+1.
 		coverURL = &key
 	}
 
@@ -132,6 +137,12 @@ func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.Publ
 		LookingFor: looking,
 		CreatedBy:  in.CreatedBy,
 	})
+	if errors.Is(err, ErrNameTaken) {
+		if coverURL != nil && s.storage != nil {
+			_ = s.storage.Delete(*coverURL)
+		}
+		return domain.PublicArtist{}, fmt.Errorf("%w: an artist page with this name already exists", ErrConflict)
+	}
 	if errors.Is(err, ErrSlugTaken) {
 		if coverURL != nil && s.storage != nil {
 			_ = s.storage.Delete(*coverURL)
@@ -194,6 +205,9 @@ func (s *Service) List(ctx context.Context, in ListInput) (ListResult, error) {
 	if offset < 0 {
 		offset = 0
 	}
+	if offset > maxOffset {
+		return ListResult{}, fmt.Errorf("%w: offset is too large", ErrValidation)
+	}
 
 	rows, total, err := s.repo.List(ctx, ListParams{
 		Query:  q,
@@ -230,6 +244,8 @@ type ClaimInput struct {
 type PublicClaim struct {
 	ID                 string  `json:"id"`
 	ArtistID           string  `json:"artist_id"`
+	UserID             string  `json:"user_id"`
+	UserHandle         string  `json:"user_handle,omitempty"`
 	Status             string  `json:"status"`
 	VerificationMethod string  `json:"verification_method"`
 	ProofURL           *string `json:"proof_url,omitempty"`
@@ -252,21 +268,20 @@ func (s *Service) RequestClaim(ctx context.Context, in ClaimInput) (PublicClaim,
 
 	var proof *string
 	if p := strings.TrimSpace(in.ProofURL); p != "" {
+		if err := auth.ValidateHTTPURL(p); err != nil {
+			return PublicClaim{}, fmt.Errorf("%w: proof_url: %s", ErrValidation, err.Error())
+		}
 		proof = &p
 	}
 
 	cl, err := s.repo.CreateClaim(ctx, artist.ID, in.UserID, method, proof)
+	if errors.Is(err, ErrClaimExists) {
+		return PublicClaim{}, fmt.Errorf("%w: you already have a pending claim for this wall", ErrConflict)
+	}
 	if err != nil {
 		return PublicClaim{}, err
 	}
-	return PublicClaim{
-		ID:                 cl.ID,
-		ArtistID:           cl.ArtistID,
-		Status:             cl.Status,
-		VerificationMethod: cl.VerificationMethod,
-		ProofURL:           cl.ProofURL,
-		CreatedAt:          cl.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
-	}, nil
+	return toPublicClaim(cl), nil
 }
 
 func (s *Service) ListPendingClaims(ctx context.Context, limit, offset int) ([]PublicClaim, int, error) {
@@ -279,20 +294,16 @@ func (s *Service) ListPendingClaims(ctx context.Context, limit, offset int) ([]P
 	if offset < 0 {
 		offset = 0
 	}
+	if offset > maxOffset {
+		return nil, 0, fmt.Errorf("%w: offset is too large", ErrValidation)
+	}
 	rows, total, err := s.repo.ListPendingClaims(ctx, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 	out := make([]PublicClaim, 0, len(rows))
 	for _, cl := range rows {
-		out = append(out, PublicClaim{
-			ID:                 cl.ID,
-			ArtistID:           cl.ArtistID,
-			Status:             cl.Status,
-			VerificationMethod: cl.VerificationMethod,
-			ProofURL:           cl.ProofURL,
-			CreatedAt:          cl.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
-		})
+		out = append(out, toPublicClaim(cl))
 	}
 	return out, total, nil
 }
@@ -300,20 +311,31 @@ func (s *Service) ListPendingClaims(ctx context.Context, limit, offset int) ([]P
 func (s *Service) ReviewClaim(ctx context.Context, claimID, reviewerID, status string) (PublicClaim, error) {
 	cl, err := s.repo.ReviewClaim(ctx, claimID, reviewerID, status)
 	if err != nil {
-		if strings.Contains(err.Error(), "not pending") || strings.Contains(err.Error(), "invalid") {
-			return PublicClaim{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
-		}
-		if errors.Is(err, ErrNotFound) {
+		switch {
+		case errors.Is(err, ErrClaimNotPending):
+			return PublicClaim{}, fmt.Errorf("%w: claim is not pending", ErrValidation)
+		case errors.Is(err, ErrAlreadyClaimed):
+			return PublicClaim{}, fmt.Errorf("%w: artist is already claimed", ErrConflict)
+		case errors.Is(err, ErrNotFound):
 			return PublicClaim{}, ErrNotFound
+		case strings.Contains(err.Error(), "invalid claim status"):
+			return PublicClaim{}, fmt.Errorf("%w: invalid claim status", ErrValidation)
+		default:
+			return PublicClaim{}, err
 		}
-		return PublicClaim{}, err
 	}
+	return toPublicClaim(cl), nil
+}
+
+func toPublicClaim(cl Claim) PublicClaim {
 	return PublicClaim{
 		ID:                 cl.ID,
 		ArtistID:           cl.ArtistID,
+		UserID:             cl.UserID,
+		UserHandle:         cl.UserHandle,
 		Status:             cl.Status,
 		VerificationMethod: cl.VerificationMethod,
 		ProofURL:           cl.ProofURL,
 		CreatedAt:          cl.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
-	}, nil
+	}
 }

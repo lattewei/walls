@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/lattewei/walls/services/api/internal/auth"
+	"github.com/lattewei/walls/services/api/internal/dberr"
 	"github.com/lattewei/walls/services/api/internal/httpx"
 )
 
@@ -23,6 +24,10 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) Create(c *gin.Context) {
 	fileHeader, err := c.FormFile("audio")
 	if err != nil {
+		if httpx.IsBodyTooLarge(err) {
+			httpx.JSONError(c, http.StatusRequestEntityTooLarge, "validation_error", "file too large")
+			return
+		}
 		httpx.BadRequest(c, "audio file is required (multipart field: audio)")
 		return
 	}
@@ -163,12 +168,20 @@ func (h *Handler) mapError(c *gin.Context, err error) {
 		msg := strings.TrimPrefix(err.Error(), ErrValidation.Error()+": ")
 		httpx.JSONError(c, http.StatusBadRequest, "validation_error", msg)
 	case errors.Is(err, ErrNotFound):
-		httpx.NotFound(c, "track not found")
+		httpx.NotFound(c, "not found")
 	case errors.Is(err, ErrForbidden):
 		httpx.Forbidden(c, "forbidden")
 	case errors.Is(err, ErrRateLimit):
 		httpx.JSONError(c, http.StatusTooManyRequests, "rate_limited", "daily upload limit reached")
 	default:
+		if dberr.IsInvalidSyntax(err) || errors.Is(err, dberr.ErrInvalidID) {
+			httpx.BadRequest(c, "invalid id")
+			return
+		}
+		if httpx.IsBodyTooLarge(err) {
+			httpx.JSONError(c, http.StatusRequestEntityTooLarge, "validation_error", "file too large")
+			return
+		}
 		httpx.Internal(c)
 	}
 }

@@ -38,6 +38,23 @@ func TestLoadDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsWeakProductionSecret(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://u:p@localhost:5432/db?sslmode=disable")
+	t.Setenv("API_ENV", "production")
+	t.Setenv("JWT_SECRET", "dev-only-change-me")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected production to refuse the default secret")
+	}
+}
+
+func TestLoadRejectsBadDuration(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://u:p@localhost:5432/db?sslmode=disable")
+	t.Setenv("JWT_ACCESS_TTL", "nope")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected invalid duration to fail")
+	}
+}
+
 func TestSplitCSV(t *testing.T) {
 	got := splitCSV(" http://a.com , http://b.com, ")
 	if len(got) != 2 || got[0] != "http://a.com" || got[1] != "http://b.com" {

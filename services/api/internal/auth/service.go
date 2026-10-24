@@ -87,18 +87,30 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (AuthResult, error) 
 	}
 
 	user, err := s.users.GetByHandle(ctx, handle)
-	if errors.Is(err, users.ErrNotFound) {
-		return AuthResult{}, ErrInvalidCredentials
-	}
-	if err != nil {
+	hash := dummyHash
+	switch {
+	case errors.Is(err, users.ErrNotFound):
+		user = domain.User{}
+	case err != nil:
 		return AuthResult{}, err
+	default:
+		hash = user.PasswordHash
 	}
-
-	if !CheckPassword(user.PasswordHash, in.Password) {
+	if !CheckPassword(hash, in.Password) || user.ID == "" {
 		return AuthResult{}, ErrInvalidCredentials
 	}
 
 	return s.issue(ctx, user)
+}
+
+func (s *Service) Logout(ctx context.Context, userID string) error {
+	if err := s.users.BumpSession(ctx, userID); err != nil {
+		if errors.Is(err, users.ErrNotFound) {
+			return ErrUnauthorized
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *Service) Me(ctx context.Context, userID string) (domain.MeResponse, error) {
@@ -158,11 +170,8 @@ func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdatePro
 			}
 		}
 
-		updated, err := s.users.UpdateProfile(ctx, userID, displayName, bio)
-		if err != nil {
-			return domain.MeResponse{}, err
-		}
-		user = updated
+		user.DisplayName = displayName
+		user.Bio = bio
 	}
 
 	profile, err := s.users.GetProducerProfile(ctx, userID)
@@ -201,32 +210,41 @@ func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdatePro
 			profile.OtherLinks = links
 		}
 
-		profile, err = s.users.UpsertProducerProfile(ctx, userID, profile)
-		if err != nil {
-			return domain.MeResponse{}, err
-		}
 	}
 
+	savedUser, savedProfile, err := s.users.SaveAccount(ctx, userID, user.DisplayName, user.Bio, profile)
+	if err != nil {
+		if errors.Is(err, users.ErrNotFound) {
+			return domain.MeResponse{}, ErrUnauthorized
+		}
+		return domain.MeResponse{}, err
+	}
 	return domain.MeResponse{
-		User:     user.ToPublic(),
-		Contacts: profile.ToPublic(),
+		User:     savedUser.ToPublic(),
+		Contacts: savedProfile.ToPublic(),
 	}, nil
 }
 
 func (s *Service) issue(ctx context.Context, user domain.User) (AuthResult, error) {
-	tok, exp, err := s.tokens.IssueAccessToken(user.ID, user.Handle, user.Role)
+	state, err := s.users.AuthState(ctx, user.ID)
+	if err != nil {
+		return AuthResult{}, err
+	}
+	tok, exp, err := s.tokens.IssueAccessToken(user.ID, state.Handle, state.Role, state.SessionVersion)
 	if err != nil {
 		return AuthResult{}, err
 	}
 
-	contacts := domain.EmptyContacts()
-	if profile, err := s.users.GetProducerProfile(ctx, user.ID); err == nil {
-		contacts = profile.ToPublic()
+	profile, err := s.users.GetProducerProfile(ctx, user.ID)
+	if err != nil {
+		return AuthResult{}, err
 	}
+	user.Role = state.Role
+	user.Handle = state.Handle
 
 	return AuthResult{
 		User:        user.ToPublic(),
-		Contacts:    contacts,
+		Contacts:    profile.ToPublic(),
 		AccessToken: tok,
 		TokenType:   "Bearer",
 		ExpiresAt:   exp.UTC().Format(time.RFC3339),

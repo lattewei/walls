@@ -6,13 +6,14 @@ import { FormEvent, useState } from "react";
 
 import { isApiRequestError } from "@/lib/api";
 import { login, register } from "@/lib/auth";
+import { safeNext } from "@/lib/safe-next";
 
 type Mode = "login" | "register";
 
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const search = useSearchParams();
-  const nextPath = search.get("next") || "/app";
+  const nextPath = safeNext(search.get("next"));
   const [handle, setHandle] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -29,7 +30,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       } else {
         await register(handle.trim(), password, displayName.trim() || undefined);
       }
-      router.push(nextPath.startsWith("/") ? nextPath : "/app");
+      router.push(nextPath);
       router.refresh();
     } catch (err) {
       if (isApiRequestError(err)) {
@@ -49,11 +50,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const alt =
     mode === "login" ? (
       <>
-        No account? <Link href="/register">Create one</Link>
+        No account? <Link href={`/register?next=${encodeURIComponent(nextPath)}`}>Create one</Link>
       </>
     ) : (
       <>
-        Already have one? <Link href="/login">Log in</Link>
+        Already have one? <Link href={`/login?next=${encodeURIComponent(nextPath)}`}>Log in</Link>
       </>
     );
 
@@ -106,6 +107,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={8}
+            maxLength={72}
           />
         </label>
 

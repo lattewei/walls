@@ -12,7 +12,10 @@ import (
 	"github.com/lattewei/walls/services/api/internal/domain"
 )
 
-var ErrNotFound = errors.New("track not found")
+var (
+	ErrNotFound   = errors.New("track not found")
+	ErrDailyLimit = errors.New("daily upload limit")
+)
 
 type Repository struct {
 	pool *pgxpool.Pool
@@ -23,14 +26,17 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 }
 
 type CreateInput struct {
-	UploaderUserID string
-	Title          string
-	Description    *string
-	AudioObjectKey string
-	AudioFormat    string
-	Status         string
-	ArtistIDs      []string
-	Tags           []string
+	UploaderUserID  string
+	Title           string
+	Description     *string
+	AudioObjectKey  string
+	AudioFormat     string
+	DurationSeconds *int
+	Status          string
+	ArtistIDs       []string
+	Tags            []string
+	Since           time.Time
+	DailyLimit      int
 }
 
 func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Track, error) {
@@ -40,14 +46,37 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Track, 
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
+	var locked string
+	err = tx.QueryRow(ctx, `
+		SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE
+	`, in.UploaderUserID).Scan(&locked)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Track{}, ErrNotFound
+	}
+	if err != nil {
+		return domain.Track{}, fmt.Errorf("lock uploader: %w", err)
+	}
+	if in.DailyLimit > 0 {
+		var n int
+		if err := tx.QueryRow(ctx, `
+			SELECT COUNT(*) FROM tracks
+			WHERE uploader_user_id = $1 AND created_at >= $2
+		`, in.UploaderUserID, in.Since).Scan(&n); err != nil {
+			return domain.Track{}, fmt.Errorf("count uploads: %w", err)
+		}
+		if n >= in.DailyLimit {
+			return domain.Track{}, ErrDailyLimit
+		}
+	}
+
 	const insertTrack = `
-		INSERT INTO tracks (uploader_user_id, title, description, audio_object_key, audio_format, status)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO tracks (uploader_user_id, title, description, audio_object_key, audio_format, duration_seconds, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, uploader_user_id, title, description, audio_object_key, audio_format,
 		          duration_seconds, status, created_at, updated_at, removed_at
 	`
 	t, err := scanTrack(tx.QueryRow(ctx, insertTrack,
-		in.UploaderUserID, in.Title, in.Description, in.AudioObjectKey, in.AudioFormat, in.Status,
+		in.UploaderUserID, in.Title, in.Description, in.AudioObjectKey, in.AudioFormat, in.DurationSeconds, in.Status,
 	))
 	if err != nil {
 		return domain.Track{}, fmt.Errorf("insert track: %w", err)
@@ -70,11 +99,17 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Track, 
 		}
 	}
 
+	if err := tx.QueryRow(ctx, `SELECT handle, display_name FROM users WHERE id = $1`, in.UploaderUserID).
+		Scan(&t.UploaderHandle, &t.UploaderName); err != nil {
+		return domain.Track{}, fmt.Errorf("uploader: %w", err)
+	}
+	if err := attachMeta(ctx, tx, &t); err != nil {
+		return domain.Track{}, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return domain.Track{}, fmt.Errorf("commit: %w", err)
 	}
-
-	return r.GetByID(ctx, t.ID)
+	return t, nil
 }
 
 func (r *Repository) GetByID(ctx context.Context, id string) (domain.Track, error) {
@@ -93,7 +128,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (domain.Track, erro
 	if err != nil {
 		return domain.Track{}, fmt.Errorf("get track: %w", err)
 	}
-	if err := r.attachMeta(ctx, &t); err != nil {
+	if err := attachMeta(ctx, r.pool, &t); err != nil {
 		return domain.Track{}, err
 	}
 	return t, nil
@@ -142,7 +177,7 @@ func (r *Repository) ListByArtistSlug(ctx context.Context, slug string, limit, o
 		return nil, 0, err
 	}
 	for i := range out {
-		if err := r.attachMeta(ctx, &out[i]); err != nil {
+		if err := attachMeta(ctx, r.pool, &out[i]); err != nil {
 			return nil, 0, err
 		}
 	}
@@ -150,6 +185,16 @@ func (r *Repository) ListByArtistSlug(ctx context.Context, slug string, limit, o
 }
 
 func (r *Repository) ListByUploaderHandle(ctx context.Context, handle string, limit, offset int) ([]domain.Track, int, error) {
+	var exists bool
+	if err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM users WHERE lower(handle) = lower($1) AND deleted_at IS NULL)
+	`, handle).Scan(&exists); err != nil {
+		return nil, 0, fmt.Errorf("uploader exists: %w", err)
+	}
+	if !exists {
+		return nil, 0, ErrNotFound
+	}
+
 	const countQ = `
 		SELECT COUNT(*)
 		FROM tracks t
@@ -189,7 +234,7 @@ func (r *Repository) ListByUploaderHandle(ctx context.Context, handle string, li
 		return nil, 0, err
 	}
 	for i := range out {
-		if err := r.attachMeta(ctx, &out[i]); err != nil {
+		if err := attachMeta(ctx, r.pool, &out[i]); err != nil {
 			return nil, 0, err
 		}
 	}
@@ -243,36 +288,52 @@ func (r *Repository) ListProducers(ctx context.Context, limit, offset int) ([]do
 	return out, total, nil
 }
 
-func (r *Repository) SoftDelete(ctx context.Context, id, uploaderID string) error {
+func (r *Repository) SoftDelete(ctx context.Context, id, uploaderID string) (*string, error) {
 	const q = `
-		UPDATE tracks
-		SET status = 'removed', removed_at = now(), updated_at = now()
-		WHERE id = $1 AND uploader_user_id = $2 AND status <> 'removed'
+		WITH old AS (
+			SELECT id, audio_object_key
+			FROM tracks
+			WHERE id = $1 AND uploader_user_id = $2 AND status <> 'removed'
+		)
+		UPDATE tracks t
+		SET status = 'removed', removed_at = now(), updated_at = now(), audio_object_key = NULL
+		FROM old
+		WHERE t.id = old.id
+		RETURNING old.audio_object_key
 	`
-	tag, err := r.pool.Exec(ctx, q, id, uploaderID)
+	var key *string
+	err := r.pool.QueryRow(ctx, q, id, uploaderID).Scan(&key)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
-		return fmt.Errorf("soft delete track: %w", err)
+		return nil, fmt.Errorf("soft delete track: %w", err)
 	}
-	if tag.RowsAffected() == 0 {
-		return ErrNotFound
-	}
-	return nil
+	return key, nil
 }
 
-func (r *Repository) Hide(ctx context.Context, id string) error {
+func (r *Repository) Hide(ctx context.Context, id string) (*string, error) {
 	const q = `
-		UPDATE tracks
-		SET status = 'removed', removed_at = now(), updated_at = now()
-		WHERE id = $1 AND status <> 'removed'
+		WITH old AS (
+			SELECT id, audio_object_key
+			FROM tracks
+			WHERE id = $1 AND status <> 'removed'
+		)
+		UPDATE tracks t
+		SET status = 'removed', removed_at = now(), updated_at = now(), audio_object_key = NULL
+		FROM old
+		WHERE t.id = old.id
+		RETURNING old.audio_object_key
 	`
-	tag, err := r.pool.Exec(ctx, q, id)
+	var key *string
+	err := r.pool.QueryRow(ctx, q, id).Scan(&key)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
-		return fmt.Errorf("hide track: %w", err)
+		return nil, fmt.Errorf("hide track: %w", err)
 	}
-	if tag.RowsAffected() == 0 {
-		return ErrNotFound
-	}
-	return nil
+	return key, nil
 }
 
 func (r *Repository) CountCreatedSince(ctx context.Context, userID string, since time.Time) (int, error) {
@@ -287,7 +348,11 @@ func (r *Repository) CountCreatedSince(ctx context.Context, userID string, since
 	return n, nil
 }
 
-func (r *Repository) attachMeta(ctx context.Context, t *domain.Track) error {
+type rowQuery interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+}
+
+func attachMeta(ctx context.Context, q rowQuery, t *domain.Track) error {
 	const artistsQ = `
 		SELECT a.id, a.slug
 		FROM track_artists ta
@@ -295,7 +360,7 @@ func (r *Repository) attachMeta(ctx context.Context, t *domain.Track) error {
 		WHERE ta.track_id = $1
 		ORDER BY a.slug
 	`
-	rows, err := r.pool.Query(ctx, artistsQ, t.ID)
+	rows, err := q.Query(ctx, artistsQ, t.ID)
 	if err != nil {
 		return fmt.Errorf("track artists: %w", err)
 	}
@@ -310,9 +375,12 @@ func (r *Repository) attachMeta(ctx context.Context, t *domain.Track) error {
 		t.ArtistIDs = append(t.ArtistIDs, id)
 		t.ArtistSlugs = append(t.ArtistSlugs, slug)
 	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
 
 	const tagsQ = `SELECT tag FROM track_tags WHERE track_id = $1 ORDER BY tag`
-	tagRows, err := r.pool.Query(ctx, tagsQ, t.ID)
+	tagRows, err := q.Query(ctx, tagsQ, t.ID)
 	if err != nil {
 		return fmt.Errorf("track tags: %w", err)
 	}
@@ -325,7 +393,7 @@ func (r *Repository) attachMeta(ctx context.Context, t *domain.Track) error {
 		}
 		t.Tags = append(t.Tags, tag)
 	}
-	return nil
+	return tagRows.Err()
 }
 
 type scannable interface {

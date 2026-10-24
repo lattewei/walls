@@ -19,6 +19,16 @@ var (
 	ErrHandleTaken = errors.New("handle already taken")
 )
 
+type AuthState struct {
+	Handle         string
+	Role           string
+	SessionVersion int
+}
+
+type SessionStore interface {
+	AuthState(ctx context.Context, userID string) (AuthState, error)
+}
+
 type Repository struct {
 	pool *pgxpool.Pool
 }
@@ -75,6 +85,38 @@ func (r *Repository) GetByHandle(ctx context.Context, handle string) (domain.Use
 		return domain.User{}, fmt.Errorf("get by handle: %w", err)
 	}
 	return u, nil
+}
+
+func (r *Repository) AuthState(ctx context.Context, id string) (AuthState, error) {
+	const q = `
+		SELECT handle, role, session_version
+		FROM users
+		WHERE id = $1 AND deleted_at IS NULL
+	`
+	var st AuthState
+	err := r.pool.QueryRow(ctx, q, id).Scan(&st.Handle, &st.Role, &st.SessionVersion)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return AuthState{}, ErrNotFound
+	}
+	if err != nil {
+		return AuthState{}, fmt.Errorf("auth state: %w", err)
+	}
+	return st, nil
+}
+
+func (r *Repository) BumpSession(ctx context.Context, id string) error {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE users
+		SET session_version = session_version + 1, updated_at = now()
+		WHERE id = $1 AND deleted_at IS NULL
+	`, id)
+	if err != nil {
+		return fmt.Errorf("bump session: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (r *Repository) GetByID(ctx context.Context, id string) (domain.User, error) {

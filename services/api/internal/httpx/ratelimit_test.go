@@ -9,6 +9,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func TestUntrustedForwardedForIsIgnored(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	if err := r.SetTrustedProxies(nil); err != nil {
+		t.Fatal(err)
+	}
+	r.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, c.ClientIP())
+	})
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "203.0.113.8:1234"
+	req.Header.Set("X-Forwarded-For", "198.51.100.1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Body.String() != "203.0.113.8" {
+		t.Fatalf("ClientIP = %q, want remote address", w.Body.String())
+	}
+}
+
 func TestMemoryRateLimiterAllowsThenBlocks(t *testing.T) {
 	l := NewMemoryRateLimiter(3, time.Minute)
 

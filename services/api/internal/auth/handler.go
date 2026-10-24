@@ -77,6 +77,10 @@ func (h *Handler) Login(c *gin.Context) {
 }
 
 func (h *Handler) Logout(c *gin.Context) {
+	if err := h.svc.Logout(c.Request.Context(), UserIDFromContext(c)); err != nil {
+		h.mapError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 

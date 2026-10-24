@@ -24,4 +24,7 @@ func TestValidatePassword(t *testing.T) {
 	if err := ValidatePassword("longenough"); err != nil {
 		t.Fatal(err)
 	}
+	if err := ValidatePassword(string(make([]byte, 73))); err == nil {
+		t.Fatal("expected bcrypt length error")
+	}
 }

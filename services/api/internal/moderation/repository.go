@@ -33,6 +33,25 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
+func (r *Repository) TargetExists(ctx context.Context, targetType, targetID string) (bool, error) {
+	var q string
+	switch targetType {
+	case "track":
+		q = `SELECT EXISTS(SELECT 1 FROM tracks WHERE id = $1 AND status <> 'removed')`
+	case "artist":
+		q = `SELECT EXISTS(SELECT 1 FROM artists WHERE id = $1)`
+	case "user":
+		q = `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND deleted_at IS NULL)`
+	default:
+		return false, nil
+	}
+	var ok bool
+	if err := r.pool.QueryRow(ctx, q, targetID).Scan(&ok); err != nil {
+		return false, err
+	}
+	return ok, nil
+}
+
 func (r *Repository) Create(ctx context.Context, reporterID *string, targetType, targetID, reason string, details *string) (Report, error) {
 	const q = `
 		INSERT INTO reports (reporter_user_id, target_type, target_id, reason, details)

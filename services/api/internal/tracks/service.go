@@ -23,6 +23,7 @@ const (
 	maxArtists   = 10
 	defaultLimit = 20
 	maxLimit     = 50
+	maxOffset    = 10000
 )
 
 type Service struct {
@@ -105,15 +106,6 @@ func (s *Service) Create(ctx context.Context, in UploadInput) (domain.PublicTrac
 		return domain.PublicTrack{}, fmt.Errorf("%w: file too large", ErrValidation)
 	}
 
-	since := time.Now().UTC().Truncate(24 * time.Hour)
-	count, err := s.repo.CountCreatedSince(ctx, in.UploaderID, since)
-	if err != nil {
-		return domain.PublicTrack{}, err
-	}
-	if count >= s.dailyLimit {
-		return domain.PublicTrack{}, fmt.Errorf("%w: daily upload limit reached", ErrRateLimit)
-	}
-
 	artistIDs := make([]string, 0, len(slugs))
 	for _, slug := range slugs {
 		a, err := s.artists.GetBySlug(ctx, slug)
@@ -126,29 +118,46 @@ func (s *Service) Create(ctx context.Context, in UploadInput) (domain.PublicTrac
 		artistIDs = append(artistIDs, a.ID)
 	}
 
-	limited := io.LimitReader(in.File, s.maxBytes+1)
-	info, stream, err := media.DetectAudio(limited)
+	info, stream, err := media.DetectAudio(in.File)
 	if err != nil {
+		if errors.Is(err, media.ErrUnsupported) {
+			return domain.PublicTrack{}, fmt.Errorf("%w: unsupported audio type (allowed: mp3, wav)", ErrValidation)
+		}
 		return domain.PublicTrack{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
 	}
 
-	key, err := s.storage.Save(stream, info.Ext)
+	key, err := s.storage.SaveCapped(stream, info.Ext, s.maxBytes)
+	if errors.Is(err, media.ErrTooLarge) {
+		return domain.PublicTrack{}, fmt.Errorf("%w: file too large", ErrValidation)
+	}
 	if err != nil {
 		return domain.PublicTrack{}, err
 	}
 
+	duration, err := confirmedDuration(s.storage, key, info.Format)
+	if err != nil {
+		_ = s.storage.Delete(key)
+		return domain.PublicTrack{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+	}
+
 	track, err := s.repo.Create(ctx, CreateInput{
-		UploaderUserID: in.UploaderID,
-		Title:          title,
-		Description:    desc,
-		AudioObjectKey: key,
-		AudioFormat:    info.Format,
-		Status:         domain.TrackReady,
-		ArtistIDs:      artistIDs,
-		Tags:           tags,
+		UploaderUserID:  in.UploaderID,
+		Title:           title,
+		Description:     desc,
+		AudioObjectKey:  key,
+		AudioFormat:     info.Format,
+		DurationSeconds: duration,
+		Status:          domain.TrackReady,
+		ArtistIDs:       artistIDs,
+		Tags:            tags,
+		Since:           time.Now().UTC().Truncate(24 * time.Hour),
+		DailyLimit:      s.dailyLimit,
 	})
 	if err != nil {
 		_ = s.storage.Delete(key)
+		if errors.Is(err, ErrDailyLimit) {
+			return domain.PublicTrack{}, fmt.Errorf("%w: daily upload limit reached", ErrRateLimit)
+		}
 		return domain.PublicTrack{}, err
 	}
 	return track.ToPublic(), nil
@@ -188,6 +197,9 @@ func (s *Service) ListByArtistSlug(ctx context.Context, slug string, limit, offs
 	if offset < 0 {
 		offset = 0
 	}
+	if offset > maxOffset {
+		return ListResult{}, fmt.Errorf("%w: offset is too large", ErrValidation)
+	}
 
 	rows, total, err := s.repo.ListByArtistSlug(ctx, slug, limit, offset)
 	if err != nil {
@@ -221,6 +233,9 @@ func (s *Service) ListByUploaderHandle(ctx context.Context, handle string, limit
 	if offset < 0 {
 		offset = 0
 	}
+	if offset > maxOffset {
+		return ListResult{}, fmt.Errorf("%w: offset is too large", ErrValidation)
+	}
 
 	rows, total, err := s.repo.ListByUploaderHandle(ctx, handle, limit, offset)
 	if err != nil {
@@ -250,6 +265,9 @@ func (s *Service) ListProducers(ctx context.Context, limit, offset int) (Produce
 	if offset < 0 {
 		offset = 0
 	}
+	if offset > maxOffset {
+		return ProducersResult{}, fmt.Errorf("%w: offset is too large", ErrValidation)
+	}
 	rows, total, err := s.repo.ListProducers(ctx, limit, offset)
 	if err != nil {
 		return ProducersResult{}, err
@@ -271,11 +289,28 @@ func (s *Service) Withdraw(ctx context.Context, trackID, userID string) error {
 	if t.Status == domain.TrackRemoved {
 		return ErrNotFound
 	}
-	return s.repo.SoftDelete(ctx, trackID, userID)
+	key, err := s.repo.SoftDelete(ctx, trackID, userID)
+	if err != nil {
+		return err
+	}
+	s.deleteAudio(key)
+	return nil
 }
 
 func (s *Service) Hide(ctx context.Context, trackID string) error {
-	return s.repo.Hide(ctx, trackID)
+	key, err := s.repo.Hide(ctx, trackID)
+	if err != nil {
+		return err
+	}
+	s.deleteAudio(key)
+	return nil
+}
+
+func (s *Service) deleteAudio(key *string) {
+	if key == nil || *key == "" || s.storage == nil {
+		return
+	}
+	_ = s.storage.Delete(*key)
 }
 
 func (s *Service) OpenAudio(ctx context.Context, trackID string) (*os.File, string, error) {
@@ -303,6 +338,29 @@ func (s *Service) OpenAudio(ctx context.Context, trackID string) (*os.File, stri
 		}
 	}
 	return f, ct, nil
+}
+
+func confirmedDuration(storage *media.LocalStorage, key, format string) (*int, error) {
+	path, err := storage.Path(key)
+	if err != nil {
+		return nil, err
+	}
+	if format == "mp3" {
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		secs, err := media.ConfirmMP3(f)
+		if err != nil {
+			return nil, fmt.Errorf("not a valid mp3")
+		}
+		return &secs, nil
+	}
+	if secs, err := media.ProbeFile(path, format); err == nil && secs > 0 {
+		return &secs, nil
+	}
+	return nil, nil
 }
 
 func normalizeSlugs(in []string) []string {

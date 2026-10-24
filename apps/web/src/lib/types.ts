@@ -60,10 +60,11 @@ export type ProdRow = {
   coverUrl?: string;
   wallName?: string;
   canWithdraw?: boolean;
+  detail?: string;
 };
 
 export function formatDuration(seconds?: number | null): string {
-  if (seconds == null || seconds < 0 || !Number.isFinite(seconds)) return "0:00";
+  if (seconds == null || seconds < 0 || !Number.isFinite(seconds)) return "—";
   const total = Math.floor(seconds);
   const m = Math.floor(total / 60);
   const s = total % 60;

@@ -7,10 +7,16 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/google/uuid"
+
+	"github.com/lattewei/walls/services/api/internal/dberr"
 )
 
 var (
-	ErrValidation = errors.New("validation_error")
+	ErrValidation    = errors.New("validation_error")
+	ErrTargetMissing = errors.New("target not found")
+	ErrDuplicate     = errors.New("duplicate report")
 )
 
 type Service struct {
@@ -39,8 +45,18 @@ func (s *Service) Create(ctx context.Context, reporterID string, targetType, tar
 		return PublicReport{}, fmt.Errorf("%w: target_type must be track, artist, or user", ErrValidation)
 	}
 	targetID = strings.TrimSpace(targetID)
-	if targetID == "" {
-		return PublicReport{}, fmt.Errorf("%w: target_id is required", ErrValidation)
+	if _, err := uuid.Parse(targetID); err != nil {
+		return PublicReport{}, fmt.Errorf("%w: target_id must be a uuid", ErrValidation)
+	}
+	exists, err := s.repo.TargetExists(ctx, targetType, targetID)
+	if err != nil {
+		if dberr.IsInvalidSyntax(err) {
+			return PublicReport{}, fmt.Errorf("%w: target_id must be a uuid", ErrValidation)
+		}
+		return PublicReport{}, err
+	}
+	if !exists {
+		return PublicReport{}, ErrTargetMissing
 	}
 	reason = strings.TrimSpace(reason)
 	if reason == "" || utf8.RuneCountInString(reason) > 200 {
@@ -58,6 +74,9 @@ func (s *Service) Create(ctx context.Context, reporterID string, targetType, tar
 		reporter = &reporterID
 	}
 	rep, err := s.repo.Create(ctx, reporter, targetType, targetID, reason, det)
+	if dberr.IsUnique(err) {
+		return PublicReport{}, ErrDuplicate
+	}
 	if err != nil {
 		return PublicReport{}, err
 	}
@@ -73,6 +92,9 @@ func (s *Service) List(ctx context.Context, status string, limit, offset int) ([
 	}
 	if offset < 0 {
 		offset = 0
+	}
+	if offset > 10000 {
+		return nil, 0, fmt.Errorf("%w: offset is too large", ErrValidation)
 	}
 	if status != "" {
 		switch status {

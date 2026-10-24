@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -42,12 +43,15 @@ func (l *MemoryRateLimiter) Allow(key string) (allowed bool, remaining int, rese
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if len(l.entries) > 10_000 {
+	if len(l.entries) > 1024 {
 		for k, e := range l.entries {
 			if !now.Before(e.reset) {
 				delete(l.entries, k)
 			}
 		}
+	}
+	if _, exists := l.entries[key]; !exists && len(l.entries) >= 10_000 {
+		return false, 0, now.Add(l.window)
 	}
 
 	e, ok := l.entries[key]
@@ -73,48 +77,19 @@ func RateLimit(limiter *MemoryRateLimiter) gin.HandlerFunc {
 			key = "unknown"
 		}
 		allowed, remaining, resetAt := limiter.Allow(key)
-		c.Header("X-RateLimit-Limit", itoa(limiter.limit))
-		c.Header("X-RateLimit-Remaining", itoa(maxInt(0, remaining)))
-		c.Header("X-RateLimit-Reset", itoa(int(resetAt.Unix())))
+		c.Header("X-RateLimit-Limit", strconv.Itoa(limiter.limit))
+		c.Header("X-RateLimit-Remaining", strconv.Itoa(max(0, remaining)))
+		c.Header("X-RateLimit-Reset", strconv.Itoa(int(resetAt.Unix())))
 
 		if !allowed {
 			retry := int(resetAt.Sub(limiter.now()).Seconds())
 			if retry < 1 {
 				retry = 1
 			}
-			c.Header("Retry-After", itoa(retry))
+			c.Header("Retry-After", strconv.Itoa(retry))
 			JSONError(c, http.StatusTooManyRequests, "rate_limited", "too many requests, try again later")
 			return
 		}
 		c.Next()
 	}
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	neg := n < 0
-	if neg {
-		n = -n
-	}
-	var buf [20]byte
-	i := len(buf)
-	for n > 0 {
-		i--
-		buf[i] = byte('0' + n%10)
-		n /= 10
-	}
-	if neg {
-		i--
-		buf[i] = '-'
-	}
-	return string(buf[i:])
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

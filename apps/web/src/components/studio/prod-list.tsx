@@ -6,17 +6,22 @@ import { useEffect, useState } from "react";
 
 import { isApiRequestError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import { withdrawTrack } from "@/lib/catalog";
+import { reportTarget, withdrawTrack } from "@/lib/catalog";
 import type { ProdRow } from "@/lib/types";
 import { formatDuration } from "@/lib/types";
 import { usePlayer } from "./player-context";
 import { IconPause, IconPlay } from "./icons";
 
-export function ProdList({ tracks }: { tracks: ProdRow[] }) {
+export function ProdList({
+  tracks,
+  loadError,
+}: {
+  tracks: ProdRow[];
+  loadError?: string | null;
+}) {
   const player = usePlayer();
   const router = useRouter();
   const [rows, setRows] = useState(tracks);
-  const [durations, setDurations] = useState<Record<string, number>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,41 +29,12 @@ export function ProdList({ tracks }: { tracks: ProdRow[] }) {
     setRows(tracks);
   }, [tracks]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const next: Record<string, number> = {};
-
-    rows.forEach((track) => {
-      if (!track.audioUrl) return;
-      if (track.durationSeconds && track.durationSeconds > 0) {
-        next[track.id] = track.durationSeconds;
-        return;
-      }
-      const audio = new Audio();
-      audio.preload = "metadata";
-      audio.src = track.audioUrl;
-      audio.onloadedmetadata = () => {
-        if (cancelled) return;
-        if (Number.isFinite(audio.duration) && audio.duration > 0) {
-          setDurations((prev) =>
-            prev[track.id] === audio.duration ? prev : { ...prev, [track.id]: audio.duration },
-          );
-        }
-      };
-    });
-
-    if (Object.keys(next).length) {
-      setDurations((prev) => ({ ...next, ...prev }));
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [rows]);
-
   async function onWithdraw(trackId: string) {
     const token = getToken();
-    if (!token) return;
+    if (!token) {
+      router.push("/login?next=" + encodeURIComponent(window.location.pathname));
+      return;
+    }
     if (!window.confirm("Remove this production from Walls?")) return;
 
     setError(null);
@@ -77,6 +53,27 @@ export function ProdList({ tracks }: { tracks: ProdRow[] }) {
     }
   }
 
+  async function onReport(trackId: string) {
+    const token = getToken();
+    if (!token) {
+      router.push("/login?next=" + encodeURIComponent(window.location.pathname));
+      return;
+    }
+    const reason = window.prompt("Why are you reporting this production?");
+    if (!reason || !reason.trim()) return;
+    setError(null);
+    try {
+      await reportTarget(token, "track", trackId, reason.trim(), "");
+      setError("Report sent.");
+    } catch (err) {
+      setError(isApiRequestError(err) ? err.message : "Could not send report.");
+    }
+  }
+
+  if (loadError) {
+    return <p className="prods__err">{loadError}</p>;
+  }
+
   if (rows.length === 0) {
     return <p className="prods__empty">No productions yet</p>;
   }
@@ -89,10 +86,7 @@ export function ProdList({ tracks }: { tracks: ProdRow[] }) {
           const active = player.track?.id === track.id;
           const playing = active && player.playing;
           const canPlay = Boolean(track.audioUrl);
-          const seconds =
-            durations[track.id] ??
-            track.durationSeconds ??
-            (active && player.duration > 0 ? player.duration : null);
+          const seconds = track.durationSeconds ?? (active && player.duration > 0 ? player.duration : null);
 
           return (
             <li key={track.id}>
@@ -130,8 +124,12 @@ export function ProdList({ tracks }: { tracks: ProdRow[] }) {
                   ) : (
                     <em>{track.meta}</em>
                   )}
+                  {track.detail ? <em className="prod__detail">{track.detail}</em> : null}
                 </span>
                 <span className="prod__dur">{formatDuration(seconds)}</span>
+                <button type="button" className="prod__rm" onClick={() => onReport(track.id)}>
+                  Report
+                </button>
                 {track.canWithdraw ? (
                   <button
                     type="button"

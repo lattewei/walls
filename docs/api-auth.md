@@ -56,7 +56,7 @@ Errors: `400 validation_error`, `409 handle_taken`.
 
 ### `POST /api/v1/auth/logout`
 
-Stateless JWT: client discards the token. Responds `{"status":"ok"}`.
+Requires `Authorization: Bearer`. Increments the user's session version, so previously issued access tokens stop working. Responds `{"status":"ok"}`.
 
 ### `GET /api/v1/me`
 

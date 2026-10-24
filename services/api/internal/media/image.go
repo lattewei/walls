@@ -35,7 +35,7 @@ func DetectImage(r io.Reader) (ImageInfo, io.Reader, error) {
 	if n >= 6 && (string(header[0:6]) == "GIF87a" || string(header[0:6]) == "GIF89a") {
 		return ImageInfo{Format: "gif", Ext: "gif", MIME: "image/gif"}, rest, nil
 	}
-	return ImageInfo{}, nil, fmt.Errorf("unsupported image type (allowed: jpeg, png, webp, gif)")
+	return ImageInfo{}, nil, fmt.Errorf("%w: allowed image types are jpeg, png, webp, gif", ErrUnsupported)
 }
 
 func MIMEFromKey(key string) string {

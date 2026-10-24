@@ -2,22 +2,39 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { getStoredUser } from "@/lib/auth";
+import { getToken } from "@/lib/auth";
+import { getMe } from "@/lib/catalog";
 import type { ProdRow } from "@/lib/types";
 import { ProdList } from "@/components/studio/prod-list";
 
 export function ProfileTracks({
   handle,
   tracks,
+  loadError,
 }: {
   handle: string;
   tracks: ProdRow[];
+  loadError?: string | null;
 }) {
   const [owner, setOwner] = useState(false);
 
   useEffect(() => {
-    const u = getStoredUser();
-    setOwner(Boolean(u && u.handle === handle));
+    const token = getToken();
+    if (!token) {
+      setOwner(false);
+      return;
+    }
+    let cancelled = false;
+    getMe(token)
+      .then((me) => {
+        if (!cancelled) setOwner(me.user.handle === handle);
+      })
+      .catch(() => {
+        if (!cancelled) setOwner(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [handle]);
 
   const rows = useMemo(
@@ -25,5 +42,5 @@ export function ProfileTracks({
     [tracks, owner],
   );
 
-  return <ProdList tracks={rows} />;
+  return <ProdList tracks={rows} loadError={loadError} />;
 }

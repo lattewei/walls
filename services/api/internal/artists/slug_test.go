@@ -4,12 +4,12 @@ import "testing"
 
 func TestSlugify(t *testing.T) {
 	cases := map[string]string{
-		"Johnny":           "johnny",
+		"Johnny":             "johnny",
 		"  Johnny Hallyday ": "johnny-hallyday",
-		"Ninho!!":          "ninho",
-		"A$AP Rocky":       "aap-rocky",
-		"Damso / Paris":    "damso-paris",
-		"---":              "",
+		"Ninho!!":            "ninho",
+		"A$AP Rocky":         "aap-rocky",
+		"Damso / Paris":      "damso-paris",
+		"---":                "",
 	}
 	for in, want := range cases {
 		got := Slugify(in)

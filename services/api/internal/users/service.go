@@ -72,8 +72,7 @@ func (s *Service) UploadAvatar(ctx context.Context, userID string, file io.Reade
 	if err != nil {
 		return domain.PublicUser{}, err
 	}
-	limited := io.LimitReader(reader, maxAvatarBytes+1)
-	key, err := s.storage.Save(limited, info.Ext)
+	key, err := s.storage.SaveCapped(reader, info.Ext, maxAvatarBytes)
 	if err != nil {
 		return domain.PublicUser{}, err
 	}

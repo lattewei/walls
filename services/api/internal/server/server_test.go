@@ -13,16 +13,19 @@ import (
 func TestProcessHealth(t *testing.T) {
 	dir := t.TempDir()
 	cfg := config.Config{
-		Host:           "127.0.0.1",
-		Port:           8080,
-		Env:            "test",
-		CORSOrigins:    []string{"http://localhost:3000"},
-		MediaLocalPath: dir,
-		MediaMaxBytes:  1 << 20,
+		Host:            "127.0.0.1",
+		Port:            8080,
+		Env:             "test",
+		CORSOrigins:     []string{"http://localhost:3000"},
+		MediaLocalPath:  dir,
+		MediaMaxBytes:   1 << 20,
 		TrackDailyLimit: 10,
 	}
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-	s := New(cfg, log, nil)
+	s, err := New(cfg, log, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	w := httptest.NewRecorder()

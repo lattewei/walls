@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/lattewei/walls/services/api/internal/auth"
+	"github.com/lattewei/walls/services/api/internal/dberr"
 	"github.com/lattewei/walls/services/api/internal/httpx"
 )
 
@@ -45,7 +46,12 @@ func (h *Handler) Create(c *gin.Context) {
 			in.Genres = c.PostFormArray("genres")
 		}
 
-		if fh, err := c.FormFile("cover"); err == nil && fh != nil {
+		if fh, err := c.FormFile("cover"); err != nil {
+			if httpx.IsBodyTooLarge(err) {
+				httpx.JSONError(c, http.StatusRequestEntityTooLarge, "validation_error", "file too large")
+				return
+			}
+		} else if fh != nil {
 			f, err := fh.Open()
 			if err != nil {
 				httpx.BadRequest(c, "cannot read cover image")
@@ -113,8 +119,16 @@ func (h *Handler) RequestClaim(c *gin.Context) {
 }
 
 func (h *Handler) ListPendingClaims(c *gin.Context) {
-	limit, _ := parseNonNegInt(c.Query("limit"), 0)
-	offset, _ := parseNonNegInt(c.Query("offset"), 0)
+	limit, err := parseNonNegInt(c.Query("limit"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid limit")
+		return
+	}
+	offset, err := parseNonNegInt(c.Query("offset"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid offset")
+		return
+	}
 	items, total, err := h.svc.ListPendingClaims(c.Request.Context(), limit, offset)
 	if err != nil {
 		h.mapError(c, err)
@@ -203,6 +217,14 @@ func (h *Handler) mapError(c *gin.Context, err error) {
 	case errors.Is(err, ErrNotFound):
 		httpx.NotFound(c, "artist not found")
 	default:
+		if dberr.IsInvalidSyntax(err) {
+			httpx.BadRequest(c, "invalid id")
+			return
+		}
+		if httpx.IsBodyTooLarge(err) {
+			httpx.JSONError(c, http.StatusRequestEntityTooLarge, "validation_error", "file too large")
+			return
+		}
 		httpx.Internal(c)
 	}
 }

@@ -1,57 +1,79 @@
 package auth
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/lattewei/walls/services/api/internal/httpx"
+	"github.com/lattewei/walls/services/api/internal/users"
 )
 
 const (
-	ContextUserID = "auth_user_id"
+	ContextUserID = httpx.UserIDKey
 	ContextHandle = "auth_handle"
 	ContextRole   = "auth_role"
 )
 
 type Middleware struct {
-	tokens *TokenService
+	tokens   *TokenService
+	sessions users.SessionStore
 }
 
-func NewMiddleware(tokens *TokenService) *Middleware {
-	return &Middleware{tokens: tokens}
+func NewMiddleware(tokens *TokenService, sessions users.SessionStore) *Middleware {
+	return &Middleware{tokens: tokens, sessions: sessions}
 }
 
 func (m *Middleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		claims, ok := m.parse(c)
-		if !ok {
-			httpx.Unauthorized(c, "authentication required")
+		if !m.attach(c, false) {
 			return
 		}
-		c.Set(ContextUserID, claims.UserID)
-		c.Set(ContextHandle, claims.Handle)
-		c.Set(ContextRole, claims.Role)
 		c.Next()
 	}
 }
 
 func (m *Middleware) RequireAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		claims, ok := m.parse(c)
-		if !ok {
-			httpx.Unauthorized(c, "authentication required")
+		if !m.attach(c, true) {
 			return
 		}
-		if claims.Role != "admin" {
-			httpx.Forbidden(c, "admin required")
-			return
-		}
-		c.Set(ContextUserID, claims.UserID)
-		c.Set(ContextHandle, claims.Handle)
-		c.Set(ContextRole, claims.Role)
 		c.Next()
 	}
+}
+
+func (m *Middleware) attach(c *gin.Context, admin bool) bool {
+	claims, ok := m.parse(c)
+	if !ok {
+		httpx.Unauthorized(c, "authentication required")
+		return false
+	}
+	if m.sessions == nil {
+		httpx.Unauthorized(c, "authentication required")
+		return false
+	}
+	state, err := m.sessions.AuthState(c.Request.Context(), claims.UserID)
+	if errors.Is(err, users.ErrNotFound) {
+		httpx.Unauthorized(c, "authentication required")
+		return false
+	}
+	if err != nil {
+		httpx.Internal(c)
+		return false
+	}
+	if state.SessionVersion != claims.SessionVersion {
+		httpx.Unauthorized(c, "authentication required")
+		return false
+	}
+	if admin && state.Role != "admin" {
+		httpx.Forbidden(c, "admin required")
+		return false
+	}
+	c.Set(ContextUserID, claims.UserID)
+	c.Set(ContextHandle, state.Handle)
+	c.Set(ContextRole, state.Role)
+	return true
 }
 
 func RoleFromContext(c *gin.Context) string {
@@ -77,7 +99,5 @@ func (m *Middleware) parse(c *gin.Context) (Claims, bool) {
 }
 
 func UserIDFromContext(c *gin.Context) string {
-	v, _ := c.Get(ContextUserID)
-	s, _ := v.(string)
-	return s
+	return httpx.UserID(c)
 }

@@ -43,8 +43,16 @@ func (h *Handler) CreateReport(c *gin.Context) {
 }
 
 func (h *Handler) ListReports(c *gin.Context) {
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "0"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "0"))
+	if err != nil || limit < 0 {
+		httpx.BadRequest(c, "invalid limit")
+		return
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		httpx.BadRequest(c, "invalid offset")
+		return
+	}
 	items, total, err := h.svc.List(c.Request.Context(), c.Query("status"), limit, offset)
 	if err != nil {
 		h.mapError(c, err)
@@ -88,6 +96,10 @@ func (h *Handler) mapError(c *gin.Context, err error) {
 		httpx.JSONError(c, http.StatusBadRequest, "validation_error", msg)
 	case errors.Is(err, ErrNotFound):
 		httpx.NotFound(c, "report not found")
+	case errors.Is(err, ErrTargetMissing):
+		httpx.NotFound(c, "target not found")
+	case errors.Is(err, ErrDuplicate):
+		httpx.JSONError(c, http.StatusConflict, "conflict", "you already reported this")
 	default:
 		httpx.Internal(c)
 	}

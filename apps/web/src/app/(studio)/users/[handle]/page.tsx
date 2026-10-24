@@ -51,6 +51,7 @@ export default async function UserPage({ params }: Props) {
     (contacts.other_links?.length ?? 0) > 0;
 
   let tracks: ProdRow[] = [];
+  let tracksError: string | null = null;
   try {
     const list = await listUserTracks(user.handle);
     tracks = list.tracks.map((t) => {
@@ -64,10 +65,11 @@ export default async function UserPage({ params }: Props) {
         durationSeconds: t.duration_seconds,
         audioUrl: t.audio_url,
         wallName: wall,
+        detail: [t.description, t.tags?.length ? t.tags.join(", ") : ""].filter(Boolean).join(" · "),
       };
     });
-  } catch {
-    tracks = [];
+  } catch (err) {
+    tracksError = isApiRequestError(err) ? err.message : "Could not load productions.";
   }
 
   return (
@@ -75,7 +77,7 @@ export default async function UserPage({ params }: Props) {
       <section className="profile__head">
         <div className="profile__avatar" aria-hidden>
           {user.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            // eslint-disable-next-line @next/next/no-img-element -- API media url, not an optimizer source
             <img src={user.avatar_url} alt="" />
           ) : (
             initial
@@ -93,14 +95,14 @@ export default async function UserPage({ params }: Props) {
                 </a>
               </li>
             ) : null}
-            {contacts.instagram_url ? (
+            {contacts.instagram_url && /^https?:\/\//i.test(contacts.instagram_url) ? (
               <li>
                 <a href={contacts.instagram_url} rel="noreferrer" target="_blank">
                   Instagram
                 </a>
               </li>
             ) : null}
-            {(contacts.other_links ?? []).map((link) => (
+            {(contacts.other_links ?? []).filter((link) => /^https?:\/\//i.test(link.url)).map((link) => (
               <li key={link.url}>
                 <a href={link.url} rel="noreferrer" target="_blank">
                   {link.label}
@@ -116,7 +118,7 @@ export default async function UserPage({ params }: Props) {
 
       <section className="prods">
         <h2>Productions</h2>
-        <ProfileTracks handle={user.handle} tracks={tracks} />
+        <ProfileTracks handle={user.handle} tracks={tracks} loadError={tracksError} />
       </section>
     </div>
   );

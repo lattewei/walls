@@ -7,7 +7,7 @@ Modular monolith:
 - **Go API** (`services/api`): auth, users, artists, tracks, media, moderation
 - **Next.js web** (`apps/web`): UI + HTML5 audio player
 - **PostgreSQL**: source of truth
-- **Audio storage**: abstract interface (local in dev, S3-compatible in prod)
+- **Audio storage**: local files in this version (`MEDIA_STORAGE=local` only)
 
 ```text
 Browser  →  Next.js  →  REST /api/v1  →  Go modules  →  PostgreSQL
@@ -18,7 +18,7 @@ Browser  →  Next.js  →  REST /api/v1  →  Go modules  →  PostgreSQL
 
 1. Create or open an artist page (`artists`)
 2. Upload a track + `track_artists` links (tags / mentions)
-3. Play audio via stream endpoint / signed URL
+3. Play audio via `GET /tracks/:id/audio` (Range requests are supported)
 4. Contact via the uploader’s public profile fields
 
 ## API modules

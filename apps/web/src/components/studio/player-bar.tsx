@@ -33,7 +33,7 @@ export function PlayerBar() {
         <div className="now__meta">
           <div className="now__art" aria-hidden>
             {track.coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
+              // eslint-disable-next-line @next/next/no-img-element -- API media url, not an optimizer source
               <img src={track.coverUrl} alt="" />
             ) : (
               <span>{track.title.slice(0, 1).toUpperCase()}</span>

@@ -1,13 +1,15 @@
 import { apiFetch, isApiRequestError } from "./api";
 import type { PublicArtist, PublicContacts, PublicProfileUser, PublicTrack } from "./types";
 
-export async function listArtists(limit = 24) {
+export async function listArtists(limit = 24, query = "") {
+  const q = query.trim();
+  const search = q ? `&q=${encodeURIComponent(q)}` : "";
   return apiFetch<{
     artists: PublicArtist[];
     total: number;
     limit: number;
     offset: number;
-  }>(`/api/v1/artists?limit=${limit}&offset=0`);
+  }>(`/api/v1/artists?limit=${limit}&offset=0${search}`);
 }
 
 export async function getArtist(slug: string) {
@@ -59,6 +61,44 @@ export async function listProducers(limit = 24) {
     limit: number;
     offset: number;
   }>(`/api/v1/producers?limit=${limit}&offset=0`);
+}
+
+export async function requestClaim(
+  slug: string,
+  token: string,
+  verificationMethod: string,
+  proofUrl: string,
+) {
+  return apiFetch<{ claim: { id: string; status: string } }>(
+    `/api/v1/artists/${encodeURIComponent(slug)}/claims`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify({
+        verification_method: verificationMethod,
+        proof_url: proofUrl,
+      }),
+    },
+  );
+}
+
+export async function reportTarget(
+  token: string,
+  targetType: "track" | "artist" | "user",
+  targetId: string,
+  reason: string,
+  details: string,
+) {
+  return apiFetch(`/api/v1/reports`, {
+    method: "POST",
+    token,
+    body: JSON.stringify({
+      target_type: targetType,
+      target_id: targetId,
+      reason,
+      details,
+    }),
+  });
 }
 
 export async function withdrawTrack(trackId: string, token: string) {
