@@ -5,7 +5,7 @@ import { ProfileTracks } from "@/components/profile-tracks";
 import { isApiRequestError } from "@/lib/api";
 import { getPublicProfile, listUserTracks } from "@/lib/catalog";
 import { site } from "@/content/site";
-import { formatDuration, type ProdRow } from "@/lib/types";
+import { toProdRow, type ProdRow } from "@/lib/types";
 
 type Props = {
   params: Promise<{ handle: string }>;
@@ -56,17 +56,10 @@ export default async function UserPage({ params }: Props) {
     const list = await listUserTracks(user.handle);
     tracks = list.tracks.map((t) => {
       const wall = t.artist_slugs?.[0];
-      return {
-        id: t.id,
-        title: t.title,
+      return toProdRow(t, {
         meta: wall ?? "Wall",
         metaHref: wall ? `/artists/${wall}` : undefined,
-        duration: formatDuration(t.duration_seconds),
-        durationSeconds: t.duration_seconds,
-        audioUrl: t.audio_url,
-        wallName: wall,
-        detail: [t.description, t.tags?.length ? t.tags.join(", ") : ""].filter(Boolean).join(" · "),
-      };
+      });
     });
   } catch (err) {
     tracksError = isApiRequestError(err) ? err.message : "Could not load productions.";
@@ -77,7 +70,6 @@ export default async function UserPage({ params }: Props) {
       <section className="profile__head">
         <div className="profile__avatar" aria-hidden>
           {user.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element -- API media url, not an optimizer source
             <img src={user.avatar_url} alt="" />
           ) : (
             initial

@@ -230,7 +230,7 @@ func (s *Service) issue(ctx context.Context, user domain.User) (AuthResult, erro
 	if err != nil {
 		return AuthResult{}, err
 	}
-	tok, exp, err := s.tokens.IssueAccessToken(user.ID, state.Handle, state.Role, state.SessionVersion)
+	tok, exp, err := s.tokens.IssueAccessToken(user.ID, state.Handle, state.SessionVersion)
 	if err != nil {
 		return AuthResult{}, err
 	}

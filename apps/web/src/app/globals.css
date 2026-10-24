@@ -1210,6 +1210,27 @@ a.studio__item:hover {
   font-size: 0.86rem;
 }
 
+.settings__link {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings__add-link {
+  border: 0;
+  background: transparent;
+  color: #b4b4bb;
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.settings__add-link:hover {
+  color: #fff;
+}
+
 .prod__n {
   color: #6a6a72;
   font-size: 0.8rem;

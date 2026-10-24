@@ -10,11 +10,7 @@ import (
 	"github.com/lattewei/walls/services/api/internal/users"
 )
 
-const (
-	ContextUserID = httpx.UserIDKey
-	ContextHandle = "auth_handle"
-	ContextRole   = "auth_role"
-)
+const ContextUserID = httpx.UserIDKey
 
 type Middleware struct {
 	tokens   *TokenService
@@ -71,15 +67,7 @@ func (m *Middleware) attach(c *gin.Context, admin bool) bool {
 		return false
 	}
 	c.Set(ContextUserID, claims.UserID)
-	c.Set(ContextHandle, state.Handle)
-	c.Set(ContextRole, state.Role)
 	return true
-}
-
-func RoleFromContext(c *gin.Context) string {
-	v, _ := c.Get(ContextRole)
-	s, _ := v.(string)
-	return s
 }
 
 func (m *Middleware) parse(c *gin.Context) (Claims, bool) {

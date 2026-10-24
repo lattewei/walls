@@ -54,14 +54,30 @@ export type ProdRow = {
   title: string;
   meta: string;
   metaHref?: string;
-  duration: string;
   durationSeconds?: number | null;
   audioUrl?: string;
   coverUrl?: string;
-  wallName?: string;
   canWithdraw?: boolean;
   detail?: string;
 };
+
+export function toProdRow(
+  t: PublicTrack,
+  extra: Pick<ProdRow, "meta" | "metaHref" | "coverUrl">,
+): ProdRow {
+  return {
+    id: t.id,
+    title: t.title,
+    meta: extra.meta,
+    metaHref: extra.metaHref,
+    durationSeconds: t.duration_seconds,
+    audioUrl: t.audio_url,
+    coverUrl: extra.coverUrl,
+    detail: [t.description, t.tags?.length ? t.tags.join(", ") : ""]
+      .filter(Boolean)
+      .join(" · "),
+  };
+}
 
 export function formatDuration(seconds?: number | null): string {
   if (seconds == null || seconds < 0 || !Number.isFinite(seconds)) return "—";

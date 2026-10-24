@@ -9,7 +9,7 @@ import (
 
 func TestIssueAndParseAccessToken(t *testing.T) {
 	svc := NewTokenService("test-secret-key-32chars-minimum!", 15*time.Minute)
-	tok, exp, err := svc.IssueAccessToken("user-1", "johnny", "user", 1)
+	tok, exp, err := svc.IssueAccessToken("user-1", "johnny", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,14 +24,14 @@ func TestIssueAndParseAccessToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if claims.UserID != "user-1" || claims.Handle != "johnny" || claims.Role != "user" || claims.SessionVersion != 1 {
+	if claims.UserID != "user-1" || claims.Handle != "johnny" || claims.SessionVersion != 1 {
 		t.Fatalf("claims = %+v", claims)
 	}
 }
 
 func TestParseRejectsTamperedToken(t *testing.T) {
 	svc := NewTokenService("test-secret-key-32chars-minimum!", time.Minute)
-	tok, _, err := svc.IssueAccessToken("user-1", "johnny", "user", 1)
+	tok, _, err := svc.IssueAccessToken("user-1", "johnny", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestParseRejectsTamperedToken(t *testing.T) {
 
 func TestParseRejectsIssuerMismatch(t *testing.T) {
 	svc := NewTokenService("test-secret-key-32chars-minimum!", time.Minute)
-	tok, _, err := svc.IssueAccessToken("user-1", "johnny", "user", 1)
+	tok, _, err := svc.IssueAccessToken("user-1", "johnny", 1)
 	if err != nil {
 		t.Fatal(err)
 	}

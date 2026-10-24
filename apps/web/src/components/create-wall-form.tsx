@@ -105,7 +105,6 @@ export function CreateWallForm() {
             <div className="wall-form__cover">
               <div className="wall-form__preview" aria-hidden>
                 {preview ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- blob preview, not an optimizer source
                   <img src={preview} alt="" />
                 ) : (
                   <span>+</span>

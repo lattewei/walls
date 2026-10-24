@@ -6,7 +6,7 @@ import { ProdList } from "@/components/studio/prod-list";
 import { isApiRequestError } from "@/lib/api";
 import { getArtist, listArtistTracks } from "@/lib/catalog";
 import { site } from "@/content/site";
-import { badgeLabel, formatDuration, type ProdRow } from "@/lib/types";
+import { badgeLabel, toProdRow, type ProdRow } from "@/lib/types";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -50,20 +50,13 @@ export default async function ArtistWallPage({ params }: Props) {
   let tracksError: string | null = null;
   try {
     const list = await listArtistTracks(artist.slug);
-    tracks = list.tracks.map((t) => ({
-      id: t.id,
-      title: t.title,
-      meta: t.uploader_display_name || t.uploader_handle || "Unknown",
-      metaHref: t.uploader_handle ? `/users/${t.uploader_handle}` : undefined,
-      duration: formatDuration(t.duration_seconds),
-      durationSeconds: t.duration_seconds,
-      audioUrl: t.audio_url,
-      coverUrl: cover || undefined,
-      wallName: artist.name,
-      detail: [t.description, t.tags?.length ? t.tags.join(", ") : ""]
-        .filter(Boolean)
-        .join(" · "),
-    }));
+    tracks = list.tracks.map((t) =>
+      toProdRow(t, {
+        meta: t.uploader_display_name || t.uploader_handle || "Unknown",
+        metaHref: t.uploader_handle ? `/users/${t.uploader_handle}` : undefined,
+        coverUrl: cover || undefined,
+      }),
+    );
   } catch (err) {
     tracksError = isApiRequestError(err) ? err.message : "Could not load productions.";
   }
@@ -73,7 +66,6 @@ export default async function ArtistWallPage({ params }: Props) {
       <section className="profile__head">
         <div className="profile__cover">
           {cover ? (
-            // eslint-disable-next-line @next/next/no-img-element -- API media url, not an optimizer source
             <img src={cover} alt="" />
           ) : (
             <span aria-hidden>{artist.name.slice(0, 1).toUpperCase()}</span>

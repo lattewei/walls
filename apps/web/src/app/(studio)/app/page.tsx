@@ -68,7 +68,6 @@ export default async function AppHome({
                   <Link href={`/artists/${artist.slug}`} className="tile">
                     <div className="tile__face">
                       {cover ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- API media url, not an optimizer source
                         <img src={cover} alt="" />
                       ) : (
                         <span aria-hidden>{initial}</span>
@@ -102,7 +101,6 @@ export default async function AppHome({
                   <Link href={`/users/${p.handle}`} className="tile">
                     <div className="tile__face">
                       {p.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- API media url, not an optimizer source
                         <img src={p.avatar_url} alt="" />
                       ) : (
                         <span aria-hidden>{initial}</span>

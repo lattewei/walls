@@ -17,15 +17,13 @@ export function SettingsForm() {
   const [bio, setBio] = useState("");
   const [email, setEmail] = useState("");
   const [instagram, setInstagram] = useState("");
-  const [linkLabel, setLinkLabel] = useState("");
-  const [linkUrl, setLinkUrl] = useState("");
+  const [links, setLinks] = useState<{ label: string; url: string }[]>([{ label: "", url: "" }]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [extraLinks, setExtraLinks] = useState<{ label: string; url: string }[]>([]);
   const preview = useMemo(
     () => (avatarFile ? URL.createObjectURL(avatarFile) : null),
     [avatarFile],
@@ -46,13 +44,8 @@ export function SettingsForm() {
         setAvatarUrl(me.user.avatar_url ?? null);
         setEmail(me.contacts.public_contact_email ?? "");
         setInstagram(me.contacts.instagram_url ?? "");
-        const links = me.contacts.other_links ?? [];
-        const [first, ...rest] = links;
-        if (first) {
-          setLinkLabel(first.label);
-          setLinkUrl(first.url);
-        }
-        setExtraLinks(rest);
+        const other = me.contacts.other_links ?? [];
+        setLinks(other.length ? other : [{ label: "", url: "" }]);
         setLoaded(true);
       } catch {
         if (!cancelled) {
@@ -96,11 +89,9 @@ export function SettingsForm() {
         setAvatarFile(null);
       }
 
-      const firstLink =
-        linkLabel.trim() && linkUrl.trim()
-          ? [{ label: linkLabel.trim(), url: linkUrl.trim() }]
-          : [];
-      const other_links = [...firstLink, ...extraLinks];
+      const other_links = links
+        .map((l) => ({ label: l.label.trim(), url: l.url.trim() }))
+        .filter((l) => l.label && l.url);
 
       const res = await updateMe(
         {
@@ -153,7 +144,6 @@ export function SettingsForm() {
             <div className="wall-form__cover wall-form__cover--round">
               <div className="wall-form__preview wall-form__preview--round" aria-hidden>
                 {shown ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- blob or API avatar, not an optimizer source
                   <img src={shown} alt="" />
                 ) : (
                   <span>{initial}</span>
@@ -216,24 +206,53 @@ export function SettingsForm() {
             />
           </label>
 
-          <label className="auth__field">
-            <span>Other link label</span>
-            <input
-              value={linkLabel}
-              onChange={(e) => setLinkLabel(e.target.value)}
-              placeholder="SoundCloud"
-              maxLength={40}
-            />
-          </label>
-
-          <label className="auth__field">
-            <span>Other link URL</span>
-            <input
-              value={linkUrl}
-              onChange={(e) => setLinkUrl(e.target.value)}
-              placeholder="https://soundcloud.com/you"
-            />
-          </label>
+          {links.map((link, i) => (
+            <div key={i} className="settings__link">
+              <label className="auth__field">
+                <span>{i === 0 ? "Other link label" : `Link ${i + 1} label`}</span>
+                <input
+                  value={link.label}
+                  onChange={(e) => {
+                    const next = [...links];
+                    next[i] = { ...next[i], label: e.target.value };
+                    setLinks(next);
+                  }}
+                  placeholder="SoundCloud"
+                  maxLength={40}
+                />
+              </label>
+              <label className="auth__field">
+                <span>{i === 0 ? "Other link URL" : `Link ${i + 1} URL`}</span>
+                <input
+                  value={link.url}
+                  onChange={(e) => {
+                    const next = [...links];
+                    next[i] = { ...next[i], url: e.target.value };
+                    setLinks(next);
+                  }}
+                  placeholder="https://soundcloud.com/you"
+                />
+              </label>
+              {links.length > 1 ? (
+                <button
+                  type="button"
+                  className="prod__rm"
+                  onClick={() => setLinks(links.filter((_, j) => j !== i))}
+                >
+                  Remove
+                </button>
+              ) : null}
+            </div>
+          ))}
+          {links.length < 10 ? (
+            <button
+              type="button"
+              className="settings__add-link"
+              onClick={() => setLinks([...links, { label: "", url: "" }])}
+            >
+              Add another link
+            </button>
+          ) : null}
 
           {error ? <p className="auth__error">{error}</p> : null}
           {ok ? <p className="settings__ok">{ok}</p> : null}

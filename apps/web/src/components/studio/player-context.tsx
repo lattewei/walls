@@ -12,7 +12,6 @@ import {
 } from "react";
 
 import type { ProdRow } from "@/lib/types";
-import { formatDuration } from "@/lib/types";
 
 type PlayerState = {
   queue: ProdRow[];
@@ -233,5 +232,3 @@ export function usePlayer() {
 export function usePlayerOptional() {
   return useContext(PlayerContext);
 }
-
-export { formatDuration };

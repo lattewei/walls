@@ -6,7 +6,7 @@
 
 ```json
 {
-  "verification_method": "official_instagram_bio_link",
+  "verification_method": "social",
   "proof_url": "https://instagram.com/johnny"
 }
 ```
@@ -41,7 +41,7 @@ Admin routes require an authenticated user whose **current** database role is `a
 
 - `GET /api/v1/admin/reports?status=open`
 - `PATCH /api/v1/admin/reports/{id}` — `{ "status": "reviewing"|"resolved"|"dismissed" }`
-- `POST /api/v1/admin/tracks/{id}/hide` — soft-remove track
+- `POST /api/v1/admin/tracks/{id}/hide` — mark the track removed and delete the audio file
 
 ## Promoting an admin
 
