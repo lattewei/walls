@@ -112,6 +112,12 @@ Contact rules:
 - `instagram_url` / links: `http://` or `https://` only (no `javascript:`)
 - max 10 `other_links`; label ≤ 40 chars
 
+### `POST /api/v1/me/avatar`
+
+Auth required. Multipart field `avatar` (jpeg, png, webp, or gif, max 5MB).
+
+**200** `{ "user": { …, "avatar_url": "/api/v1/media/…" } }`
+
 ### `GET /api/v1/users/{handle}`
 
 **Public** profile (no auth). Never returns password hash or private data.
@@ -146,6 +152,6 @@ Per IP, fixed window (in-memory, single instance):
 
 ## Password
 
-- 8–128 characters
+- 8–72 bytes (bcrypt’s limit)
 - bcrypt hash (cost 12)
 - never returned by the API

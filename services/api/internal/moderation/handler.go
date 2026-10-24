@@ -3,12 +3,10 @@ package moderation
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/lattewei/walls/services/api/internal/auth"
 	"github.com/lattewei/walls/services/api/internal/httpx"
 	"github.com/lattewei/walls/services/api/internal/tracks"
 )
@@ -33,7 +31,7 @@ func (h *Handler) CreateReport(c *gin.Context) {
 		httpx.BadRequest(c, "invalid JSON body")
 		return
 	}
-	uid := auth.UserIDFromContext(c)
+	uid := httpx.UserID(c)
 	rep, err := h.svc.Create(c.Request.Context(), uid, req.TargetType, req.TargetID, req.Reason, req.Details)
 	if err != nil {
 		h.mapError(c, err)
@@ -43,13 +41,13 @@ func (h *Handler) CreateReport(c *gin.Context) {
 }
 
 func (h *Handler) ListReports(c *gin.Context) {
-	limit, err := strconv.Atoi(c.DefaultQuery("limit", "0"))
-	if err != nil || limit < 0 {
+	limit, err := httpx.ParseNonNegInt(c.Query("limit"), 0)
+	if err != nil {
 		httpx.BadRequest(c, "invalid limit")
 		return
 	}
-	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	if err != nil || offset < 0 {
+	offset, err := httpx.ParseNonNegInt(c.Query("offset"), 0)
+	if err != nil {
 		httpx.BadRequest(c, "invalid offset")
 		return
 	}
@@ -69,7 +67,7 @@ func (h *Handler) UpdateReport(c *gin.Context) {
 		httpx.BadRequest(c, "invalid JSON body")
 		return
 	}
-	rep, err := h.svc.UpdateStatus(c.Request.Context(), c.Param("id"), req.Status, auth.UserIDFromContext(c))
+	rep, err := h.svc.UpdateStatus(c.Request.Context(), c.Param("id"), req.Status, httpx.UserID(c))
 	if err != nil {
 		h.mapError(c, err)
 		return

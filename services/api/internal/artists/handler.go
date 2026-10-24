@@ -3,12 +3,10 @@ package artists
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/lattewei/walls/services/api/internal/auth"
 	"github.com/lattewei/walls/services/api/internal/dberr"
 	"github.com/lattewei/walls/services/api/internal/httpx"
 )
@@ -30,7 +28,7 @@ type createRequest struct {
 }
 
 func (h *Handler) Create(c *gin.Context) {
-	uid := auth.UserIDFromContext(c)
+	uid := httpx.UserID(c)
 	ct := c.ContentType()
 
 	var in CreateArtistInput
@@ -41,7 +39,7 @@ func (h *Handler) Create(c *gin.Context) {
 		in.Slug = c.PostForm("slug")
 		in.Bio = c.PostForm("bio")
 		in.LookingFor = c.PostForm("looking_for")
-		in.Genres = splitCSV(c.PostForm("genres"))
+		in.Genres = httpx.SplitCSV(c.PostForm("genres"))
 		if len(in.Genres) == 0 {
 			in.Genres = c.PostFormArray("genres")
 		}
@@ -107,7 +105,7 @@ func (h *Handler) RequestClaim(c *gin.Context) {
 	}
 	cl, err := h.svc.RequestClaim(c.Request.Context(), ClaimInput{
 		Slug:               c.Param("slug"),
-		UserID:             auth.UserIDFromContext(c),
+		UserID:             httpx.UserID(c),
 		VerificationMethod: req.VerificationMethod,
 		ProofURL:           req.ProofURL,
 	})
@@ -119,12 +117,12 @@ func (h *Handler) RequestClaim(c *gin.Context) {
 }
 
 func (h *Handler) ListPendingClaims(c *gin.Context) {
-	limit, err := parseNonNegInt(c.Query("limit"), 0)
+	limit, err := httpx.ParseNonNegInt(c.Query("limit"), 0)
 	if err != nil {
 		httpx.BadRequest(c, "invalid limit")
 		return
 	}
-	offset, err := parseNonNegInt(c.Query("offset"), 0)
+	offset, err := httpx.ParseNonNegInt(c.Query("offset"), 0)
 	if err != nil {
 		httpx.BadRequest(c, "invalid offset")
 		return
@@ -145,7 +143,7 @@ func (h *Handler) ReviewClaim(c *gin.Context) {
 		httpx.BadRequest(c, "invalid JSON body")
 		return
 	}
-	cl, err := h.svc.ReviewClaim(c.Request.Context(), c.Param("id"), auth.UserIDFromContext(c), req.Status)
+	cl, err := h.svc.ReviewClaim(c.Request.Context(), c.Param("id"), httpx.UserID(c), req.Status)
 	if err != nil {
 		h.mapError(c, err)
 		return
@@ -154,12 +152,12 @@ func (h *Handler) ReviewClaim(c *gin.Context) {
 }
 
 func (h *Handler) List(c *gin.Context) {
-	limit, err := parseNonNegInt(c.Query("limit"), 0)
+	limit, err := httpx.ParseNonNegInt(c.Query("limit"), 0)
 	if err != nil {
 		httpx.BadRequest(c, "invalid limit")
 		return
 	}
-	offset, err := parseNonNegInt(c.Query("offset"), 0)
+	offset, err := httpx.ParseNonNegInt(c.Query("offset"), 0)
 	if err != nil {
 		httpx.BadRequest(c, "invalid offset")
 		return
@@ -175,35 +173,6 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, res)
-}
-
-func splitCSV(s string) []string {
-	if s == "" {
-		return nil
-	}
-	parts := strings.Split(s, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return out
-}
-
-func parseNonNegInt(raw string, fallback int) (int, error) {
-	if raw == "" {
-		return fallback, nil
-	}
-	n, err := strconv.Atoi(raw)
-	if err != nil {
-		return 0, err
-	}
-	if n < 0 {
-		return 0, strconv.ErrRange
-	}
-	return n, nil
 }
 
 func (h *Handler) mapError(c *gin.Context, err error) {

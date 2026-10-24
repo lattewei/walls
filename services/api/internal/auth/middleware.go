@@ -97,7 +97,3 @@ func (m *Middleware) parse(c *gin.Context) (Claims, bool) {
 	}
 	return claims, true
 }
-
-func UserIDFromContext(c *gin.Context) string {
-	return httpx.UserID(c)
-}

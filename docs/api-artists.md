@@ -1,6 +1,6 @@
 # Artists API
 
-## `POST /api/v1/artists` — T3.1
+## `POST /api/v1/artists`
 
 Auth required: `Authorization: Bearer <token>`
 
@@ -57,7 +57,7 @@ curl -s -X POST http://localhost:8080/api/v1/artists \
 
 ---
 
-## `GET /api/v1/artists` — T3.3
+## `GET /api/v1/artists`
 
 Public list / search. No auth.
 
@@ -97,7 +97,7 @@ curl -s "http://localhost:8080/api/v1/artists?q=john&limit=10&offset=0"
 
 ---
 
-## `GET /api/v1/artists/{slug}` — T3.2
+## `GET /api/v1/artists/{slug}`
 
 Public, no auth.
 
@@ -126,7 +126,7 @@ curl -s http://localhost:8080/api/v1/artists/johnny
 
 ---
 
-## Trust badge — T3.4
+## Trust badge
 
 Every artist payload includes:
 
@@ -140,4 +140,4 @@ Rules for clients:
 
 - Show a **community / unverified** badge when `badge` is `community` or `pending_claim`.
 - Never present a page as the artist’s official account unless `is_official` is `true`.
-- Claim flow (request + review) is **T3.5** — until then new pages stay `unclaimed` / `community`.
+- Claim a wall with `POST /api/v1/artists/{slug}/claims`. Admins review at `/api/v1/admin/claims`. See [api-moderation.md](./api-moderation.md).

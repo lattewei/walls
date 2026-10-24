@@ -21,7 +21,8 @@ curl -X POST http://localhost:8080/api/v1/tracks \
   -F "tags=drill,dark"
 ```
 
-**201** `{ "track": { …, "audio_url": "/api/v1/tracks/{id}/audio" } }`  
+**201** `{ "track": { …, "duration_seconds": 142, "audio_url": "/api/v1/tracks/{id}/audio" } }`  
+Duration is computed at insert for mp3 and wav.  
 **400** validation · **429** daily upload limit (`TRACK_DAILY_UPLOAD_LIMIT`)
 
 ## `GET /api/v1/tracks/{id}`
@@ -34,7 +35,7 @@ Public stream for `ready` tracks. Supports range requests via `ServeContent`.
 
 ## `DELETE /api/v1/tracks/{id}`
 
-Auth required. Owner withdraws own track (`status=removed`).
+Auth required. Owner withdraws own track (`status=removed`) and the audio file is deleted.
 
 ## `GET /api/v1/artists/{slug}/tracks`
 
@@ -43,3 +44,11 @@ Public list of ready tracks on an artist page.
 ```bash
 curl "http://localhost:8080/api/v1/artists/johnny/tracks?limit=20&offset=0"
 ```
+
+## `GET /api/v1/users/{handle}/tracks`
+
+Public list of ready tracks uploaded by that user.
+
+## `GET /api/v1/producers`
+
+Public list of users who have at least one ready track, ordered by track count.

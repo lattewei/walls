@@ -50,7 +50,11 @@ export function ClaimWall({ slug, official }: { slug: string; official: boolean 
     <form className="auth__card" onSubmit={onSubmit}>
       <label className="auth__field">
         <span>How can we verify you?</span>
-        <input value={method} onChange={(e) => setMethod(e.target.value)} required maxLength={100} />
+        <select value={method} onChange={(e) => setMethod(e.target.value)} required>
+          <option value="social">Link in my Instagram / social bio</option>
+          <option value="official_site">Page on my official site</option>
+          <option value="other">Something else (URL below)</option>
+        </select>
       </label>
       <label className="auth__field">
         <span>Proof URL</span>

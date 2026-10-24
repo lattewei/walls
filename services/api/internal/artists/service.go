@@ -55,7 +55,7 @@ func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.Publ
 
 	slug := strings.TrimSpace(strings.ToLower(in.Slug))
 	if slug == "" {
-		slug = slugify(name)
+		slug = Slugify(name)
 	}
 	if err := ValidateSlug(slug); err != nil {
 		return domain.PublicArtist{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
@@ -228,10 +228,6 @@ func (s *Service) List(ctx context.Context, in ListInput) (ListResult, error) {
 		Limit:   limit,
 		Offset:  offset,
 	}, nil
-}
-
-func slugify(name string) string {
-	return Slugify(name)
 }
 
 type ClaimInput struct {

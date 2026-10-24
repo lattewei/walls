@@ -77,7 +77,7 @@ func (h *Handler) Login(c *gin.Context) {
 }
 
 func (h *Handler) Logout(c *gin.Context) {
-	if err := h.svc.Logout(c.Request.Context(), UserIDFromContext(c)); err != nil {
+	if err := h.svc.Logout(c.Request.Context(), httpx.UserID(c)); err != nil {
 		h.mapError(c, err)
 		return
 	}
@@ -85,7 +85,7 @@ func (h *Handler) Logout(c *gin.Context) {
 }
 
 func (h *Handler) Me(c *gin.Context) {
-	uid := UserIDFromContext(c)
+	uid := httpx.UserID(c)
 	res, err := h.svc.Me(c.Request.Context(), uid)
 	if err != nil {
 		h.mapError(c, err)
@@ -142,7 +142,7 @@ func (h *Handler) UpdateMe(c *gin.Context) {
 		return
 	}
 
-	uid := UserIDFromContext(c)
+	uid := httpx.UserID(c)
 	res, err := h.svc.UpdateProfile(c.Request.Context(), uid, in)
 	if err != nil {
 		h.mapError(c, err)

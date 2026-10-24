@@ -30,7 +30,7 @@ cd services/api
 go run ./cmd/migrate up
 ```
 
-### Option B - Docker Compose (if you have Docker later)
+### Option B — Docker Compose
 
 ```bash
 docker compose up -d db

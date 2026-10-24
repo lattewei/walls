@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0a1220;
+  --bg: #0a0a0c;
   --ink: #f5f7fb;
   --ink-muted: rgba(245, 247, 251, 0.72);
   --ink-faint: rgba(245, 247, 251, 0.45);
   --line: rgba(255, 255, 255, 0.14);
   --surface: rgba(255, 255, 255, 0.08);
   --surface-strong: #f5f7fb;
-  --surface-ink: #0a1220;
+  --surface-ink: #0a0a0c;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -209,7 +209,8 @@ body:has(.landing-root) {
   font-weight: 500;
 }
 
-.auth__field input {
+.auth__field input,
+.auth__field select {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -222,7 +223,8 @@ body:has(.landing-root) {
   outline: none;
 }
 
-.auth__field input:focus {
+.auth__field input:focus,
+.auth__field select:focus {
   border-color: rgba(255, 255, 255, 0.35);
 }
 
@@ -1181,6 +1183,25 @@ a.studio__item:hover {
   color: #f0a8a8;
   font-size: 0.86rem;
   text-align: center;
+}
+
+.prods__ok {
+  margin: 0 0 10px;
+  color: #a8f0b8;
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.prod__report {
+  margin: 16px auto 0;
+  width: min(100%, 520px);
+}
+
+.prod__report-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .settings__ok {
