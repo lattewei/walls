@@ -18,8 +18,6 @@ TODO.local.md
 *.local.md
 .scratch/
 .notes/
-scripts/setup-db.ps1
-scripts/setup-db.sh
 
 # --- OS ---
 .DS_Store
