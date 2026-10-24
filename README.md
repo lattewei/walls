@@ -30,8 +30,6 @@ Native Postgres, env vars, and troubleshooting: [docs/development.md](./docs/dev
 - [Tracks](./docs/api-tracks.md)
 - [Claims, reports, admin](./docs/api-moderation.md)
 
-`go test ./...` in `services/api`. `npm run lint && npm run build` in `apps/web`. Same checks on every push.
-
 ## License
 
 [MIT](./LICENSE)
