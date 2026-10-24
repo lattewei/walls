@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { isApiRequestError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
@@ -21,13 +21,10 @@ export function ProdList({
 }) {
   const player = usePlayer();
   const router = useRouter();
-  const [rows, setRows] = useState(tracks);
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setRows(tracks);
-  }, [tracks]);
+  const rows = tracks.filter((t) => !hidden.has(t.id));
 
   async function onWithdraw(trackId: string) {
     const token = getToken();
@@ -41,7 +38,7 @@ export function ProdList({
     setBusyId(trackId);
     try {
       await withdrawTrack(trackId, token);
-      setRows((prev) => prev.filter((t) => t.id !== trackId));
+      setHidden((prev) => new Set(prev).add(trackId));
       if (player.track?.id === trackId) {
         player.pause();
       }

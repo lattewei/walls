@@ -1,5 +1,7 @@
 # Walls
 
+[![CI](https://github.com/lattewei/walls/actions/workflows/ci.yml/badge.svg)](https://github.com/lattewei/walls/actions/workflows/ci.yml)
+
 Open-source web platform: open artist pages, tagged beat submissions, in-app listening, and direct contact with producers.
 
 > Product name: **Walls**. Module path: `github.com/lattewei/walls`.
@@ -70,9 +72,10 @@ curl http://localhost:8080/api/v1/health
 ├── services/api/       # Go API
 ├── migrations/         # Versioned SQL
 ├── docs/               # Architecture, API, dev
-├── scripts/
+├── .github/workflows/  # CI
 ├── docker-compose.yml
 ├── .env.example
+├── LICENSE
 └── README.md
 ```
 
@@ -84,7 +87,6 @@ curl http://localhost:8080/api/v1/health
 - [Artists API](./docs/api-artists.md)
 - [Tracks API](./docs/api-tracks.md)
 - [Claims, reports & admin](./docs/api-moderation.md)
-- [Image credits](./CREDITS.md)
 
 ## Auth (MVP)
 
@@ -96,6 +98,15 @@ curl -s -X POST http://localhost:8080/api/v1/auth/register \
   -d '{"handle":"johnny_beats","password":"secret123","display_name":"Johnny"}'
 ```
 
+## Tests
+
+```bash
+cd services/api && go test ./...
+cd apps/web && npm run lint && npm run build
+```
+
+GitHub Actions runs the same checks on every push.
+
 ## License
 
-TBD (MIT or AGPL-3.0) before public release.
+[MIT](./LICENSE)

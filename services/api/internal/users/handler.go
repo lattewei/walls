@@ -3,7 +3,6 @@ package users
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -58,15 +57,13 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 			httpx.JSONError(c, http.StatusBadRequest, "validation_error", "unsupported image type")
 		case errors.Is(err, media.ErrTooLarge):
 			httpx.JSONError(c, http.StatusRequestEntityTooLarge, "validation_error", "avatar image is too large (max 5MB)")
+		case errors.Is(err, ErrAvatarRequired):
+			httpx.JSONError(c, http.StatusBadRequest, "validation_error", "avatar file is required")
 		case errors.Is(err, ErrNotFound):
 			httpx.Unauthorized(c, "authentication required")
 		case dberr.IsInvalidSyntax(err):
 			httpx.BadRequest(c, "invalid id")
 		default:
-			if strings.Contains(err.Error(), "required") {
-				httpx.JSONError(c, http.StatusBadRequest, "validation_error", "avatar file is required")
-				return
-			}
 			httpx.Internal(c)
 		}
 		return

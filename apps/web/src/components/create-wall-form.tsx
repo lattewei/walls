@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { isApiRequestError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import { createArtist } from "@/lib/catalog";
+import { useSessionToken } from "@/lib/session";
 
 function parseGenres(raw: string): string[] {
   return raw
@@ -24,29 +25,23 @@ export function CreateWallForm() {
   const [genres, setGenres] = useState("");
   const [lookingFor, setLookingFor] = useState("");
   const [cover, setCover] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
-  const [ready, setReady] = useState(false);
+  const token = useSessionToken();
+  const preview = useMemo(() => (cover ? URL.createObjectURL(cover) : null), [cover]);
 
   useEffect(() => {
-    if (!getToken()) {
+    if (!token) {
       router.replace("/login?next=/artists/new");
-      return;
     }
-    setReady(true);
-  }, [router]);
+  }, [router, token]);
 
   useEffect(() => {
-    if (!cover) {
-      setPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(cover);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [cover]);
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -88,7 +83,7 @@ export function CreateWallForm() {
     }
   }
 
-  if (!ready) {
+  if (!token) {
     return (
       <div className="auth">
         <p className="auth__hint">Checking session…</p>
@@ -139,7 +134,7 @@ export function CreateWallForm() {
               name="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Kendrick Lamar"
+              placeholder="Artist name"
               required
               maxLength={100}
             />
@@ -151,7 +146,7 @@ export function CreateWallForm() {
               name="slug"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              placeholder="kendrick-lamar"
+              placeholder="artist-name"
               pattern="[a-z0-9]+(-[a-z0-9]+)*"
               maxLength={64}
               autoCapitalize="none"

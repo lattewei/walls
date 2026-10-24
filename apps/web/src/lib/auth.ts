@@ -52,12 +52,59 @@ export function saveSession(session: AuthSession) {
   localStorage.setItem(TOKEN_KEY, session.access_token);
   localStorage.setItem(USER_KEY, JSON.stringify(session.user));
   localStorage.setItem(EXP_KEY, session.expires_at);
+  emitSession();
 }
 
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(EXP_KEY);
+  emitSession();
+}
+
+export function peekToken(): string | null {
+  if (typeof window === "undefined") return null;
+  if (sessionExpired()) return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+let cachedUserRaw: string | null | undefined;
+let cachedUser: AuthUser | null = null;
+
+export function peekUser(): AuthUser | null {
+  if (typeof window === "undefined") return null;
+  if (sessionExpired()) return null;
+  const raw = localStorage.getItem(USER_KEY);
+  if (raw === cachedUserRaw) return cachedUser;
+  cachedUserRaw = raw;
+  if (!raw) {
+    cachedUser = null;
+    return null;
+  }
+  try {
+    cachedUser = JSON.parse(raw) as AuthUser;
+    return cachedUser;
+  } catch {
+    cachedUser = null;
+    return null;
+  }
+}
+
+function emitSession() {
+  cachedUserRaw = undefined;
+  cachedUser = null;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("walls:session"));
+  }
+}
+
+export function subscribeSession(onStoreChange: () => void) {
+  window.addEventListener("walls:session", onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+  return () => {
+    window.removeEventListener("walls:session", onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
 }
 
 export async function login(handle: string, password: string) {
@@ -103,4 +150,5 @@ export function updateStoredUser(partial: Partial<AuthUser>) {
   const current = getStoredUser();
   if (!current) return;
   localStorage.setItem(USER_KEY, JSON.stringify({ ...current, ...partial }));
+  emitSession();
 }

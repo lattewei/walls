@@ -35,6 +35,7 @@ Browser  →  Next.js  →  REST /api/v1  →  Go modules  →  PostgreSQL
 ## Principles
 
 - Access control **on the server only**
+- JWT carries identity; role and session version are loaded from the database on each request
 - No microservices in the MVP
 - Versioned SQL migrations in `/migrations`
 - Config only via environment variables

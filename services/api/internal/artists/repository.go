@@ -22,6 +22,7 @@ var (
 	ErrClaimNotPending = errors.New("claim is not pending")
 	ErrAlreadyClaimed  = errors.New("artist already claimed")
 	ErrClaimExists     = errors.New("pending claim already exists")
+	ErrInvalidStatus   = errors.New("invalid claim status")
 )
 
 type Repository struct {
@@ -233,7 +234,7 @@ func (r *Repository) ListPendingClaims(ctx context.Context, limit, offset int) (
 
 func (r *Repository) ReviewClaim(ctx context.Context, claimID, reviewerID, status string) (Claim, error) {
 	if status != "accepted" && status != "rejected" {
-		return Claim{}, fmt.Errorf("invalid claim status")
+		return Claim{}, ErrInvalidStatus
 	}
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {

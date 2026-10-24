@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	ErrNotFound    = errors.New("user not found")
-	ErrHandleTaken = errors.New("handle already taken")
+	ErrNotFound       = errors.New("user not found")
+	ErrHandleTaken    = errors.New("handle already taken")
+	ErrAvatarRequired = errors.New("avatar file is required")
 )
 
 type AuthState struct {

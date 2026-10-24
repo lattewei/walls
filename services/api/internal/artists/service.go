@@ -318,7 +318,7 @@ func (s *Service) ReviewClaim(ctx context.Context, claimID, reviewerID, status s
 			return PublicClaim{}, fmt.Errorf("%w: artist is already claimed", ErrConflict)
 		case errors.Is(err, ErrNotFound):
 			return PublicClaim{}, ErrNotFound
-		case strings.Contains(err.Error(), "invalid claim status"):
+		case errors.Is(err, ErrInvalidStatus):
 			return PublicClaim{}, fmt.Errorf("%w: invalid claim status", ErrValidation)
 		default:
 			return PublicClaim{}, err

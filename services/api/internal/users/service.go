@@ -51,10 +51,10 @@ func (s *Service) UploadAvatar(ctx context.Context, userID string, file io.Reade
 		return domain.PublicUser{}, ErrNotFound
 	}
 	if file == nil {
-		return domain.PublicUser{}, fmt.Errorf("avatar file is required")
+		return domain.PublicUser{}, ErrAvatarRequired
 	}
 	if size > 0 && size > maxAvatarBytes {
-		return domain.PublicUser{}, fmt.Errorf("avatar image is too large (max 5MB)")
+		return domain.PublicUser{}, media.ErrTooLarge
 	}
 	if s.storage == nil {
 		return domain.PublicUser{}, fmt.Errorf("media storage unavailable")

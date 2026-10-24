@@ -1,7 +1,3 @@
-/**
- * Landing copy. Edit this file only for the first screen.
- */
-
 export const site = {
   name: "Walls",
 

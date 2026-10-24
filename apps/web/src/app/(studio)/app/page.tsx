@@ -2,8 +2,13 @@ import Link from "next/link";
 
 import { isApiRequestError } from "@/lib/api";
 import { listArtists, listProducers } from "@/lib/catalog";
+import { site } from "@/content/site";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: `${site.name} — Home`,
+};
 
 export default async function AppHome({
   searchParams,

@@ -43,9 +43,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  indexRef.current = index;
-  queueRef.current = queue;
   const track = index >= 0 && index < queue.length ? queue[index] : null;
+
+  useEffect(() => {
+    indexRef.current = index;
+    queueRef.current = queue;
+  }, [index, queue]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -95,9 +98,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         audio.removeAttribute("src");
         audio.load();
       }
-      setPlaying(false);
-      setCurrentTime(0);
-      setDuration(0);
       return;
     }
     const audio = audioRef.current;

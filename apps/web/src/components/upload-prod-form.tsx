@@ -7,6 +7,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { isApiRequestError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import { listArtists } from "@/lib/catalog";
+import { useSessionToken } from "@/lib/session";
 import { uploadTrack } from "@/lib/tracks";
 import type { PublicArtist } from "@/lib/types";
 
@@ -25,7 +26,7 @@ export function UploadProdForm() {
   const search = useSearchParams();
   const presetSlug = search.get("artist")?.trim().toLowerCase() ?? "";
 
-  const [ready, setReady] = useState(false);
+  const token = useSessionToken();
   const [artists, setArtists] = useState<PublicArtist[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -38,18 +39,13 @@ export function UploadProdForm() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!getToken()) {
+    if (!token) {
       const next = presetSlug
         ? `/login?next=${encodeURIComponent(`/upload?artist=${presetSlug}`)}`
         : "/login?next=/upload";
       router.replace(next);
       return;
     }
-    setReady(true);
-  }, [router, presetSlug]);
-
-  useEffect(() => {
-    if (!ready) return;
     let cancelled = false;
     (async () => {
       try {
@@ -69,7 +65,7 @@ export function UploadProdForm() {
     return () => {
       cancelled = true;
     };
-  }, [ready, presetSlug]);
+  }, [router, presetSlug, token]);
 
   const selectedName = useMemo(() => {
     return artists.find((a) => a.slug === artistSlug)?.name ?? artistSlug;
@@ -126,7 +122,7 @@ export function UploadProdForm() {
     }
   }
 
-  if (!ready) {
+  if (!token) {
     return (
       <div className="wall-form">
         <p className="wall-form__hint">Checking session…</p>

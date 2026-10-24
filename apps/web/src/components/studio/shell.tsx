@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { site } from "@/content/site";
-import { getStoredUser, logout, type AuthUser } from "@/lib/auth";
+import { logout } from "@/lib/auth";
+import { useSessionUser } from "@/lib/session";
 import { IconGrid, IconHome, IconPanel, IconSearch, IconUser } from "./icons";
 import { PlayerBar } from "./player-bar";
 import { PlayerProvider } from "./player-context";
@@ -13,30 +14,14 @@ import { PlayerProvider } from "./player-context";
 export function StudioShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
+  const user = useSessionUser();
   const bare = path === "/" || path === "/login" || path === "/register";
   const homeOn = path === "/app";
-  const [folded, setFolded] = useState(!homeOn);
-  const [user, setUser] = useState<AuthUser | null>(null);
-
-  useEffect(() => {
-    if (path === "/" || path === "/login" || path === "/register") return;
-    setFolded(path !== "/app");
-  }, [path]);
-
-  useEffect(() => {
-    const sync = () => setUser(getStoredUser());
-    sync();
-    window.addEventListener("walls:session", sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener("walls:session", sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, [path]);
+  const [foldOverride, setFoldOverride] = useState<boolean | null>(null);
+  const folded = foldOverride ?? !homeOn;
 
   async function onLogout() {
     await logout();
-    setUser(null);
     router.push("/app");
     router.refresh();
   }
@@ -53,7 +38,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             className="studio__item studio__fold"
-            onClick={() => setFolded((v) => !v)}
+            onClick={() => setFoldOverride((v) => !(v ?? !homeOn))}
             aria-expanded={!folded}
             aria-label={folded ? "Expand sidebar" : "Collapse sidebar"}
           >

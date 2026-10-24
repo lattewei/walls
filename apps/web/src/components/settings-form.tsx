@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { isApiRequestError } from "@/lib/api";
-import { getToken, getStoredUser, updateStoredUser } from "@/lib/auth";
+import { getToken, updateStoredUser } from "@/lib/auth";
 import { getMe, updateMe, uploadAvatar } from "@/lib/catalog";
+import { useSessionToken, useSessionUser } from "@/lib/session";
 
 export function SettingsForm() {
   const router = useRouter();
-  const [ready, setReady] = useState(false);
+  const token = useSessionToken();
+  const stored = useSessionUser();
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [email, setEmail] = useState("");
@@ -19,26 +21,26 @@ export function SettingsForm() {
   const [linkUrl, setLinkUrl] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [handle, setHandle] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [extraLinks, setExtraLinks] = useState<{ label: string; url: string }[]>([]);
+  const preview = useMemo(
+    () => (avatarFile ? URL.createObjectURL(avatarFile) : null),
+    [avatarFile],
+  );
 
   useEffect(() => {
-    const token = getToken();
-    const stored = getStoredUser();
     if (!token || !stored) {
       router.replace("/login?next=/settings");
       return;
     }
-    setHandle(stored.handle);
-    setDisplayName(stored.display_name);
+    let cancelled = false;
     (async () => {
       try {
         const me = await getMe(token);
+        if (cancelled) return;
         setDisplayName(me.user.display_name || stored.display_name);
         setBio(me.user.bio ?? "");
         setAvatarUrl(me.user.avatar_url ?? null);
@@ -53,22 +55,21 @@ export function SettingsForm() {
         setExtraLinks(rest);
         setLoaded(true);
       } catch {
-        setError("Could not load your profile. Refresh before saving, or your contacts may be overwritten.");
-      } finally {
-        setReady(true);
+        if (!cancelled) {
+          setError("Could not load your profile. Refresh before saving, or your contacts may be overwritten.");
+        }
       }
     })();
-  }, [router]);
+    return () => {
+      cancelled = true;
+    };
+  }, [router, token, stored]);
 
   useEffect(() => {
-    if (!avatarFile) {
-      setPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(avatarFile);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [avatarFile]);
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -126,7 +127,7 @@ export function SettingsForm() {
     }
   }
 
-  if (!ready) {
+  if (!token || !stored) {
     return (
       <div className="wall-form">
         <p className="wall-form__hint">Loading…</p>
@@ -134,6 +135,7 @@ export function SettingsForm() {
     );
   }
 
+  const handle = stored.handle;
   const shown = preview || avatarUrl;
   const initial = displayName.slice(0, 1).toUpperCase() || handle.slice(0, 1).toUpperCase() || "?";
 
