@@ -1,6 +1,5 @@
 # Walls
 
-[![CI](https://github.com/lattewei/walls/actions/workflows/ci.yml/badge.svg)](https://github.com/lattewei/walls/actions/workflows/ci.yml)
 
 You made a beat for someone you cannot reach. Open their public wall, upload the instrumental, tag their name. They listen in the browser. If they want it, they write you.
 
@@ -18,7 +17,7 @@ cd services/api && go run ./cmd/migrate up && go run ./cmd/api
 cd apps/web && npm i && npm run dev
 ```
 
-The last two lines are two terminals. App: [http://localhost:3000](http://localhost:3000). API: [http://localhost:8080](http://localhost:8080).
+The last two lines are two terminals. App: [http://localhost:3001](http://localhost:3001). API: [http://localhost:8080](http://localhost:8080).
 
 Native Postgres, env vars, and troubleshooting: [docs/development.md](./docs/development.md).
 
@@ -33,3 +32,5 @@ Native Postgres, env vars, and troubleshooting: [docs/development.md](./docs/dev
 ## License
 
 [MIT](./LICENSE)
+
+[![CI](https://github.com/lattewei/walls/actions/workflows/ci.yml/badge.svg)](https://github.com/lattewei/walls/actions/workflows/ci.yml)

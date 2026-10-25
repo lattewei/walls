@@ -91,7 +91,7 @@ npm install
 npm run dev
 ```
 
-App: `http://localhost:3000`  
+App: `http://localhost:3001`  
 API must be running on `:8080`.
 
 The browser calls the Go API directly (`NEXT_PUBLIC_API_URL`, default `http://127.0.0.1:8080`). CORS origins are set on the API (`API_CORS_ORIGINS`).
