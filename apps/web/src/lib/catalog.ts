@@ -101,6 +101,21 @@ export async function reportTarget(
   });
 }
 
+export type UpdateTrackInput = {
+  title?: string;
+  description?: string | null;
+  artist_slugs?: string[];
+  tags?: string[];
+};
+
+export async function updateTrack(trackId: string, input: UpdateTrackInput, token: string) {
+  return apiFetch<{ track: PublicTrack }>(`/api/v1/tracks/${encodeURIComponent(trackId)}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(input),
+  });
+}
+
 export async function withdrawTrack(trackId: string, token: string) {
   return apiFetch<{ status: string }>(`/api/v1/tracks/${encodeURIComponent(trackId)}`, {
     method: "DELETE",

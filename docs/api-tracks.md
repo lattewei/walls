@@ -29,6 +29,21 @@ Duration is computed at insert for mp3 and wav.
 
 Public metadata (not removed tracks).
 
+## `PATCH /api/v1/tracks/{id}`
+
+Auth required. Owner only. JSON. Omit a field to leave it. Empty `description` clears it. `artist_slugs` must stay non-empty if sent.
+
+```json
+{
+  "title": "Night run",
+  "description": "",
+  "artist_slugs": ["johnny"],
+  "tags": ["drill"]
+}
+```
+
+**200** `{ "track": { … } }` · **403** not the uploader
+
 ## `GET /api/v1/tracks/{id}/audio`
 
 Public stream for `ready` tracks. Supports range requests via `ServeContent`.

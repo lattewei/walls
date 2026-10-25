@@ -72,6 +72,32 @@ func (h *Handler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"track": track})
 }
 
+func (h *Handler) Update(c *gin.Context) {
+	var req struct {
+		Title       *string   `json:"title"`
+		Description *string   `json:"description"`
+		ArtistSlugs *[]string `json:"artist_slugs"`
+		Tags        *[]string `json:"tags"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequest(c, "invalid JSON body")
+		return
+	}
+	track, err := h.svc.Update(c.Request.Context(), UpdateInput{
+		TrackID:     c.Param("id"),
+		ActorID:     httpx.UserID(c),
+		Title:       req.Title,
+		Description: req.Description,
+		ArtistSlugs: req.ArtistSlugs,
+		Tags:        req.Tags,
+	})
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"track": track})
+}
+
 func (h *Handler) ListByArtist(c *gin.Context) {
 	limit, err := httpx.ParseNonNegInt(c.Query("limit"), 0)
 	if err != nil {

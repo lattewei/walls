@@ -177,6 +177,92 @@ func (s *Service) Get(ctx context.Context, id string) (domain.PublicTrack, error
 	return t.ToPublic(), nil
 }
 
+type UpdateInput struct {
+	TrackID     string
+	ActorID     string
+	Title       *string
+	Description *string
+	ArtistSlugs *[]string
+	Tags        *[]string
+}
+
+func (s *Service) Update(ctx context.Context, in UpdateInput) (domain.PublicTrack, error) {
+	t, err := s.repo.GetByID(ctx, in.TrackID)
+	if errors.Is(err, ErrNotFound) {
+		return domain.PublicTrack{}, ErrNotFound
+	}
+	if err != nil {
+		return domain.PublicTrack{}, err
+	}
+	if t.Status == domain.TrackRemoved {
+		return domain.PublicTrack{}, ErrNotFound
+	}
+	if t.UploaderUserID != in.ActorID {
+		return domain.PublicTrack{}, ErrForbidden
+	}
+
+	title := t.Title
+	if in.Title != nil {
+		title = strings.TrimSpace(*in.Title)
+		if title == "" {
+			return domain.PublicTrack{}, fmt.Errorf("%w: title is required", ErrValidation)
+		}
+		if utf8.RuneCountInString(title) > maxTitleLen {
+			return domain.PublicTrack{}, fmt.Errorf("%w: title is too long", ErrValidation)
+		}
+	}
+
+	desc := t.Description
+	if in.Description != nil {
+		d := strings.TrimSpace(*in.Description)
+		if utf8.RuneCountInString(d) > maxDescLen {
+			return domain.PublicTrack{}, fmt.Errorf("%w: description is too long", ErrValidation)
+		}
+		if d == "" {
+			desc = nil
+		} else {
+			desc = &d
+		}
+	}
+
+	slugs := t.ArtistSlugs
+	if in.ArtistSlugs != nil {
+		slugs = normalizeSlugs(*in.ArtistSlugs)
+		if len(slugs) == 0 {
+			return domain.PublicTrack{}, fmt.Errorf("%w: at least one artist_slug is required", ErrValidation)
+		}
+		if len(slugs) > maxArtists {
+			return domain.PublicTrack{}, fmt.Errorf("%w: too many artists", ErrValidation)
+		}
+	}
+
+	tags := t.Tags
+	if in.Tags != nil {
+		tags = normalizeTags(*in.Tags)
+		if err := validateTags(tags); err != nil {
+			return domain.PublicTrack{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+		}
+	}
+
+	artistIDs := make([]string, 0, len(slugs))
+	for _, slug := range slugs {
+		a, err := s.artists.GetBySlug(ctx, slug)
+		if errors.Is(err, artists.ErrNotFound) {
+			return domain.PublicTrack{}, fmt.Errorf("%w: unknown artist slug %q", ErrValidation, slug)
+		}
+		if err != nil {
+			return domain.PublicTrack{}, err
+		}
+		artistIDs = append(artistIDs, a.ID)
+	}
+
+	updated, err := s.repo.Update(ctx, t.ID, title, desc, artistIDs, tags)
+	if err != nil {
+		return domain.PublicTrack{}, err
+	}
+	return updated.ToPublic(), nil
+}
+
 func (s *Service) ListByArtistSlug(ctx context.Context, slug string, limit, offset int) (ListResult, error) {
 	slug = strings.TrimSpace(strings.ToLower(slug))
 	if err := artists.ValidateSlug(slug); err != nil {

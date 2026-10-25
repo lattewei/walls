@@ -288,6 +288,58 @@ func (r *Repository) ListProducers(ctx context.Context, limit, offset int) ([]do
 	return out, total, nil
 }
 
+func (r *Repository) Update(ctx context.Context, id, title string, description *string, artistIDs, tags []string) (domain.Track, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Track{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	const q = `
+		UPDATE tracks
+		SET title = $2, description = $3, updated_at = now()
+		WHERE id = $1 AND status <> 'removed'
+		RETURNING id, uploader_user_id, title, description, audio_object_key, audio_format,
+		          duration_seconds, status, created_at, updated_at, removed_at
+	`
+	t, err := scanTrack(tx.QueryRow(ctx, q, id, title, description))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Track{}, ErrNotFound
+	}
+	if err != nil {
+		return domain.Track{}, fmt.Errorf("update track: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM track_artists WHERE track_id = $1`, id); err != nil {
+		return domain.Track{}, fmt.Errorf("clear artists: %w", err)
+	}
+	for _, artistID := range artistIDs {
+		if _, err := tx.Exec(ctx, `INSERT INTO track_artists (track_id, artist_id) VALUES ($1, $2)`, id, artistID); err != nil {
+			return domain.Track{}, fmt.Errorf("link artist: %w", err)
+		}
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM track_tags WHERE track_id = $1`, id); err != nil {
+		return domain.Track{}, fmt.Errorf("clear tags: %w", err)
+	}
+	for _, tag := range tags {
+		if _, err := tx.Exec(ctx, `INSERT INTO track_tags (track_id, tag) VALUES ($1, $2)`, id, tag); err != nil {
+			return domain.Track{}, fmt.Errorf("link tag: %w", err)
+		}
+	}
+
+	if err := tx.QueryRow(ctx, `SELECT handle, display_name FROM users WHERE id = $1`, t.UploaderUserID).
+		Scan(&t.UploaderHandle, &t.UploaderName); err != nil {
+		return domain.Track{}, fmt.Errorf("uploader: %w", err)
+	}
+	if err := attachMeta(ctx, tx, &t); err != nil {
+		return domain.Track{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return domain.Track{}, fmt.Errorf("commit: %w", err)
+	}
+	return t, nil
+}
+
 func (r *Repository) SoftDelete(ctx context.Context, id, uploaderID string) (*string, error) {
 	const q = `
 		WITH old AS (
