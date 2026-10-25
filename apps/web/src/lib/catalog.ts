@@ -24,13 +24,13 @@ export async function getArtist(slug: string) {
   }
 }
 
-export async function listArtistTracks(slug: string, limit = 50) {
+export async function listArtistTracks(slug: string, limit = 50, sort: "recent" | "plays" = "recent") {
   return apiFetch<{
     tracks: PublicTrack[];
     total: number;
     limit: number;
     offset: number;
-  }>(`/api/v1/artists/${encodeURIComponent(slug)}/tracks?limit=${limit}&offset=0`);
+  }>(`/api/v1/artists/${encodeURIComponent(slug)}/tracks?limit=${limit}&offset=0&sort=${sort}`);
 }
 
 export async function getPublicProfile(handle: string) {
@@ -45,13 +45,33 @@ export async function getPublicProfile(handle: string) {
   }
 }
 
-export async function listUserTracks(handle: string, limit = 50) {
+export async function listUserTracks(handle: string, limit = 50, sort: "recent" | "plays" = "recent") {
   return apiFetch<{
     tracks: PublicTrack[];
     total: number;
     limit: number;
     offset: number;
-  }>(`/api/v1/users/${encodeURIComponent(handle)}/tracks?limit=${limit}&offset=0`);
+  }>(`/api/v1/users/${encodeURIComponent(handle)}/tracks?limit=${limit}&offset=0&sort=${sort}`);
+}
+
+export async function listTracks(limit = 24, sort: "recent" | "plays" = "plays") {
+  return apiFetch<{
+    tracks: PublicTrack[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/api/v1/tracks?limit=${limit}&offset=0&sort=${sort}`);
+}
+
+export async function recordPlay(trackId: string, token?: string | null) {
+  try {
+    return await apiFetch<{ counted: boolean; play_count: number }>(
+      `/api/v1/tracks/${encodeURIComponent(trackId)}/plays`,
+      { method: "POST", token: token || undefined },
+    );
+  } catch {
+    return null;
+  }
 }
 
 export async function listProducers(limit = 24) {

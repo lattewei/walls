@@ -26,6 +26,7 @@ type Track struct {
 	Tags            []string
 	UploaderHandle  string
 	UploaderName    string
+	PlayCount       int
 }
 
 type PublicTrack struct {
@@ -41,6 +42,7 @@ type PublicTrack struct {
 	UploaderName    string   `json:"uploader_display_name,omitempty"`
 	CreatedAt       string   `json:"created_at"`
 	AudioURL        string   `json:"audio_url,omitempty"`
+	PlayCount       int      `json:"play_count"`
 }
 
 func (t Track) ToPublic() PublicTrack {
@@ -64,6 +66,7 @@ func (t Track) ToPublic() PublicTrack {
 		UploaderHandle:  t.UploaderHandle,
 		UploaderName:    t.UploaderName,
 		CreatedAt:       t.CreatedAt.UTC().Format(time.RFC3339),
+		PlayCount:       t.PlayCount,
 	}
 	if t.Status == TrackReady && t.AudioObjectKey != nil && *t.AudioObjectKey != "" {
 		p.AudioURL = "/api/v1/tracks/" + t.ID + "/audio"

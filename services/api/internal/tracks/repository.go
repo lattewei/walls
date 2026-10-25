@@ -134,7 +134,14 @@ func (r *Repository) GetByID(ctx context.Context, id string) (domain.Track, erro
 	return t, nil
 }
 
-func (r *Repository) ListByArtistSlug(ctx context.Context, slug string, limit, offset int) ([]domain.Track, int, error) {
+func trackOrder(sort string) string {
+	if sort == "plays" {
+		return "t.play_count DESC, t.created_at DESC"
+	}
+	return "t.created_at DESC"
+}
+
+func (r *Repository) ListByArtistSlug(ctx context.Context, slug string, limit, offset int, sort string) ([]domain.Track, int, error) {
 	const countQ = `
 		SELECT COUNT(*)
 		FROM tracks t
@@ -147,7 +154,7 @@ func (r *Repository) ListByArtistSlug(ctx context.Context, slug string, limit, o
 		return nil, 0, fmt.Errorf("count tracks: %w", err)
 	}
 
-	const listQ = `
+	listQ := `
 		SELECT t.id, t.uploader_user_id, t.title, t.description, t.audio_object_key, t.audio_format,
 		       t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at,
 		       u.handle, u.display_name
@@ -156,7 +163,7 @@ func (r *Repository) ListByArtistSlug(ctx context.Context, slug string, limit, o
 		JOIN artists a ON a.id = ta.artist_id
 		JOIN users u ON u.id = t.uploader_user_id
 		WHERE lower(a.slug) = lower($1) AND t.status = 'ready'
-		ORDER BY t.created_at DESC
+		ORDER BY ` + trackOrder(sort) + `
 		LIMIT $2 OFFSET $3
 	`
 	rows, err := r.pool.Query(ctx, listQ, slug, limit, offset)
@@ -184,7 +191,7 @@ func (r *Repository) ListByArtistSlug(ctx context.Context, slug string, limit, o
 	return out, total, nil
 }
 
-func (r *Repository) ListByUploaderHandle(ctx context.Context, handle string, limit, offset int) ([]domain.Track, int, error) {
+func (r *Repository) ListByUploaderHandle(ctx context.Context, handle string, limit, offset int, sort string) ([]domain.Track, int, error) {
 	var exists bool
 	if err := r.pool.QueryRow(ctx, `
 		SELECT EXISTS(SELECT 1 FROM users WHERE lower(handle) = lower($1) AND deleted_at IS NULL)
@@ -206,14 +213,14 @@ func (r *Repository) ListByUploaderHandle(ctx context.Context, handle string, li
 		return nil, 0, fmt.Errorf("count uploader tracks: %w", err)
 	}
 
-	const listQ = `
+	listQ := `
 		SELECT t.id, t.uploader_user_id, t.title, t.description, t.audio_object_key, t.audio_format,
 		       t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at,
 		       u.handle, u.display_name
 		FROM tracks t
 		JOIN users u ON u.id = t.uploader_user_id
 		WHERE lower(u.handle) = lower($1) AND t.status = 'ready' AND u.deleted_at IS NULL
-		ORDER BY t.created_at DESC
+		ORDER BY ` + trackOrder(sort) + `
 		LIMIT $2 OFFSET $3
 	`
 	rows, err := r.pool.Query(ctx, listQ, handle, limit, offset)
@@ -286,6 +293,92 @@ func (r *Repository) ListProducers(ctx context.Context, limit, offset int) ([]do
 		return nil, 0, err
 	}
 	return out, total, nil
+}
+
+func (r *Repository) ListReady(ctx context.Context, limit, offset int, sort string) ([]domain.Track, int, error) {
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM tracks WHERE status = 'ready'`).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count ready tracks: %w", err)
+	}
+	listQ := `
+		SELECT t.id, t.uploader_user_id, t.title, t.description, t.audio_object_key, t.audio_format,
+		       t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at,
+		       u.handle, u.display_name
+		FROM tracks t
+		JOIN users u ON u.id = t.uploader_user_id
+		WHERE t.status = 'ready' AND u.deleted_at IS NULL
+		ORDER BY ` + trackOrder(sort) + `
+		LIMIT $1 OFFSET $2
+	`
+	rows, err := r.pool.Query(ctx, listQ, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list ready tracks: %w", err)
+	}
+	defer rows.Close()
+	out := make([]domain.Track, 0, limit)
+	for rows.Next() {
+		t, err := scanTrackWithUploader(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	for i := range out {
+		if err := attachMeta(ctx, r.pool, &out[i]); err != nil {
+			return nil, 0, err
+		}
+	}
+	return out, total, nil
+}
+
+func (r *Repository) RecordPlay(ctx context.Context, trackID, viewerKey string) (counted bool, playCount int, err error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return false, 0, err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	var status string
+	err = tx.QueryRow(ctx, `
+		SELECT status, play_count FROM tracks WHERE id = $1 FOR UPDATE
+	`, trackID).Scan(&status, &playCount)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, 0, ErrNotFound
+	}
+	if err != nil {
+		return false, 0, err
+	}
+	if status != domain.TrackReady {
+		return false, 0, ErrNotFound
+	}
+
+	tag, err := tx.Exec(ctx, `
+		INSERT INTO track_play_receipts (track_id, viewer_key, day)
+		VALUES ($1, $2, (timezone('utc', now()))::date)
+		ON CONFLICT DO NOTHING
+	`, trackID, viewerKey)
+	if err != nil {
+		return false, 0, fmt.Errorf("play receipt: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		if err := tx.Commit(ctx); err != nil {
+			return false, playCount, err
+		}
+		return false, playCount, nil
+	}
+	if err := tx.QueryRow(ctx, `
+		UPDATE tracks SET play_count = play_count + 1 WHERE id = $1
+		RETURNING play_count
+	`, trackID).Scan(&playCount); err != nil {
+		return false, 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, 0, err
+	}
+	return true, playCount, nil
 }
 
 func (r *Repository) Update(ctx context.Context, id, title string, description *string, artistIDs, tags []string) (domain.Track, error) {
@@ -445,7 +538,21 @@ func attachMeta(ctx context.Context, q rowQuery, t *domain.Track) error {
 		}
 		t.Tags = append(t.Tags, tag)
 	}
-	return tagRows.Err()
+	if err := tagRows.Err(); err != nil {
+		return err
+	}
+
+	pcRows, err := q.Query(ctx, `SELECT play_count FROM tracks WHERE id = $1`, t.ID)
+	if err != nil {
+		return fmt.Errorf("play count: %w", err)
+	}
+	defer pcRows.Close()
+	if pcRows.Next() {
+		if err := pcRows.Scan(&t.PlayCount); err != nil {
+			return err
+		}
+	}
+	return pcRows.Err()
 }
 
 type scannable interface {

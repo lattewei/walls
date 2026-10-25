@@ -2,6 +2,8 @@ package tracks
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -263,7 +265,7 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (domain.PublicTrac
 	return updated.ToPublic(), nil
 }
 
-func (s *Service) ListByArtistSlug(ctx context.Context, slug string, limit, offset int) (ListResult, error) {
+func (s *Service) ListByArtistSlug(ctx context.Context, slug string, limit, offset int, sort string) (ListResult, error) {
 	slug = strings.TrimSpace(strings.ToLower(slug))
 	if err := artists.ValidateSlug(slug); err != nil {
 		return ListResult{}, ErrNotFound
@@ -287,7 +289,7 @@ func (s *Service) ListByArtistSlug(ctx context.Context, slug string, limit, offs
 		return ListResult{}, fmt.Errorf("%w: offset is too large", ErrValidation)
 	}
 
-	rows, total, err := s.repo.ListByArtistSlug(ctx, slug, limit, offset)
+	rows, total, err := s.repo.ListByArtistSlug(ctx, slug, limit, offset, parseSort(sort))
 	if err != nil {
 		return ListResult{}, err
 	}
@@ -305,7 +307,7 @@ type ListResult struct {
 	Offset int                  `json:"offset"`
 }
 
-func (s *Service) ListByUploaderHandle(ctx context.Context, handle string, limit, offset int) (ListResult, error) {
+func (s *Service) ListByUploaderHandle(ctx context.Context, handle string, limit, offset int, sort string) (ListResult, error) {
 	handle = strings.TrimSpace(strings.ToLower(handle))
 	if handle == "" {
 		return ListResult{}, ErrNotFound
@@ -323,7 +325,7 @@ func (s *Service) ListByUploaderHandle(ctx context.Context, handle string, limit
 		return ListResult{}, fmt.Errorf("%w: offset is too large", ErrValidation)
 	}
 
-	rows, total, err := s.repo.ListByUploaderHandle(ctx, handle, limit, offset)
+	rows, total, err := s.repo.ListByUploaderHandle(ctx, handle, limit, offset, parseSort(sort))
 	if err != nil {
 		return ListResult{}, err
 	}
@@ -359,6 +361,73 @@ func (s *Service) ListProducers(ctx context.Context, limit, offset int) (Produce
 		return ProducersResult{}, err
 	}
 	return ProducersResult{Producers: rows, Total: total, Limit: limit, Offset: offset}, nil
+}
+
+func parseSort(sort string) string {
+	if strings.EqualFold(strings.TrimSpace(sort), "plays") {
+		return "plays"
+	}
+	return "recent"
+}
+
+func viewerKey(userID, ip, ua string, now time.Time) string {
+	if userID != "" {
+		return "u:" + userID
+	}
+	day := now.UTC().Format("2006-01-02")
+	sum := sha256.Sum256([]byte(ip + "\n" + ua + "\n" + day))
+	return "i:" + hex.EncodeToString(sum[:16])
+}
+
+func (s *Service) List(ctx context.Context, limit, offset int, sort string) (ListResult, error) {
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+	if limit > maxLimit {
+		limit = maxLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > maxOffset {
+		return ListResult{}, fmt.Errorf("%w: offset is too large", ErrValidation)
+	}
+	rows, total, err := s.repo.ListReady(ctx, limit, offset, parseSort(sort))
+	if err != nil {
+		return ListResult{}, err
+	}
+	items := make([]domain.PublicTrack, 0, len(rows))
+	for _, t := range rows {
+		items = append(items, t.ToPublic())
+	}
+	return ListResult{Tracks: items, Total: total, Limit: limit, Offset: offset}, nil
+}
+
+type PlayResult struct {
+	Counted   bool `json:"counted"`
+	PlayCount int  `json:"play_count"`
+}
+
+func (s *Service) RecordPlay(ctx context.Context, trackID, userID, ip, ua string) (PlayResult, error) {
+	t, err := s.repo.GetByID(ctx, trackID)
+	if errors.Is(err, ErrNotFound) {
+		return PlayResult{}, ErrNotFound
+	}
+	if err != nil {
+		return PlayResult{}, err
+	}
+	if t.Status != domain.TrackReady {
+		return PlayResult{}, ErrNotFound
+	}
+	if userID != "" && userID == t.UploaderUserID {
+		return PlayResult{Counted: false, PlayCount: t.PlayCount}, nil
+	}
+	key := viewerKey(userID, ip, ua, time.Now())
+	counted, count, err := s.repo.RecordPlay(ctx, trackID, key)
+	if err != nil {
+		return PlayResult{}, err
+	}
+	return PlayResult{Counted: counted, PlayCount: count}, nil
 }
 
 func (s *Service) Withdraw(ctx context.Context, trackID, userID string) error {

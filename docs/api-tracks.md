@@ -25,6 +25,25 @@ curl -X POST http://localhost:8080/api/v1/tracks \
 Duration is computed at insert for mp3 and wav.  
 **400** validation · **429** daily upload limit (`TRACK_DAILY_UPLOAD_LIMIT`)
 
+## `GET /api/v1/tracks`
+
+Public catalog. `sort=recent` (default) or `sort=plays`. Paginated `limit` / `offset`.
+
+## Play counts
+
+`POST /api/v1/tracks/{id}/plays` — public. Call after ~15s of real playback, not on every stream byte.
+
+- One count per listener per track per UTC day
+- Logged-in listeners are keyed by user id; anonymous by a hash of IP + user-agent + day
+- The uploader's own plays are ignored
+- 40 requests / minute / IP
+
+**200** `{ "counted": true, "play_count": 12 }` (`counted` is false if already counted today)
+
+`play_count` is on every track payload.
+
+Artist and uploader lists accept `?sort=plays` or `?sort=recent`.
+
 ## `GET /api/v1/tracks/{id}`
 
 Public metadata (not removed tracks).

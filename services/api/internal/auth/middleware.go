@@ -30,6 +30,24 @@ func (m *Middleware) RequireAuth() gin.HandlerFunc {
 	}
 }
 
+func (m *Middleware) Optional() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claims, ok := m.parse(c)
+		if !ok || m.sessions == nil {
+			c.Next()
+			return
+		}
+		state, err := m.sessions.AuthState(c.Request.Context(), claims.UserID)
+		if err != nil || state.SessionVersion != claims.SessionVersion {
+			c.Next()
+			return
+		}
+		c.Set(ContextUserID, claims.UserID)
+		c.Set(httpx.RoleKey, state.Role)
+		c.Next()
+	}
+}
+
 func (m *Middleware) RequireAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !m.attach(c, true) {

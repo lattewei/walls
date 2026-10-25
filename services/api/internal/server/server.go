@@ -34,6 +34,7 @@ type Server struct {
 	tracksHandler     *tracks.Handler
 	moderationHandler *moderation.Handler
 	authLimiter       *httpx.MemoryRateLimiter
+	playLimiter       *httpx.MemoryRateLimiter
 }
 
 func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) (*Server, error) {
@@ -88,6 +89,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) (*Server, erro
 		tracksHandler:     tracks.NewHandler(tracksSvc),
 		moderationHandler: moderation.NewHandler(modSvc, tracksSvc),
 		authLimiter:       httpx.NewMemoryRateLimiter(cfg.AuthRateLimit, cfg.AuthRateWindow),
+		playLimiter:       httpx.NewMemoryRateLimiter(40, time.Minute),
 	}
 	s.routes()
 	return s, nil
@@ -136,8 +138,10 @@ func (s *Server) routes() {
 		tracksGroup := v1.Group("/tracks")
 		{
 			tracksGroup.POST("", s.authMW.RequireAuth(), httpx.LimitBody(s.cfg.MediaMaxBytes+1<<20), s.tracksHandler.Create)
+			tracksGroup.GET("", s.tracksHandler.List)
 			tracksGroup.GET("/:id", s.tracksHandler.Get)
 			tracksGroup.PATCH("/:id", s.authMW.RequireAuth(), s.tracksHandler.Update)
+			tracksGroup.POST("/:id/plays", httpx.RateLimit(s.playLimiter), s.authMW.Optional(), s.tracksHandler.RecordPlay)
 			tracksGroup.GET("/:id/audio", s.tracksHandler.StreamAudio)
 			tracksGroup.DELETE("/:id", s.authMW.RequireAuth(), s.tracksHandler.Withdraw)
 		}

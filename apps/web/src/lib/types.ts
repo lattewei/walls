@@ -28,6 +28,7 @@ export type PublicTrack = {
   uploader_display_name?: string;
   created_at: string;
   audio_url?: string;
+  play_count?: number;
 };
 
 export type PublicProfileUser = {
@@ -61,6 +62,7 @@ export type ProdRow = {
   coverUrl?: string;
   canWithdraw?: boolean;
   detail?: string;
+  playCount?: number;
 };
 
 export function toProdRow(
@@ -75,6 +77,7 @@ export function toProdRow(
     durationSeconds: t.duration_seconds,
     audioUrl: apiUrl(t.audio_url),
     coverUrl: apiUrl(extra.coverUrl),
+    playCount: t.play_count ?? 0,
     detail: [t.description, t.tags?.length ? t.tags.join(", ") : ""]
       .filter(Boolean)
       .join(" · "),

@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { getToken } from "@/lib/auth";
+import { recordPlay } from "@/lib/catalog";
 import type { ProdRow } from "@/lib/types";
 
 type PlayerState = {
@@ -108,6 +110,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setDuration(track.durationSeconds ?? 0);
     }
   }, [track?.id, track?.audioUrl, track?.durationSeconds]);
+
+  const countedRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (!track?.id) return;
+    const need = duration > 0 && duration < 15 ? duration * 0.5 : 15;
+    if (currentTime < need) return;
+    if (countedRef.current.has(track.id)) return;
+    countedRef.current.add(track.id);
+    void recordPlay(track.id, getToken());
+  }, [track?.id, currentTime, duration]);
 
   const start = useCallback((next: ProdRow) => {
     const audio = audioRef.current;

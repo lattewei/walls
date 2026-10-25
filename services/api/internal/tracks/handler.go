@@ -110,7 +110,7 @@ func (h *Handler) ListByArtist(c *gin.Context) {
 		return
 	}
 
-	res, err := h.svc.ListByArtistSlug(c.Request.Context(), c.Param("slug"), limit, offset)
+	res, err := h.svc.ListByArtistSlug(c.Request.Context(), c.Param("slug"), limit, offset, c.Query("sort"))
 	if err != nil {
 		h.mapError(c, err)
 		return
@@ -130,7 +130,41 @@ func (h *Handler) ListByUploader(c *gin.Context) {
 		return
 	}
 
-	res, err := h.svc.ListByUploaderHandle(c.Request.Context(), c.Param("handle"), limit, offset)
+	res, err := h.svc.ListByUploaderHandle(c.Request.Context(), c.Param("handle"), limit, offset, c.Query("sort"))
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *Handler) List(c *gin.Context) {
+	limit, err := httpx.ParseNonNegInt(c.Query("limit"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid limit")
+		return
+	}
+	offset, err := httpx.ParseNonNegInt(c.Query("offset"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid offset")
+		return
+	}
+	res, err := h.svc.List(c.Request.Context(), limit, offset, c.Query("sort"))
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *Handler) RecordPlay(c *gin.Context) {
+	res, err := h.svc.RecordPlay(
+		c.Request.Context(),
+		c.Param("id"),
+		httpx.UserID(c),
+		c.ClientIP(),
+		c.GetHeader("User-Agent"),
+	)
 	if err != nil {
 		h.mapError(c, err)
 		return
