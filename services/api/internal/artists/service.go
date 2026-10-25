@@ -387,6 +387,7 @@ type ClaimInput struct {
 type PublicClaim struct {
 	ID                 string  `json:"id"`
 	ArtistID           string  `json:"artist_id"`
+	ArtistSlug         string  `json:"artist_slug,omitempty"`
 	UserID             string  `json:"user_id"`
 	UserHandle         string  `json:"user_handle,omitempty"`
 	Status             string  `json:"status"`
@@ -451,6 +452,33 @@ func (s *Service) ListPendingClaims(ctx context.Context, limit, offset int) ([]P
 	return out, total, nil
 }
 
+func (s *Service) ListMine(ctx context.Context, userID string, limit, offset int) ([]PublicClaim, int, error) {
+	if userID == "" {
+		return nil, 0, ErrNotFound
+	}
+	if limit <= 0 {
+		limit = defaultListLimit
+	}
+	if limit > maxListLimit {
+		limit = maxListLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > maxOffset {
+		return nil, 0, fmt.Errorf("%w: offset is too large", ErrValidation)
+	}
+	rows, total, err := s.repo.ListByUser(ctx, userID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	out := make([]PublicClaim, 0, len(rows))
+	for _, cl := range rows {
+		out = append(out, toPublicClaim(cl))
+	}
+	return out, total, nil
+}
+
 func (s *Service) ReviewClaim(ctx context.Context, claimID, reviewerID, status string) (PublicClaim, error) {
 	cl, err := s.repo.ReviewClaim(ctx, claimID, reviewerID, status)
 	if err != nil {
@@ -474,6 +502,7 @@ func toPublicClaim(cl Claim) PublicClaim {
 	return PublicClaim{
 		ID:                 cl.ID,
 		ArtistID:           cl.ArtistID,
+		ArtistSlug:         cl.ArtistSlug,
 		UserID:             cl.UserID,
 		UserHandle:         cl.UserHandle,
 		Status:             cl.Status,

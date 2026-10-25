@@ -82,6 +82,23 @@ export async function requestClaim(
   );
 }
 
+export async function listMyClaims(token: string, limit = 20, offset = 0) {
+  return apiFetch<{
+    claims: {
+      id: string;
+      artist_id: string;
+      artist_slug?: string;
+      status: string;
+      verification_method: string;
+      proof_url?: string;
+      created_at: string;
+    }[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/api/v1/me/claims?limit=${limit}&offset=${offset}`, { token });
+}
+
 export async function reportTarget(
   token: string,
   targetType: "track" | "artist" | "user",

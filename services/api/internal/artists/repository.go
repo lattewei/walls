@@ -185,6 +185,7 @@ type Claim struct {
 	ArtistID           string
 	UserID             string
 	UserHandle         string
+	ArtistSlug         string
 	VerificationMethod string
 	ProofURL           *string
 	Status             string
@@ -275,6 +276,38 @@ func (r *Repository) ListPendingClaims(ctx context.Context, limit, offset int) (
 		if err := rows.Scan(
 			&cl.ID, &cl.ArtistID, &cl.UserID, &cl.UserHandle, &cl.VerificationMethod, &cl.ProofURL,
 			&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		out = append(out, cl)
+	}
+	return out, total, rows.Err()
+}
+
+func (r *Repository) ListByUser(ctx context.Context, userID string, limit, offset int) ([]Claim, int, error) {
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM artist_claims WHERE user_id = $1`, userID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT c.id, c.artist_id, c.user_id, u.handle, c.verification_method, c.proof_url, c.status, c.reviewed_by, c.created_at, c.reviewed_at, a.slug
+		FROM artist_claims c
+		JOIN users u ON u.id = c.user_id
+		JOIN artists a ON a.id = c.artist_id
+		WHERE c.user_id = $1
+		ORDER BY c.created_at DESC
+		LIMIT $2 OFFSET $3
+	`, userID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	out := []Claim{}
+	for rows.Next() {
+		var cl Claim
+		if err := rows.Scan(
+			&cl.ID, &cl.ArtistID, &cl.UserID, &cl.UserHandle, &cl.VerificationMethod, &cl.ProofURL,
+			&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt, &cl.ArtistSlug,
 		); err != nil {
 			return nil, 0, err
 		}

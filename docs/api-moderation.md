@@ -13,6 +13,12 @@
 
 Creates a `pending` claim and sets page `claim_status` to `pending` (unless already `claimed`).
 
+### `GET /api/v1/me/claims` (auth)
+
+Your claims, newest first. Optional `limit` / `offset`.
+
+**200** `{ "claims": [ { "id", "artist_id", "artist_slug", "status", … } ], "total", "limit", "offset" }`
+
 ### Admin
 
 - `GET /api/v1/admin/claims` — pending claims

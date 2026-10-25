@@ -198,6 +198,25 @@ func (h *Handler) ListPendingClaims(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"claims": items, "total": total, "limit": limit, "offset": offset})
 }
 
+func (h *Handler) ListMine(c *gin.Context) {
+	limit, err := httpx.ParseNonNegInt(c.Query("limit"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid limit")
+		return
+	}
+	offset, err := httpx.ParseNonNegInt(c.Query("offset"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid offset")
+		return
+	}
+	items, total, err := h.svc.ListMine(c.Request.Context(), httpx.UserID(c), limit, offset)
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"claims": items, "total": total, "limit": limit, "offset": offset})
+}
+
 func (h *Handler) ReviewClaim(c *gin.Context) {
 	var req struct {
 		Status string `json:"status"`
