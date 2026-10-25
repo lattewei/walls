@@ -70,3 +70,16 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
+
+func (h *Handler) Delete(c *gin.Context) {
+	err := h.svc.Delete(c.Request.Context(), httpx.UserID(c))
+	if errors.Is(err, ErrNotFound) {
+		httpx.Unauthorized(c, "authentication required")
+		return
+	}
+	if err != nil {
+		httpx.Internal(c)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}

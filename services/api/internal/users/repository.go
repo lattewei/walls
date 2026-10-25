@@ -157,6 +157,65 @@ func (r *Repository) UpdateProfile(ctx context.Context, id string, displayName s
 	return u, nil
 }
 
+func (r *Repository) SoftDelete(ctx context.Context, id string) (avatar string, audioKeys []string, err error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return "", nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	rows, err := tx.Query(ctx, `
+		SELECT audio_object_key FROM tracks
+		WHERE uploader_user_id = $1 AND status <> 'removed' AND audio_object_key IS NOT NULL
+	`, id)
+	if err != nil {
+		return "", nil, fmt.Errorf("list audio: %w", err)
+	}
+	for rows.Next() {
+		var key *string
+		if err := rows.Scan(&key); err != nil {
+			rows.Close()
+			return "", nil, err
+		}
+		if key != nil && *key != "" {
+			audioKeys = append(audioKeys, *key)
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return "", nil, err
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE tracks
+		SET status = 'removed', removed_at = now(), updated_at = now(), audio_object_key = NULL
+		WHERE uploader_user_id = $1 AND status <> 'removed'
+	`, id); err != nil {
+		return "", nil, fmt.Errorf("withdraw tracks: %w", err)
+	}
+
+	var avatarURL *string
+	err = tx.QueryRow(ctx, `
+		UPDATE users
+		SET deleted_at = now(), session_version = session_version + 1, updated_at = now()
+		WHERE id = $1 AND deleted_at IS NULL
+		RETURNING avatar_url
+	`, id).Scan(&avatarURL)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil, ErrNotFound
+	}
+	if err != nil {
+		return "", nil, fmt.Errorf("delete user: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return "", nil, fmt.Errorf("commit: %w", err)
+	}
+	if avatarURL != nil {
+		avatar = *avatarURL
+	}
+	return avatar, audioKeys, nil
+}
+
 func (r *Repository) UpdateAvatar(ctx context.Context, id string, avatarURL *string) (domain.User, error) {
 	const q = `
 		UPDATE users

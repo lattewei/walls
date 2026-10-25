@@ -88,3 +88,22 @@ func (s *Service) UploadAvatar(ctx context.Context, userID string, file io.Reade
 	}
 	return updated.ToPublic(), nil
 }
+
+func (s *Service) Delete(ctx context.Context, userID string) error {
+	if userID == "" {
+		return ErrNotFound
+	}
+	avatar, keys, err := s.repo.SoftDelete(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if s.storage != nil {
+		if avatar != "" {
+			_ = s.storage.Delete(avatar)
+		}
+		for _, key := range keys {
+			_ = s.storage.Delete(key)
+		}
+	}
+	return nil
+}

@@ -115,6 +115,7 @@ func (s *Server) routes() {
 			me.PATCH("", s.authHandler.UpdateMe)
 			me.POST("/avatar", httpx.LimitBody(5<<20+1<<16), s.usersHandler.UploadAvatar)
 			me.GET("/claims", s.artistsHandler.ListMine)
+			me.DELETE("", s.usersHandler.Delete)
 		}
 
 		v1.GET("/producers", s.tracksHandler.ListProducers)

@@ -118,6 +118,12 @@ Auth required. Multipart field `avatar` (jpeg, png, webp, or gif, max 5MB).
 
 **200** `{ "user": { …, "avatar_url": "/api/v1/media/…" } }`
 
+### `DELETE /api/v1/me`
+
+Auth required. Soft-deletes the account, revokes sessions, withdraws the user's tracks and deletes their audio and avatar files. Artist walls they created stay up.
+
+**200** `{ "status": "ok" }`
+
 ### `GET /api/v1/users/{handle}`
 
 **Public** profile (no auth). Never returns password hash or private data.

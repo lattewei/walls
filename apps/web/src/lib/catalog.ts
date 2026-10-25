@@ -166,6 +166,10 @@ export async function updateMe(input: UpdateMeInput, token: string) {
   });
 }
 
+export async function deleteMe(token: string) {
+  return apiFetch<{ status: string }>("/api/v1/me", { method: "DELETE", token });
+}
+
 export async function uploadAvatar(file: File, token: string) {
   const form = new FormData();
   form.set("avatar", file);
