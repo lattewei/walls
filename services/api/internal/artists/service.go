@@ -45,6 +45,7 @@ type CreateArtistInput struct {
 var (
 	ErrValidation = errors.New("validation_error")
 	ErrConflict   = errors.New("conflict")
+	ErrForbidden  = errors.New("forbidden")
 )
 
 func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.PublicArtist, error) {
@@ -173,6 +174,152 @@ func (s *Service) GetBySlug(ctx context.Context, slug string) (domain.PublicArti
 		return domain.PublicArtist{}, err
 	}
 	return artist.ToPublic(), nil
+}
+
+type UpdateArtistInput struct {
+	Slug       string
+	ActorID    string
+	ActorRole  string
+	Name       *string
+	Bio        *string
+	Genres     *[]string
+	LookingFor *string
+	Cover      io.Reader
+	CoverSize  int64
+}
+
+func canEditArtist(a domain.Artist, actorID, role string) bool {
+	if role == "admin" {
+		return true
+	}
+	if actorID == "" {
+		return false
+	}
+	if a.CreatedBy != nil && *a.CreatedBy == actorID {
+		return true
+	}
+	if a.ClaimedBy != nil && *a.ClaimedBy == actorID {
+		return true
+	}
+	return false
+}
+
+func (s *Service) Update(ctx context.Context, in UpdateArtistInput) (domain.PublicArtist, error) {
+	current, err := s.repo.GetBySlug(ctx, strings.TrimSpace(strings.ToLower(in.Slug)))
+	if errors.Is(err, ErrNotFound) {
+		return domain.PublicArtist{}, ErrNotFound
+	}
+	if err != nil {
+		return domain.PublicArtist{}, err
+	}
+	if !canEditArtist(current, in.ActorID, in.ActorRole) {
+		return domain.PublicArtist{}, ErrForbidden
+	}
+
+	name := current.Name
+	if in.Name != nil {
+		name = NormalizeName(*in.Name)
+		if err := ValidateName(name); err != nil {
+			return domain.PublicArtist{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+		}
+		if name != current.Name {
+			taken, err := s.repo.existsByNormalizedName(ctx, name, current.ID)
+			if err != nil {
+				return domain.PublicArtist{}, err
+			}
+			if taken {
+				return domain.PublicArtist{}, fmt.Errorf("%w: an artist page with this name already exists", ErrConflict)
+			}
+		}
+	}
+
+	bio := current.Bio
+	if in.Bio != nil {
+		b := strings.TrimSpace(*in.Bio)
+		if err := ValidateBio(b); err != nil {
+			return domain.PublicArtist{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+		}
+		if b == "" {
+			bio = nil
+		} else {
+			bio = &b
+		}
+	}
+
+	genres := current.Genres
+	if in.Genres != nil {
+		genres = NormalizeGenres(*in.Genres)
+		if err := ValidateGenres(genres); err != nil {
+			return domain.PublicArtist{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+		}
+	}
+
+	looking := current.LookingFor
+	if in.LookingFor != nil {
+		lf := strings.TrimSpace(*in.LookingFor)
+		if err := ValidateBio(lf); err != nil {
+			return domain.PublicArtist{}, fmt.Errorf("%w: looking_for too long", ErrValidation)
+		}
+		if lf == "" {
+			looking = nil
+		} else {
+			looking = &lf
+		}
+	}
+
+	coverURL := current.CoverURL
+	avatarURL := current.AvatarURL
+	var newKey string
+	if in.Cover != nil {
+		if in.CoverSize > 0 && in.CoverSize > s.maxCover {
+			return domain.PublicArtist{}, fmt.Errorf("%w: cover image is too large (max 5MB)", ErrValidation)
+		}
+		if s.storage == nil {
+			return domain.PublicArtist{}, fmt.Errorf("%w: media storage unavailable", ErrValidation)
+		}
+		info, reader, err := media.DetectImage(in.Cover)
+		if err != nil {
+			if errors.Is(err, media.ErrUnsupported) {
+				return domain.PublicArtist{}, fmt.Errorf("%w: unsupported image type", ErrValidation)
+			}
+			return domain.PublicArtist{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+		}
+		key, err := s.storage.SaveCapped(reader, info.Ext, s.maxCover)
+		if errors.Is(err, media.ErrTooLarge) {
+			return domain.PublicArtist{}, fmt.Errorf("%w: cover image is too large (max 5MB)", ErrValidation)
+		}
+		if err != nil {
+			return domain.PublicArtist{}, err
+		}
+		newKey = key
+		coverURL = &key
+		avatarURL = &key
+	}
+
+	updated, err := s.repo.Update(ctx, current.ID, UpdateFields{
+		Name:       name,
+		Bio:        bio,
+		CoverURL:   coverURL,
+		AvatarURL:  avatarURL,
+		Genres:     genres,
+		LookingFor: looking,
+	})
+	if errors.Is(err, ErrNameTaken) {
+		if newKey != "" {
+			_ = s.storage.Delete(newKey)
+		}
+		return domain.PublicArtist{}, fmt.Errorf("%w: an artist page with this name already exists", ErrConflict)
+	}
+	if err != nil {
+		if newKey != "" {
+			_ = s.storage.Delete(newKey)
+		}
+		return domain.PublicArtist{}, err
+	}
+	if newKey != "" && current.CoverURL != nil && *current.CoverURL != "" && *current.CoverURL != newKey {
+		_ = s.storage.Delete(*current.CoverURL)
+	}
+	return updated.ToPublic(), nil
 }
 
 type ListInput struct {

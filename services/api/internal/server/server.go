@@ -126,6 +126,7 @@ func (s *Server) routes() {
 			artistsGroup.GET("", s.artistsHandler.List)
 			artistsGroup.POST("", s.authMW.RequireAuth(), httpx.LimitBody((5<<20)+1<<20), s.artistsHandler.Create)
 			artistsGroup.GET("/:slug", s.artistsHandler.GetBySlug)
+			artistsGroup.PATCH("/:slug", s.authMW.RequireAuth(), httpx.LimitBody((5<<20)+1<<20), s.artistsHandler.Update)
 			artistsGroup.GET("/:slug/tracks", s.tracksHandler.ListByArtist)
 			artistsGroup.POST("/:slug/claims", s.authMW.RequireAuth(), s.artistsHandler.RequestClaim)
 		}

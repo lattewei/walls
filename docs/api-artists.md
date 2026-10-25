@@ -126,6 +126,24 @@ curl -s http://localhost:8080/api/v1/artists/johnny
 
 ---
 
+## `PATCH /api/v1/artists/{slug}`
+
+Auth required. Creator, claimed owner, or admin. JSON or multipart (to replace the cover). Slug cannot change. Omit a field to leave it. Empty string / empty `genres` clears it.
+
+```json
+{
+  "name": "Johnny",
+  "bio": "optional",
+  "genres": ["rap"],
+  "looking_for": ""
+}
+```
+
+**200** `{ "artist": { … } }`  
+**403** not allowed · **409** name taken
+
+---
+
 ## Trust badge
 
 Every artist payload includes:

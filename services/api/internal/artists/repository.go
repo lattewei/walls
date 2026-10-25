@@ -82,14 +82,19 @@ func (r *Repository) ExistsBySlug(ctx context.Context, slug string) (bool, error
 }
 
 func (r *Repository) ExistsByNormalizedName(ctx context.Context, name string) (bool, error) {
+	return r.existsByNormalizedName(ctx, name, "")
+}
+
+func (r *Repository) existsByNormalizedName(ctx context.Context, name, exceptID string) (bool, error) {
 	const q = `
 		SELECT EXISTS(
 			SELECT 1 FROM artists
 			WHERE lower(regexp_replace(trim(name), '\s+', ' ', 'g')) = lower($1)
+			  AND ($2 = '' OR id::text <> $2)
 		)
 	`
 	var ok bool
-	if err := r.pool.QueryRow(ctx, q, name).Scan(&ok); err != nil {
+	if err := r.pool.QueryRow(ctx, q, name, exceptID).Scan(&ok); err != nil {
 		return false, fmt.Errorf("exists by name: %w", err)
 	}
 	return ok, nil
@@ -125,6 +130,52 @@ func (r *Repository) GetByID(ctx context.Context, id string) (domain.Artist, err
 	}
 	if err != nil {
 		return domain.Artist{}, fmt.Errorf("get by id: %w", err)
+	}
+	return a, nil
+}
+
+type UpdateFields struct {
+	Name       string
+	Bio        *string
+	CoverURL   *string
+	AvatarURL  *string
+	Genres     []string
+	LookingFor *string
+}
+
+func (r *Repository) Update(ctx context.Context, id string, in UpdateFields) (domain.Artist, error) {
+	genres := in.Genres
+	if genres == nil {
+		genres = []string{}
+	}
+	const q = `
+		UPDATE artists
+		SET name = $2,
+		    bio = $3,
+		    cover_url = $4,
+		    avatar_url = $5,
+		    genres = $6,
+		    looking_for = $7,
+		    updated_at = now()
+		WHERE id = $1
+		RETURNING id, name, slug, bio, avatar_url, cover_url, genres, looking_for,
+		          claim_status, created_by, claimed_by, created_at, updated_at
+	`
+	a, err := scanArtist(r.pool.QueryRow(ctx, q,
+		id, in.Name, in.Bio, in.CoverURL, in.AvatarURL, genres, in.LookingFor,
+	))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Artist{}, ErrNotFound
+	}
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			if pgErr.ConstraintName == "artists_name_norm_unique" {
+				return domain.Artist{}, ErrNameTaken
+			}
+			return domain.Artist{}, ErrSlugTaken
+		}
+		return domain.Artist{}, fmt.Errorf("update artist: %w", err)
 	}
 	return a, nil
 }

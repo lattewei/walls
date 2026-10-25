@@ -67,6 +67,7 @@ func (m *Middleware) attach(c *gin.Context, admin bool) bool {
 		return false
 	}
 	c.Set(ContextUserID, claims.UserID)
+	c.Set(httpx.RoleKey, state.Role)
 	return true
 }
 

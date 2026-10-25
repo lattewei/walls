@@ -94,6 +94,69 @@ func (h *Handler) GetBySlug(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"artist": artist})
 }
 
+func (h *Handler) Update(c *gin.Context) {
+	in := UpdateArtistInput{
+		Slug:      c.Param("slug"),
+		ActorID:   httpx.UserID(c),
+		ActorRole: httpx.Role(c),
+	}
+	ct := c.ContentType()
+	if strings.HasPrefix(ct, "multipart/form-data") {
+		if v, ok := c.GetPostForm("name"); ok {
+			in.Name = &v
+		}
+		if v, ok := c.GetPostForm("bio"); ok {
+			in.Bio = &v
+		}
+		if v, ok := c.GetPostForm("looking_for"); ok {
+			in.LookingFor = &v
+		}
+		if v, ok := c.GetPostForm("genres"); ok {
+			g := httpx.SplitCSV(v)
+			in.Genres = &g
+		} else if arr := c.PostFormArray("genres"); len(arr) > 0 {
+			in.Genres = &arr
+		}
+		if fh, err := c.FormFile("cover"); err != nil {
+			if httpx.IsBodyTooLarge(err) {
+				httpx.JSONError(c, http.StatusRequestEntityTooLarge, "validation_error", "file too large")
+				return
+			}
+		} else if fh != nil {
+			f, err := fh.Open()
+			if err != nil {
+				httpx.BadRequest(c, "cannot read cover image")
+				return
+			}
+			defer f.Close()
+			in.Cover = f
+			in.CoverSize = fh.Size
+		}
+	} else {
+		var req struct {
+			Name       *string   `json:"name"`
+			Bio        *string   `json:"bio"`
+			Genres     *[]string `json:"genres"`
+			LookingFor *string   `json:"looking_for"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			httpx.BadRequest(c, "invalid JSON body")
+			return
+		}
+		in.Name = req.Name
+		in.Bio = req.Bio
+		in.Genres = req.Genres
+		in.LookingFor = req.LookingFor
+	}
+
+	artist, err := h.svc.Update(c.Request.Context(), in)
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"artist": artist})
+}
+
 func (h *Handler) RequestClaim(c *gin.Context) {
 	var req struct {
 		VerificationMethod string `json:"verification_method"`
@@ -183,6 +246,8 @@ func (h *Handler) mapError(c *gin.Context, err error) {
 	case errors.Is(err, ErrConflict):
 		msg := strings.TrimPrefix(err.Error(), ErrConflict.Error()+": ")
 		httpx.JSONError(c, http.StatusConflict, "conflict", msg)
+	case errors.Is(err, ErrForbidden):
+		httpx.Forbidden(c, "forbidden")
 	case errors.Is(err, ErrNotFound):
 		httpx.NotFound(c, "artist not found")
 	default:

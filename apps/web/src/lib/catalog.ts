@@ -190,3 +190,37 @@ export async function createArtist(input: CreateArtistInput, token: string) {
   });
   return data.artist;
 }
+
+export type UpdateArtistInput = {
+  name?: string;
+  bio?: string | null;
+  genres?: string[];
+  looking_for?: string | null;
+  cover?: File | null;
+};
+
+export async function updateArtist(slug: string, input: UpdateArtistInput, token: string) {
+  if (input.cover) {
+    const form = new FormData();
+    if (input.name != null) form.set("name", input.name);
+    if (input.bio != null) form.set("bio", input.bio);
+    if (input.looking_for != null) form.set("looking_for", input.looking_for);
+    if (input.genres) form.set("genres", input.genres.join(","));
+    form.set("cover", input.cover);
+    const data = await apiFetch<{ artist: PublicArtist }>(
+      `/api/v1/artists/${encodeURIComponent(slug)}`,
+      { method: "PATCH", token, body: form },
+    );
+    return data.artist;
+  }
+  const body: Record<string, unknown> = {};
+  if (input.name != null) body.name = input.name;
+  if (input.bio != null) body.bio = input.bio;
+  if (input.looking_for != null) body.looking_for = input.looking_for;
+  if (input.genres) body.genres = input.genres;
+  const data = await apiFetch<{ artist: PublicArtist }>(
+    `/api/v1/artists/${encodeURIComponent(slug)}`,
+    { method: "PATCH", token, body: JSON.stringify(body) },
+  );
+  return data.artist;
+}
