@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"log/slog"
+	"net/url"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +22,7 @@ func RequestLogger(log *slog.Logger) gin.HandlerFunc {
 	}
 }
 
-func CORS(origins []string) gin.HandlerFunc {
+func CORS(origins []string, allowLocal bool) gin.HandlerFunc {
 	allowed := make(map[string]struct{}, len(origins))
 	for _, o := range origins {
 		allowed[o] = struct{}{}
@@ -29,7 +30,7 @@ func CORS(origins []string) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
-		if _, ok := allowed[origin]; ok {
+		if originAllowed(origin, allowed, allowLocal) {
 			c.Header("Access-Control-Allow-Origin", origin)
 			c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, Range")
 			c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
@@ -43,6 +44,25 @@ func CORS(origins []string) gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+func originAllowed(origin string, allowed map[string]struct{}, allowLocal bool) bool {
+	if origin == "" {
+		return false
+	}
+	if _, ok := allowed[origin]; ok {
+		return true
+	}
+	return allowLocal && localOrigin(origin)
+}
+
+func localOrigin(origin string) bool {
+	u, err := url.Parse(origin)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return false
+	}
+	host := u.Hostname()
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }
 
 func SecureHeaders() gin.HandlerFunc {

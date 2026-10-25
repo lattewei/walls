@@ -52,7 +52,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) (*Server, erro
 	}
 	r.Use(gin.Recovery())
 	r.Use(httpx.SecureHeaders())
-	r.Use(httpx.CORS(cfg.CORSOrigins))
+	r.Use(httpx.CORS(cfg.CORSOrigins, cfg.IsDev()))
 	r.Use(httpx.RequestLogger(log))
 
 	mediaPath := cfg.MediaLocalPath

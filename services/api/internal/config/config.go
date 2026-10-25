@@ -56,7 +56,7 @@ func Load() (Config, error) {
 		Host:            getEnv("API_HOST", "0.0.0.0"),
 		Port:            port,
 		Env:             getEnv("API_ENV", "development"),
-		CORSOrigins:     splitCSV(getEnv("API_CORS_ORIGINS", "http://localhost:3000")),
+		CORSOrigins:     splitCSV(getEnv("API_CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")),
 		DatabaseURL:     os.Getenv("DATABASE_URL"),
 		MigrationsPath:  getEnv("MIGRATIONS_PATH", "../../migrations"),
 		JWTSecret:       getEnv("JWT_SECRET", "dev-only-change-me"),
