@@ -11,12 +11,14 @@ Nothing is verified automatically. A human admin reviews every claim.
 | Actor | Can do |
 |-------|--------|
 | Anyone | Create a wall, upload a production, report a wall |
-| Wall creator | Edit that wall, remove their production |
+| Wall creator | Edit that wall until it is claimed, remove their production |
 | Claimant | Submit a claim, publish the code, attach the proof link |
 | Claimed owner | Edit the wall (bio, genres, looking for, cover, name) |
 | Admin | Review claims, resolve reports, hide tracks |
 
-A wall is editable by its creator, its claimed owner, or an admin. The API
+While a wall is unclaimed or has only pending claims, its creator can edit it.
+Once a claim is accepted, the wall belongs to the claimed owner: the creator
+loses edit rights, and only the owner or an admin can edit it. The API
 computes this per request as `can_edit` on `GET /api/v1/artists/{slug}`.
 
 ## States
@@ -79,6 +81,9 @@ new claim later.
 - **Editing after acceptance.** The owner can change the wall’s name, bio,
   genres, looking-for line, and cover. The URL (`/artists/{slug}`) does not
   change.
+- **Creator handover.** Accepting a claim transfers edit control. The original
+  creator keeps `can_edit` while the wall is unclaimed or pending, then loses
+  it on acceptance. Admins always keep access.
 - **Proof is optional at creation.** A claimant can create the claim first, get
   the code, and attach the post later. Admins see “No proof post yet”.
 

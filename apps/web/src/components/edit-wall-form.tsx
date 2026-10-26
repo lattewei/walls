@@ -116,8 +116,8 @@ export function EditWallForm({ artist }: { artist: PublicArtist }) {
         <div className="wall-form__inner">
           <h1>Not your wall</h1>
           <p className="wall-form__hint">
-            Only the person who claimed this wall, the producer who created it,
-            or an admin can edit it.
+            Unclaimed walls can be edited by their creator. Once a wall is
+            claimed, only the claimed owner or an admin can edit it.
           </p>
           <p className="auth__alt">
             <Link href={`/artists/${artist.slug}`}>Back to the wall</Link>

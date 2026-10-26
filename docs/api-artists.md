@@ -121,8 +121,9 @@ includes `can_edit` for the caller.
 }
 ```
 
-`can_edit` is `true` for the page creator, the user who claimed it, and admins.
-Anonymous requests always get `false`.
+`can_edit` is `true` for an admin, for the claimed owner, or for the page
+creator **while the wall is unclaimed or pending**. Once a wall is claimed, the
+original creator loses edit rights. Anonymous requests always get `false`.
 
 **404** if slug is unknown or invalid.
 
@@ -135,7 +136,10 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/artists/j
 
 ## `PATCH /api/v1/artists/{slug}`
 
-Auth required. Creator, claimed owner, or admin. JSON or multipart (to replace the cover). Slug cannot change. Omit a field to leave it. Empty string / empty `genres` clears it.
+Auth required. Admin, claimed owner, or the page creator while the wall is
+unclaimed or pending. The creator loses this right once a claim is accepted.
+JSON or multipart (to replace the cover). Slug cannot change. Omit a field to
+leave it. Empty string / empty `genres` clears it.
 
 ```json
 {
@@ -160,7 +164,7 @@ Every artist payload includes:
 | `claim_status` | Raw DB status: `unclaimed` \| `pending` \| `claimed` |
 | `badge` | UI-ready label: `community` \| `pending_claim` \| `claimed` |
 | `is_official` | `true` **only** when `claim_status` is `claimed` |
-| `can_edit` | Caller may `PATCH` this wall (creator, claimed owner, or admin) |
+| `can_edit` | Caller may `PATCH` this wall (admin, claimed owner, or creator while unclaimed/pending) |
 
 Rules for clients:
 

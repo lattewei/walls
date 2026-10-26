@@ -203,6 +203,11 @@ func canEditArtist(a domain.Artist, actorID, role string) bool {
 	if actorID == "" {
 		return false
 	}
+	// A claimed wall belongs to its claimant. The original creator keeps edit
+	// rights while the wall is unclaimed or pending, then loses them on accept.
+	if a.ClaimStatus == domain.ClaimClaimed {
+		return a.ClaimedBy != nil && *a.ClaimedBy == actorID
+	}
 	if a.CreatedBy != nil && *a.CreatedBy == actorID {
 		return true
 	}
