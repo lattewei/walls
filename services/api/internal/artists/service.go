@@ -161,6 +161,12 @@ func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.Publ
 }
 
 func (s *Service) GetBySlug(ctx context.Context, slug string) (domain.PublicArtist, error) {
+	return s.GetBySlugForActor(ctx, slug, "", "")
+}
+
+// GetBySlugForActor adds the caller-specific edit flag. The actor is optional:
+// public requests simply get can_edit=false.
+func (s *Service) GetBySlugForActor(ctx context.Context, slug, actorID, role string) (domain.PublicArtist, error) {
 	slug = strings.TrimSpace(strings.ToLower(slug))
 	if err := ValidateSlug(slug); err != nil {
 		return domain.PublicArtist{}, ErrNotFound
@@ -173,7 +179,9 @@ func (s *Service) GetBySlug(ctx context.Context, slug string) (domain.PublicArti
 	if err != nil {
 		return domain.PublicArtist{}, err
 	}
-	return artist.ToPublic(), nil
+	pub := artist.ToPublic()
+	pub.CanEdit = canEditArtist(artist, actorID, role)
+	return pub, nil
 }
 
 type UpdateArtistInput struct {
@@ -381,6 +389,7 @@ type ClaimInput struct {
 	Slug               string
 	UserID             string
 	VerificationMethod string
+	IdentityURL        string
 	ProofURL           string
 }
 
@@ -388,10 +397,13 @@ type PublicClaim struct {
 	ID                 string  `json:"id"`
 	ArtistID           string  `json:"artist_id"`
 	ArtistSlug         string  `json:"artist_slug,omitempty"`
+	ArtistName         string  `json:"artist_name,omitempty"`
 	UserID             string  `json:"user_id"`
 	UserHandle         string  `json:"user_handle,omitempty"`
 	Status             string  `json:"status"`
 	VerificationMethod string  `json:"verification_method"`
+	ClaimCode          string  `json:"claim_code"`
+	IdentityURL        *string `json:"identity_url,omitempty"`
 	ProofURL           *string `json:"proof_url,omitempty"`
 	CreatedAt          string  `json:"created_at"`
 }
@@ -399,15 +411,26 @@ type PublicClaim struct {
 func (s *Service) RequestClaim(ctx context.Context, in ClaimInput) (PublicClaim, error) {
 	method := strings.TrimSpace(in.VerificationMethod)
 	if method == "" {
-		return PublicClaim{}, fmt.Errorf("%w: verification_method is required", ErrValidation)
+		method = "identity"
 	}
 	if utf8.RuneCountInString(method) > 100 {
 		return PublicClaim{}, fmt.Errorf("%w: verification_method is too long", ErrValidation)
 	}
 
+	identity := strings.TrimSpace(in.IdentityURL)
+	if identity == "" {
+		return PublicClaim{}, fmt.Errorf("%w: identity_url is required", ErrValidation)
+	}
+	if err := auth.ValidateHTTPURL(identity); err != nil {
+		return PublicClaim{}, fmt.Errorf("%w: identity_url: %s", ErrValidation, err.Error())
+	}
+
 	artist, err := s.GetBySlug(ctx, in.Slug)
 	if err != nil {
 		return PublicClaim{}, err
+	}
+	if artist.ClaimStatus == domain.ClaimClaimed {
+		return PublicClaim{}, fmt.Errorf("%w: this wall is already claimed", ErrConflict)
 	}
 
 	var proof *string
@@ -418,9 +441,33 @@ func (s *Service) RequestClaim(ctx context.Context, in ClaimInput) (PublicClaim,
 		proof = &p
 	}
 
-	cl, err := s.repo.CreateClaim(ctx, artist.ID, in.UserID, method, proof)
+	cl, err := s.repo.CreateClaim(ctx, artist.ID, in.UserID, method, &identity, proof)
 	if errors.Is(err, ErrClaimExists) {
 		return PublicClaim{}, fmt.Errorf("%w: you already have a pending claim for this wall", ErrConflict)
+	}
+	if err != nil {
+		return PublicClaim{}, err
+	}
+	cl.ArtistSlug = artist.Slug
+	cl.ArtistName = artist.Name
+	return toPublicClaim(cl), nil
+}
+
+// UpdateClaimProof attaches the public post that carries the claim code.
+func (s *Service) UpdateClaimProof(ctx context.Context, claimID, userID, proofURL string) (PublicClaim, error) {
+	if strings.TrimSpace(claimID) == "" {
+		return PublicClaim{}, ErrNotFound
+	}
+	var proof *string
+	if p := strings.TrimSpace(proofURL); p != "" {
+		if err := auth.ValidateHTTPURL(p); err != nil {
+			return PublicClaim{}, fmt.Errorf("%w: proof_url: %s", ErrValidation, err.Error())
+		}
+		proof = &p
+	}
+	cl, err := s.repo.UpdateClaimProof(ctx, claimID, userID, proof)
+	if errors.Is(err, ErrNotFound) {
+		return PublicClaim{}, ErrNotFound
 	}
 	if err != nil {
 		return PublicClaim{}, err
@@ -503,10 +550,13 @@ func toPublicClaim(cl Claim) PublicClaim {
 		ID:                 cl.ID,
 		ArtistID:           cl.ArtistID,
 		ArtistSlug:         cl.ArtistSlug,
+		ArtistName:         cl.ArtistName,
 		UserID:             cl.UserID,
 		UserHandle:         cl.UserHandle,
 		Status:             cl.Status,
 		VerificationMethod: cl.VerificationMethod,
+		ClaimCode:          cl.ClaimCode,
+		IdentityURL:        cl.IdentityURL,
 		ProofURL:           cl.ProofURL,
 		CreatedAt:          cl.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}

@@ -82,6 +82,7 @@ Public list / search. No auth.
       "claim_status": "unclaimed",
       "badge": "community",
       "is_official": false,
+      "can_edit": false,
       "created_at": "…"
     }
   ],
@@ -99,7 +100,8 @@ curl -s "http://localhost:8080/api/v1/artists?q=john&limit=10&offset=0"
 
 ## `GET /api/v1/artists/{slug}`
 
-Public, no auth.
+Public. The `Authorization` header is optional: when present, the response
+includes `can_edit` for the caller.
 
 **200**
 
@@ -113,15 +115,20 @@ Public, no auth.
     "claim_status": "unclaimed",
     "badge": "community",
     "is_official": false,
+    "can_edit": false,
     "created_at": "…"
   }
 }
 ```
 
+`can_edit` is `true` for the page creator, the user who claimed it, and admins.
+Anonymous requests always get `false`.
+
 **404** if slug is unknown or invalid.
 
 ```bash
 curl -s http://localhost:8080/api/v1/artists/johnny
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/artists/johnny
 ```
 
 ---
@@ -153,9 +160,10 @@ Every artist payload includes:
 | `claim_status` | Raw DB status: `unclaimed` \| `pending` \| `claimed` |
 | `badge` | UI-ready label: `community` \| `pending_claim` \| `claimed` |
 | `is_official` | `true` **only** when `claim_status` is `claimed` |
+| `can_edit` | Caller may `PATCH` this wall (creator, claimed owner, or admin) |
 
 Rules for clients:
 
 - Show a **community / unverified** badge when `badge` is `community` or `pending_claim`.
 - Never present a page as the artist’s official account unless `is_official` is `true`.
-- Claim a wall with `POST /api/v1/artists/{slug}/claims`. Admins review at `/api/v1/admin/claims`. See [api-moderation.md](./api-moderation.md).
+- Claim a wall with `POST /api/v1/artists/{slug}/claims`. Admins review at `/api/v1/admin/claims`. See [claims.md](./claims.md).

@@ -1,5 +1,11 @@
 import { apiFetch, isApiRequestError } from "./api";
-import type { PublicArtist, PublicContacts, PublicProfileUser, PublicTrack } from "./types";
+import type {
+  Claim,
+  PublicArtist,
+  PublicContacts,
+  PublicProfileUser,
+  PublicTrack,
+} from "./types";
 
 export async function listArtists(limit = 24, query = "") {
   const q = query.trim();
@@ -16,6 +22,20 @@ export async function getArtist(slug: string) {
   try {
     const data = await apiFetch<{ artist: PublicArtist }>(
       `/api/v1/artists/${encodeURIComponent(slug)}`,
+    );
+    return data.artist;
+  } catch (err) {
+    if (isApiRequestError(err) && err.status === 404) return null;
+    throw err;
+  }
+}
+
+// Same wall, but with the caller attached so the API can report can_edit.
+export async function getArtistForSession(slug: string, token: string) {
+  try {
+    const data = await apiFetch<{ artist: PublicArtist }>(
+      `/api/v1/artists/${encodeURIComponent(slug)}`,
+      { token },
     );
     return data.artist;
   } catch (err) {
@@ -86,33 +106,40 @@ export async function listProducers(limit = 24) {
 export async function requestClaim(
   slug: string,
   token: string,
-  verificationMethod: string,
-  proofUrl: string,
+  identityUrl: string,
+  proofUrl = "",
 ) {
-  return apiFetch<{ claim: { id: string; status: string } }>(
+  return apiFetch<{ claim: Claim }>(
     `/api/v1/artists/${encodeURIComponent(slug)}/claims`,
     {
       method: "POST",
       token,
       body: JSON.stringify({
-        verification_method: verificationMethod,
+        identity_url: identityUrl,
         proof_url: proofUrl,
       }),
     },
   );
 }
 
+export async function updateClaimProof(
+  claimId: string,
+  proofUrl: string,
+  token: string,
+) {
+  return apiFetch<{ claim: Claim }>(
+    `/api/v1/me/claims/${encodeURIComponent(claimId)}`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ proof_url: proofUrl }),
+    },
+  );
+}
+
 export async function listMyClaims(token: string, limit = 20, offset = 0) {
   return apiFetch<{
-    claims: {
-      id: string;
-      artist_id: string;
-      artist_slug?: string;
-      status: string;
-      verification_method: string;
-      proof_url?: string;
-      created_at: string;
-    }[];
+    claims: Claim[];
     total: number;
     limit: number;
     offset: number;

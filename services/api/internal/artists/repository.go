@@ -183,10 +183,13 @@ func (r *Repository) Update(ctx context.Context, id string, in UpdateFields) (do
 type Claim struct {
 	ID                 string
 	ArtistID           string
+	ArtistName         string
+	ArtistSlug         string
 	UserID             string
 	UserHandle         string
-	ArtistSlug         string
 	VerificationMethod string
+	ClaimCode          string
+	IdentityURL        *string
 	ProofURL           *string
 	Status             string
 	ReviewedBy         *string
@@ -194,7 +197,7 @@ type Claim struct {
 	ReviewedAt         *time.Time
 }
 
-func (r *Repository) CreateClaim(ctx context.Context, artistID, userID, method string, proofURL *string) (Claim, error) {
+func (r *Repository) CreateClaim(ctx context.Context, artistID, userID, method string, identityURL, proofURL *string) (Claim, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return Claim{}, err
@@ -202,13 +205,14 @@ func (r *Repository) CreateClaim(ctx context.Context, artistID, userID, method s
 	defer tx.Rollback(ctx) //nolint:errcheck
 
 	const insert = `
-		INSERT INTO artist_claims (artist_id, user_id, verification_method, proof_url, status)
-		VALUES ($1, $2, $3, $4, 'pending')
-		RETURNING id, artist_id, user_id, verification_method, proof_url, status, reviewed_by, created_at, reviewed_at
+		INSERT INTO artist_claims (artist_id, user_id, verification_method, identity_url, proof_url, status)
+		VALUES ($1, $2, $3, $4, $5, 'pending')
+		RETURNING id, artist_id, user_id, verification_method, claim_code, identity_url, proof_url, status, reviewed_by, created_at, reviewed_at
 	`
 	var cl Claim
-	err = tx.QueryRow(ctx, insert, artistID, userID, method, proofURL).Scan(
-		&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ProofURL,
+	err = tx.QueryRow(ctx, insert, artistID, userID, method, identityURL, proofURL).Scan(
+		&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ClaimCode,
+		&cl.IdentityURL, &cl.ProofURL,
 		&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
 	)
 	if err != nil {
@@ -236,12 +240,13 @@ func (r *Repository) CreateClaim(ctx context.Context, artistID, userID, method s
 
 func (r *Repository) GetClaim(ctx context.Context, id string) (Claim, error) {
 	const q = `
-		SELECT id, artist_id, user_id, verification_method, proof_url, status, reviewed_by, created_at, reviewed_at
+		SELECT id, artist_id, user_id, verification_method, claim_code, identity_url, proof_url, status, reviewed_by, created_at, reviewed_at
 		FROM artist_claims WHERE id = $1
 	`
 	var cl Claim
 	err := r.pool.QueryRow(ctx, q, id).Scan(
-		&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ProofURL,
+		&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ClaimCode,
+		&cl.IdentityURL, &cl.ProofURL,
 		&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -259,9 +264,12 @@ func (r *Repository) ListPendingClaims(ctx context.Context, limit, offset int) (
 		return nil, 0, err
 	}
 	rows, err := r.pool.Query(ctx, `
-		SELECT c.id, c.artist_id, c.user_id, u.handle, c.verification_method, c.proof_url, c.status, c.reviewed_by, c.created_at, c.reviewed_at
+		SELECT c.id, c.artist_id, c.user_id, u.handle, a.slug, a.name,
+		       c.verification_method, c.claim_code, c.identity_url, c.proof_url,
+		       c.status, c.reviewed_by, c.created_at, c.reviewed_at
 		FROM artist_claims c
 		JOIN users u ON u.id = c.user_id
+		JOIN artists a ON a.id = c.artist_id
 		WHERE c.status = 'pending'
 		ORDER BY c.created_at ASC
 		LIMIT $1 OFFSET $2
@@ -274,7 +282,8 @@ func (r *Repository) ListPendingClaims(ctx context.Context, limit, offset int) (
 	for rows.Next() {
 		var cl Claim
 		if err := rows.Scan(
-			&cl.ID, &cl.ArtistID, &cl.UserID, &cl.UserHandle, &cl.VerificationMethod, &cl.ProofURL,
+			&cl.ID, &cl.ArtistID, &cl.UserID, &cl.UserHandle, &cl.ArtistSlug, &cl.ArtistName,
+			&cl.VerificationMethod, &cl.ClaimCode, &cl.IdentityURL, &cl.ProofURL,
 			&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
 		); err != nil {
 			return nil, 0, err
@@ -290,7 +299,9 @@ func (r *Repository) ListByUser(ctx context.Context, userID string, limit, offse
 		return nil, 0, err
 	}
 	rows, err := r.pool.Query(ctx, `
-		SELECT c.id, c.artist_id, c.user_id, u.handle, c.verification_method, c.proof_url, c.status, c.reviewed_by, c.created_at, c.reviewed_at, a.slug
+		SELECT c.id, c.artist_id, c.user_id, u.handle, a.slug, a.name,
+		       c.verification_method, c.claim_code, c.identity_url, c.proof_url,
+		       c.status, c.reviewed_by, c.created_at, c.reviewed_at
 		FROM artist_claims c
 		JOIN users u ON u.id = c.user_id
 		JOIN artists a ON a.id = c.artist_id
@@ -306,8 +317,9 @@ func (r *Repository) ListByUser(ctx context.Context, userID string, limit, offse
 	for rows.Next() {
 		var cl Claim
 		if err := rows.Scan(
-			&cl.ID, &cl.ArtistID, &cl.UserID, &cl.UserHandle, &cl.VerificationMethod, &cl.ProofURL,
-			&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt, &cl.ArtistSlug,
+			&cl.ID, &cl.ArtistID, &cl.UserID, &cl.UserHandle, &cl.ArtistSlug, &cl.ArtistName,
+			&cl.VerificationMethod, &cl.ClaimCode, &cl.IdentityURL, &cl.ProofURL,
+			&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -327,14 +339,15 @@ func (r *Repository) ReviewClaim(ctx context.Context, claimID, reviewerID, statu
 	defer tx.Rollback(ctx) //nolint:errcheck
 
 	const lockClaim = `
-		SELECT id, artist_id, user_id, verification_method, proof_url, status, reviewed_by, created_at, reviewed_at
+		SELECT id, artist_id, user_id, verification_method, claim_code, identity_url, proof_url, status, reviewed_by, created_at, reviewed_at
 		FROM artist_claims
 		WHERE id = $1
 		FOR UPDATE
 	`
 	var cl Claim
 	err = tx.QueryRow(ctx, lockClaim, claimID).Scan(
-		&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ProofURL,
+		&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ClaimCode,
+		&cl.IdentityURL, &cl.ProofURL,
 		&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -376,11 +389,12 @@ func (r *Repository) ReviewClaim(ctx context.Context, claimID, reviewerID, statu
 		UPDATE artist_claims
 		SET status = $2, reviewed_by = $3, reviewed_at = now()
 		WHERE id = $1 AND status = 'pending'
-		RETURNING id, artist_id, user_id, verification_method, proof_url, status, reviewed_by, created_at, reviewed_at
+		RETURNING id, artist_id, user_id, verification_method, claim_code, identity_url, proof_url, status, reviewed_by, created_at, reviewed_at
 	`
 	var out Claim
 	err = tx.QueryRow(ctx, upd, claimID, status, reviewerID).Scan(
-		&out.ID, &out.ArtistID, &out.UserID, &out.VerificationMethod, &out.ProofURL,
+		&out.ID, &out.ArtistID, &out.UserID, &out.VerificationMethod, &out.ClaimCode,
+		&out.IdentityURL, &out.ProofURL,
 		&out.Status, &out.ReviewedBy, &out.CreatedAt, &out.ReviewedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -396,6 +410,15 @@ func (r *Repository) ReviewClaim(ctx context.Context, claimID, reviewerID, statu
 			SET claim_status = 'claimed', claimed_by = $2, updated_at = now()
 			WHERE id = $1
 		`, out.ArtistID, out.UserID)
+		if err != nil {
+			return Claim{}, err
+		}
+		// One accepted claim closes the wall: other requests are not left in limbo.
+		_, err = tx.Exec(ctx, `
+			UPDATE artist_claims
+			SET status = 'rejected', reviewed_by = $3, reviewed_at = now()
+			WHERE artist_id = $1 AND status = 'pending' AND id <> $2
+		`, out.ArtistID, claimID, reviewerID)
 	} else {
 		_, err = tx.Exec(ctx, `
 			UPDATE artists
@@ -410,6 +433,30 @@ func (r *Repository) ReviewClaim(ctx context.Context, claimID, reviewerID, statu
 		return Claim{}, err
 	}
 	return out, nil
+}
+
+// UpdateClaimProof lets the claimant add the public post that contains the
+// claim code, while the claim is still pending.
+func (r *Repository) UpdateClaimProof(ctx context.Context, claimID, userID string, proofURL *string) (Claim, error) {
+	const q = `
+		UPDATE artist_claims
+		SET proof_url = $3
+		WHERE id = $1 AND user_id = $2 AND status = 'pending'
+		RETURNING id, artist_id, user_id, verification_method, claim_code, identity_url, proof_url, status, reviewed_by, created_at, reviewed_at
+	`
+	var cl Claim
+	err := r.pool.QueryRow(ctx, q, claimID, userID, proofURL).Scan(
+		&cl.ID, &cl.ArtistID, &cl.UserID, &cl.VerificationMethod, &cl.ClaimCode,
+		&cl.IdentityURL, &cl.ProofURL,
+		&cl.Status, &cl.ReviewedBy, &cl.CreatedAt, &cl.ReviewedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Claim{}, ErrNotFound
+	}
+	if err != nil {
+		return Claim{}, err
+	}
+	return cl, nil
 }
 
 type ListParams struct {

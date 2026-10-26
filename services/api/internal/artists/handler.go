@@ -82,7 +82,7 @@ func (h *Handler) Create(c *gin.Context) {
 
 func (h *Handler) GetBySlug(c *gin.Context) {
 	slug := c.Param("slug")
-	artist, err := h.svc.GetBySlug(c.Request.Context(), slug)
+	artist, err := h.svc.GetBySlugForActor(c.Request.Context(), slug, httpx.UserID(c), httpx.Role(c))
 	if errors.Is(err, ErrNotFound) {
 		httpx.NotFound(c, "artist not found")
 		return
@@ -160,6 +160,7 @@ func (h *Handler) Update(c *gin.Context) {
 func (h *Handler) RequestClaim(c *gin.Context) {
 	var req struct {
 		VerificationMethod string `json:"verification_method"`
+		IdentityURL        string `json:"identity_url"`
 		ProofURL           string `json:"proof_url"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -170,6 +171,7 @@ func (h *Handler) RequestClaim(c *gin.Context) {
 		Slug:               c.Param("slug"),
 		UserID:             httpx.UserID(c),
 		VerificationMethod: req.VerificationMethod,
+		IdentityURL:        req.IdentityURL,
 		ProofURL:           req.ProofURL,
 	})
 	if err != nil {
@@ -177,6 +179,26 @@ func (h *Handler) RequestClaim(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"claim": cl})
+}
+
+func (h *Handler) UpdateMyClaim(c *gin.Context) {
+	var req struct {
+		ProofURL string `json:"proof_url"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequest(c, "invalid JSON body")
+		return
+	}
+	cl, err := h.svc.UpdateClaimProof(c.Request.Context(), c.Param("id"), httpx.UserID(c), req.ProofURL)
+	if errors.Is(err, ErrNotFound) {
+		httpx.NotFound(c, "claim not found")
+		return
+	}
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"claim": cl})
 }
 
 func (h *Handler) ListPendingClaims(c *gin.Context) {

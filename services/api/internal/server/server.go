@@ -117,6 +117,7 @@ func (s *Server) routes() {
 			me.PATCH("", s.authHandler.UpdateMe)
 			me.POST("/avatar", httpx.LimitBody(5<<20+1<<16), s.usersHandler.UploadAvatar)
 			me.GET("/claims", s.artistsHandler.ListMine)
+			me.PATCH("/claims/:id", s.artistsHandler.UpdateMyClaim)
 			me.DELETE("", s.usersHandler.Delete)
 		}
 
@@ -129,7 +130,7 @@ func (s *Server) routes() {
 		{
 			artistsGroup.GET("", s.artistsHandler.List)
 			artistsGroup.POST("", s.authMW.RequireAuth(), httpx.LimitBody((5<<20)+1<<20), s.artistsHandler.Create)
-			artistsGroup.GET("/:slug", s.artistsHandler.GetBySlug)
+			artistsGroup.GET("/:slug", s.authMW.Optional(), s.artistsHandler.GetBySlug)
 			artistsGroup.PATCH("/:slug", s.authMW.RequireAuth(), httpx.LimitBody((5<<20)+1<<20), s.artistsHandler.Update)
 			artistsGroup.GET("/:slug/tracks", s.tracksHandler.ListByArtist)
 			artistsGroup.POST("/:slug/claims", s.authMW.RequireAuth(), s.artistsHandler.RequestClaim)

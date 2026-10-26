@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ClaimWall } from "@/components/claim-wall";
+import { WallAdminActions } from "@/components/wall-admin-actions";
 import { ProdList } from "@/components/studio/prod-list";
 import { apiUrl, isApiRequestError } from "@/lib/api";
 import { getArtist, listArtistTracks } from "@/lib/catalog";
@@ -91,7 +91,7 @@ export default async function ArtistWallPage({ params }: Props) {
           <Link href="/artists/new" className="profile__action profile__action--ghost">
             Create another wall
           </Link>
-          <ClaimWall slug={artist.slug} official={artist.is_official} />
+          <WallAdminActions slug={artist.slug} official={artist.is_official} />
         </div>
       </section>
 

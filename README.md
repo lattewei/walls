@@ -27,6 +27,7 @@ Native Postgres, env vars, and troubleshooting: [docs/development.md](./docs/dev
 - [Auth](./docs/api-auth.md)
 - [Artists](./docs/api-artists.md)
 - [Tracks](./docs/api-tracks.md)
+- [Claiming a wall](./docs/claims.md)
 - [Claims, reports, admin](./docs/api-moderation.md)
 
 ## License

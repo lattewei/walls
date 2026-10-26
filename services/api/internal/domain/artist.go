@@ -43,6 +43,7 @@ type PublicArtist struct {
 	ClaimStatus string   `json:"claim_status"`
 	Badge       string   `json:"badge"`
 	IsOfficial  bool     `json:"is_official"`
+	CanEdit     bool     `json:"can_edit"`
 	CreatedAt   string   `json:"created_at"`
 }
 

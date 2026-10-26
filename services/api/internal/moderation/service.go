@@ -28,13 +28,16 @@ func NewService(repo *Repository) *Service {
 }
 
 type PublicReport struct {
-	ID         string  `json:"id"`
-	TargetType string  `json:"target_type"`
-	TargetID   string  `json:"target_id"`
-	Reason     string  `json:"reason"`
-	Details    *string `json:"details,omitempty"`
-	Status     string  `json:"status"`
-	CreatedAt  string  `json:"created_at"`
+	ID             string  `json:"id"`
+	ReporterHandle *string `json:"reporter_handle,omitempty"`
+	TargetType     string  `json:"target_type"`
+	TargetID       string  `json:"target_id"`
+	TargetLabel    *string `json:"target_label,omitempty"`
+	TargetSlug     *string `json:"target_slug,omitempty"`
+	Reason         string  `json:"reason"`
+	Details        *string `json:"details,omitempty"`
+	Status         string  `json:"status"`
+	CreatedAt      string  `json:"created_at"`
 }
 
 func (s *Service) Create(ctx context.Context, reporterID string, targetType, targetID, reason, details string) (PublicReport, error) {
@@ -132,12 +135,15 @@ func (s *Service) UpdateStatus(ctx context.Context, id, status, reviewerID strin
 
 func toPublic(r Report) PublicReport {
 	return PublicReport{
-		ID:         r.ID,
-		TargetType: r.TargetType,
-		TargetID:   r.TargetID,
-		Reason:     r.Reason,
-		Details:    r.Details,
-		Status:     r.Status,
-		CreatedAt:  r.CreatedAt.UTC().Format(time.RFC3339),
+		ID:             r.ID,
+		ReporterHandle: r.ReporterHandle,
+		TargetType:     r.TargetType,
+		TargetID:       r.TargetID,
+		TargetLabel:    r.TargetLabel,
+		TargetSlug:     r.TargetSlug,
+		Reason:         r.Reason,
+		Details:        r.Details,
+		Status:         r.Status,
+		CreatedAt:      r.CreatedAt.UTC().Format(time.RFC3339),
 	}
 }

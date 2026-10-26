@@ -2,23 +2,48 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { site } from "@/content/site";
-import { logout } from "@/lib/auth";
-import { useSessionUser } from "@/lib/session";
-import { IconGrid, IconHome, IconPanel, IconSearch, IconUser } from "./icons";
+import { logout, updateStoredUser } from "@/lib/auth";
+import { getMe } from "@/lib/catalog";
+import { useSessionToken, useSessionUser } from "@/lib/session";
+import { IconGrid, IconHome, IconPanel, IconSearch, IconShield, IconUser } from "./icons";
 import { PlayerBar } from "./player-bar";
 import { PlayerProvider } from "./player-context";
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
+  const token = useSessionToken();
   const user = useSessionUser();
   const bare = path === "/" || path === "/login" || path === "/register";
   const homeOn = path === "/app";
   const [foldOverride, setFoldOverride] = useState<boolean | null>(null);
   const folded = foldOverride ?? !homeOn;
+
+  // Roles can change server-side (for example after promoting an admin).
+  // Refresh the cached user so the navigation reflects it without a re-login.
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { user: me } = await getMe(token);
+        if (cancelled) return;
+        updateStoredUser({
+          handle: me.handle,
+          display_name: me.display_name,
+          role: me.role || "user",
+        });
+      } catch {
+        // The shell still renders if the profile refresh fails.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   async function onLogout() {
     await logout();
@@ -87,6 +112,15 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
                   <span aria-hidden>✎</span>
                   <span className="studio__label">Settings</span>
                 </Link>
+                {user.role === "admin" ? (
+                  <Link
+                    href="/admin"
+                    className={path === "/admin" ? "studio__item is-on" : "studio__item"}
+                  >
+                    <IconShield />
+                    <span className="studio__label">Moderation</span>
+                  </Link>
+                ) : null}
                 <button type="button" className="studio__item" onClick={onLogout} aria-label="Log out">
                   <span aria-hidden>×</span>
                   <span className="studio__label">Log out</span>
