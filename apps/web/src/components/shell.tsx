@@ -9,10 +9,10 @@ import { logout, updateStoredUser } from "@/lib/auth";
 import { getMe } from "@/lib/catalog";
 import { useSessionToken, useSessionUser } from "@/lib/session";
 import { IconGrid, IconHome, IconPanel, IconSearch, IconShield, IconUser } from "./icons";
-import { PlayerBar } from "./player-bar";
+import { PlayerDock } from "./player-dock";
 import { PlayerProvider } from "./player-context";
 
-export function StudioShell({ children }: { children: React.ReactNode }) {
+export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const token = useSessionToken();
@@ -22,8 +22,6 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
   const [foldOverride, setFoldOverride] = useState<boolean | null>(null);
   const folded = foldOverride ?? !homeOn;
 
-  // Roles can change server-side (for example after promoting an admin).
-  // Refresh the cached user so the navigation reflects it without a re-login.
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
@@ -37,7 +35,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           role: me.role || "user",
         });
       } catch {
-        // The shell still renders if the profile refresh fails.
+        // Keep the cached session if the profile refresh fails.
       }
     })();
     return () => {
@@ -51,18 +49,18 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
     router.refresh();
   }
 
-  const frame = bare ? "studio is-landing" : folded ? "studio is-folded" : "studio";
+  const frame = bare ? "frame is-landing" : folded ? "frame is-folded" : "frame";
 
   return (
     <PlayerProvider>
       <div className={frame}>
-        <aside className="studio__side">
-          <Link href="/app" className="studio__brand">
+        <aside className="rail">
+          <Link href="/app" className="rail__brand">
             {site.name}
           </Link>
           <button
             type="button"
-            className="studio__item studio__fold"
+            className="rail__item rail__fold"
             onClick={() => setFoldOverride((v) => !(v ?? !homeOn))}
             aria-expanded={!folded}
             aria-label={folded ? "Expand sidebar" : "Collapse sidebar"}
@@ -70,72 +68,74 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
             <IconPanel folded={folded} />
           </button>
           <nav>
-            <form className="studio__search" action="/app" method="get">
+            <form className="rail__search" action="/app" method="get">
               <IconSearch />
               <input name="q" placeholder="Search walls" aria-label="Search walls" />
             </form>
-            <Link href="/app" className={homeOn ? "studio__item is-on" : "studio__item"}>
+            <Link href="/app" className={homeOn ? "rail__item is-on" : "rail__item"}>
               <IconHome />
-              <span className="studio__label">Home</span>
+              <span className="rail__label">Home</span>
             </Link>
-            <Link href="/app#artists" className="studio__item">
+            <Link href="/app#artists" className="rail__item">
               <IconGrid />
-              <span className="studio__label">Browse</span>
+              <span className="rail__label">Browse</span>
             </Link>
             {user ? (
               <>
                 <Link
                   href="/artists/new"
-                  className={path === "/artists/new" ? "studio__item is-on" : "studio__item"}
+                  className={path === "/artists/new" ? "rail__item is-on" : "rail__item"}
                 >
                   <span aria-hidden>+</span>
-                  <span className="studio__label">New wall</span>
+                  <span className="rail__label">New wall</span>
                 </Link>
                 <Link
                   href="/upload"
-                  className={path === "/upload" ? "studio__item is-on" : "studio__item"}
+                  className={path === "/upload" ? "rail__item is-on" : "rail__item"}
                 >
                   <span aria-hidden>↑</span>
-                  <span className="studio__label">Upload</span>
+                  <span className="rail__label">Upload</span>
                 </Link>
                 <Link
                   href={`/users/${user.handle}`}
-                  className={path.startsWith("/users/") ? "studio__item is-on" : "studio__item"}
+                  className={path.startsWith("/users/") ? "rail__item is-on" : "rail__item"}
                 >
                   <IconUser />
-                  <span className="studio__label">@{user.handle}</span>
+                  <span className="rail__label">@{user.handle}</span>
                 </Link>
                 <Link
                   href="/settings"
-                  className={path === "/settings" ? "studio__item is-on" : "studio__item"}
+                  className={path === "/settings" ? "rail__item is-on" : "rail__item"}
                 >
                   <span aria-hidden>✎</span>
-                  <span className="studio__label">Settings</span>
+                  <span className="rail__label">Settings</span>
                 </Link>
                 {user.role === "admin" ? (
                   <Link
                     href="/admin"
-                    className={path === "/admin" ? "studio__item is-on" : "studio__item"}
+                    className={path === "/admin" ? "rail__item is-on" : "rail__item"}
                   >
                     <IconShield />
-                    <span className="studio__label">Moderation</span>
+                    <span className="rail__label">Moderation</span>
                   </Link>
                 ) : null}
-                <button type="button" className="studio__item" onClick={onLogout} aria-label="Log out">
+                <button type="button" className="rail__item" onClick={onLogout} aria-label="Log out">
                   <span aria-hidden>×</span>
-                  <span className="studio__label">Log out</span>
+                  <span className="rail__label">Log out</span>
                 </button>
               </>
             ) : (
-              <Link href="/login" className={path === "/login" ? "studio__item is-on" : "studio__item"}>
+              <Link href="/login" className={path === "/login" ? "rail__item is-on" : "rail__item"}>
                 <IconUser />
-                <span className="studio__label">Log in</span>
+                <span className="rail__label">Log in</span>
               </Link>
             )}
           </nav>
         </aside>
-        <div className="studio__main">{children}</div>
-        {!bare ? <PlayerBar /> : null}
+        <div className="stage" id="main">
+          {children}
+        </div>
+        {!bare ? <PlayerDock /> : null}
       </div>
     </PlayerProvider>
   );

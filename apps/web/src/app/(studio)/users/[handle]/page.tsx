@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
-import { EditProfileGate } from "@/components/edit-profile-gate";
-import { ProfileTracks } from "@/components/profile-tracks";
+import { EditProfileLink } from "@/components/wall-actions";
+import { OwnerTrackList } from "@/components/track-list";
 import { apiUrl, isApiRequestError } from "@/lib/api";
 import { getPublicProfile, listUserTracks } from "@/lib/catalog";
 import { site } from "@/content/site";
@@ -33,8 +33,8 @@ export default async function UserPage({ params }: Props) {
   } catch (err) {
     if (isApiRequestError(err) && err.status === 0) {
       return (
-        <div className="profile">
-          <p className="profile__missing">{err.message}</p>
+        <div className="wall">
+          <p className="wall__missing">{err.message}</p>
         </div>
       );
     }
@@ -66,51 +66,51 @@ export default async function UserPage({ params }: Props) {
   }
 
   return (
-    <div className="profile">
-      <section className="profile__head">
-        <div className="profile__avatar" aria-hidden>
-          {user.avatar_url ? (
-            <img src={apiUrl(user.avatar_url)} alt="" />
-          ) : (
-            initial
-          )}
+    <div className="wall">
+      <section className="wall__head">
+        <div className="wall__avatar" aria-hidden>
+          {user.avatar_url ? <img src={apiUrl(user.avatar_url)} alt="" /> : initial}
         </div>
-        <h1>{user.display_name}</h1>
-        <p className="profile__handle">@{user.handle}</p>
-        {user.bio ? <p className="profile__bio">{user.bio}</p> : null}
-        {hasContacts ? (
-          <ul className="profile__links">
-            {contacts.public_contact_email ? (
-              <li>
-                <a href={`mailto:${contacts.public_contact_email}`}>
-                  {contacts.public_contact_email}
-                </a>
-              </li>
-            ) : null}
-            {contacts.instagram_url && /^https?:\/\//i.test(contacts.instagram_url) ? (
-              <li>
-                <a href={contacts.instagram_url} rel="noreferrer" target="_blank">
-                  Instagram
-                </a>
-              </li>
-            ) : null}
-            {(contacts.other_links ?? []).filter((link) => /^https?:\/\//i.test(link.url)).map((link) => (
-              <li key={link.url}>
-                <a href={link.url} rel="noreferrer" target="_blank">
-                  {link.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <div className="profile__actions">
-          <EditProfileGate handle={user.handle} />
+        <div className="wall__intro">
+          <h1>{user.display_name}</h1>
+          <p className="wall__handle">@{user.handle}</p>
+          {user.bio ? <p className="wall__bio">{user.bio}</p> : null}
+          {hasContacts ? (
+            <ul className="wall__links">
+              {contacts.public_contact_email ? (
+                <li>
+                  <a href={`mailto:${contacts.public_contact_email}`}>
+                    {contacts.public_contact_email}
+                  </a>
+                </li>
+              ) : null}
+              {contacts.instagram_url && /^https?:\/\//i.test(contacts.instagram_url) ? (
+                <li>
+                  <a href={contacts.instagram_url} rel="noreferrer" target="_blank">
+                    Instagram
+                  </a>
+                </li>
+              ) : null}
+              {(contacts.other_links ?? [])
+                .filter((link) => /^https?:\/\//i.test(link.url))
+                .map((link) => (
+                  <li key={link.url}>
+                    <a href={link.url} rel="noreferrer" target="_blank">
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          ) : null}
+          <div className="wall__actions">
+            <EditProfileLink handle={user.handle} />
+          </div>
         </div>
       </section>
 
-      <section className="prods">
+      <section className="tracks">
         <h2>Productions</h2>
-        <ProfileTracks handle={user.handle} tracks={tracks} loadError={tracksError} />
+        <OwnerTrackList handle={user.handle} tracks={tracks} loadError={tracksError} />
       </section>
     </div>
   );

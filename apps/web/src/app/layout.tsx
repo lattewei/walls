@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
 
-import { StudioShell } from "@/components/studio/shell";
+import { Shell } from "@/components/shell";
 import { site } from "@/content/site";
 
 import "./globals.css";
@@ -22,8 +22,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={sans.variable}>
-      <body className="font-[family-name:var(--font-sans)] antialiased">
-        <StudioShell>{children}</StudioShell>
+      <body>
+        <a href="#main" className="skip">
+          Skip to content
+        </a>
+        <Shell>{children}</Shell>
       </body>
     </html>
   );

@@ -32,9 +32,7 @@ export function CreateWallForm() {
   const preview = useMemo(() => (cover ? URL.createObjectURL(cover) : null), [cover]);
 
   useEffect(() => {
-    if (!token) {
-      router.replace("/login?next=/artists/new");
-    }
+    if (!token) router.replace("/login?next=/artists/new");
   }, [router, token]);
 
   useEffect(() => {
@@ -48,8 +46,8 @@ export function CreateWallForm() {
     if (submitting.current) return;
     submitting.current = true;
     setError(null);
-    const token = getToken();
-    if (!token) {
+    const session = getToken();
+    if (!session) {
       router.push("/login");
       return;
     }
@@ -65,18 +63,12 @@ export function CreateWallForm() {
           looking_for: lookingFor || undefined,
           cover,
         },
-        token,
+        session,
       );
       router.push(`/artists/${artist.slug}`);
       router.refresh();
     } catch (err) {
-      if (isApiRequestError(err)) {
-        setError(err.message);
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Could not create the wall.");
-      }
+      setError(isApiRequestError(err) ? err.message : "Could not create the wall.");
     } finally {
       submitting.current = false;
       setBusy(false);
@@ -85,119 +77,82 @@ export function CreateWallForm() {
 
   if (!token) {
     return (
-      <div className="auth">
-        <p className="auth__hint">Checking session…</p>
+      <div className="sheet">
+        <p className="hint">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="wall-form">
-      <div className="wall-form__inner">
-        <h1>Create a wall</h1>
-        <p className="wall-form__hint">
-          Open a public page for an artist. Anyone can upload prods tagged to it.
-        </p>
+    <div className="sheet">
+      <form onSubmit={onSubmit}>
+        <h1>New wall</h1>
+        <p className="hint">A page for an artist. Producers drop instrumentals on it.</p>
 
-        <form onSubmit={onSubmit}>
-          <label className="auth__field">
-            <span>Cover photo (optional)</span>
-            <div className="wall-form__cover">
-              <div className="wall-form__preview" aria-hidden>
-                {preview ? (
-                  <img src={preview} alt="" />
-                ) : (
-                  <span>+</span>
-                )}
-              </div>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null;
-                  if (file && file.size > 5 * 1024 * 1024) {
-                    setError("Cover image must be under 5MB");
-                    setCover(null);
-                    return;
-                  }
-                  setError(null);
-                  setCover(file);
-                }}
-              />
+        <label className="field">
+          <span>Cover</span>
+          <div className="cover-pick">
+            <div className="cover-pick__face" aria-hidden>
+              {preview ? <img src={preview} alt="" /> : <span>+</span>}
             </div>
-          </label>
-
-          <label className="auth__field">
-            <span>Artist name</span>
             <input
-              name="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Artist name"
-              required
-              maxLength={100}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={(e) => setCover(e.target.files?.[0] ?? null)}
             />
-          </label>
+          </div>
+        </label>
 
-          <label className="auth__field">
-            <span>Slug (optional)</span>
-            <input
-              name="slug"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="artist-name"
-              pattern="[a-z0-9]+(-[a-z0-9]+)*"
-              maxLength={64}
-              autoCapitalize="none"
-              spellCheck={false}
-            />
-          </label>
+        <label className="field">
+          <span>Name</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} />
+        </label>
 
-          <label className="auth__field">
-            <span>Bio (optional)</span>
-            <textarea
-              name="bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Short note about this wall"
-              rows={3}
-              maxLength={2000}
-            />
-          </label>
+        <label className="field">
+          <span>Slug (optional)</span>
+          <input
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            placeholder="artist-name"
+            maxLength={64}
+            autoCapitalize="none"
+          />
+        </label>
 
-          <label className="auth__field">
-            <span>Looking for (optional)</span>
-            <input
-              name="looking_for"
-              value={lookingFor}
-              onChange={(e) => setLookingFor(e.target.value)}
-              placeholder="Melodic hooks, dark 808s"
-              maxLength={2000}
-            />
-          </label>
+        <label className="field">
+          <span>Bio</span>
+          <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={500} />
+        </label>
 
-          <label className="auth__field">
-            <span>Genres (optional, comma-separated)</span>
-            <input
-              name="genres"
-              value={genres}
-              onChange={(e) => setGenres(e.target.value)}
-              placeholder="rap, r&b"
-              maxLength={120}
-            />
-          </label>
+        <label className="field">
+          <span>Genres</span>
+          <input
+            value={genres}
+            onChange={(e) => setGenres(e.target.value)}
+            placeholder="drill, rnb"
+            maxLength={120}
+          />
+        </label>
 
-          {error ? <p className="auth__error">{error}</p> : null}
+        <label className="field">
+          <span>Looking for</span>
+          <input
+            value={lookingFor}
+            onChange={(e) => setLookingFor(e.target.value)}
+            placeholder="dark 140 bpm"
+            maxLength={120}
+          />
+        </label>
 
-          <button type="submit" className="auth__submit" disabled={busy || !name.trim()}>
-            {busy ? "Creating…" : "Create wall"}
-          </button>
-        </form>
+        {error ? <p className="note note--err">{error}</p> : null}
 
-        <p className="auth__alt">
-          <Link href="/app">Cancel</Link>
-        </p>
-      </div>
+        <button type="submit" className="btn" disabled={busy}>
+          {busy ? "Creating…" : "Create wall"}
+        </button>
+      </form>
+      <p className="alt">
+        <Link href="/app">Back</Link>
+      </p>
     </div>
   );
 }

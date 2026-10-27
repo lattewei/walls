@@ -7,7 +7,7 @@ import { site } from "@/content/site";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: `${site.name} — Home`,
+  title: `${site.name} · Home`,
 };
 
 export default async function AppHome({
@@ -40,23 +40,20 @@ export default async function AppHome({
   return (
     <div className="home">
       <div className="home__bar">
-        <h1 className="home__title">Walls</h1>
-        <Link href="/artists/new" className="home__cta">
+        <h1>Walls</h1>
+        <Link href="/artists/new" className="btn btn--ghost">
           Create a wall
         </Link>
       </div>
 
-      <section id="artists" className="shelf shelf--artist">
+      <section id="artists" className="shelf">
         <h2>{query ? `Artists matching “${query}”` : "Artists"}</h2>
         {loadError ? (
           <p className="shelf__empty">{loadError}</p>
         ) : artists.length === 0 ? (
           <p className="shelf__empty">
             No walls yet.{" "}
-            <Link href="/artists/new" className="shelf__link">
-              Create the first one
-            </Link>
-            .
+            <Link href="/artists/new">Create the first one</Link>.
           </p>
         ) : (
           <ul>
@@ -65,13 +62,9 @@ export default async function AppHome({
               const cover = artist.cover_url || artist.avatar_url;
               return (
                 <li key={artist.id}>
-                  <Link href={`/artists/${artist.slug}`} className="tile">
+                  <Link href={`/artists/${artist.slug}`} className="tile tile--wall">
                     <div className="tile__face">
-                      {cover ? (
-                        <img src={apiUrl(cover)} alt="" />
-                      ) : (
-                        <span aria-hidden>{initial}</span>
-                      )}
+                      {cover ? <img src={apiUrl(cover)} alt="" /> : <span aria-hidden>{initial}</span>}
                     </div>
                     <p className="tile__title">{artist.name}</p>
                     <p className="tile__meta">
@@ -86,7 +79,7 @@ export default async function AppHome({
         )}
       </section>
 
-      <section id="beatmakers" className="shelf shelf--producer">
+      <section id="beatmakers" className="shelf">
         <h2>Producers</h2>
         {producersError ? (
           <p className="shelf__empty">{producersError}</p>
@@ -98,7 +91,7 @@ export default async function AppHome({
               const initial = p.display_name.slice(0, 1).toUpperCase();
               return (
                 <li key={p.id}>
-                  <Link href={`/users/${p.handle}`} className="tile">
+                  <Link href={`/users/${p.handle}`} className="tile tile--person">
                     <div className="tile__face">
                       {p.avatar_url ? (
                         <img src={apiUrl(p.avatar_url)} alt="" />

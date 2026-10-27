@@ -30,7 +30,6 @@ export async function getArtist(slug: string) {
   }
 }
 
-// Same wall, but with the caller attached so the API can report can_edit.
 export async function getArtistForSession(slug: string, token: string) {
   try {
     const data = await apiFetch<{ artist: PublicArtist }>(
@@ -72,15 +71,6 @@ export async function listUserTracks(handle: string, limit = 50, sort: "recent" 
     limit: number;
     offset: number;
   }>(`/api/v1/users/${encodeURIComponent(handle)}/tracks?limit=${limit}&offset=0&sort=${sort}`);
-}
-
-export async function listTracks(limit = 24, sort: "recent" | "plays" = "plays") {
-  return apiFetch<{
-    tracks: PublicTrack[];
-    total: number;
-    limit: number;
-    offset: number;
-  }>(`/api/v1/tracks?limit=${limit}&offset=0&sort=${sort}`);
 }
 
 export async function recordPlay(trackId: string, token?: string | null) {
@@ -211,10 +201,6 @@ export async function updateMe(input: UpdateMeInput, token: string) {
     token,
     body: JSON.stringify(input),
   });
-}
-
-export async function deleteMe(token: string) {
-  return apiFetch<{ status: string }>("/api/v1/me", { method: "DELETE", token });
 }
 
 export async function uploadAvatar(file: File, token: string) {

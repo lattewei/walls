@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { UploadProdForm } from "@/components/upload-prod-form";
+import { UploadForm } from "@/components/upload-form";
 import { site } from "@/content/site";
 
 export const metadata: Metadata = {
@@ -12,12 +12,12 @@ export default function UploadPage() {
   return (
     <Suspense
       fallback={
-        <div className="wall-form">
-          <p className="wall-form__hint">Loading…</p>
+        <div className="sheet">
+          <p className="hint">Loading…</p>
         </div>
       }
     >
-      <UploadProdForm />
+      <UploadForm />
     </Suspense>
   );
 }

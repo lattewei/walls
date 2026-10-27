@@ -8,9 +8,7 @@ import { isApiRequestError } from "@/lib/api";
 import { login, register } from "@/lib/auth";
 import { safeNext } from "@/lib/safe-next";
 
-type Mode = "login" | "register";
-
-export function AuthForm({ mode }: { mode: Mode }) {
+export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
   const search = useSearchParams();
   const nextPath = safeNext(search.get("next"));
@@ -33,13 +31,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
       router.push(nextPath);
       router.refresh();
     } catch (err) {
-      if (isApiRequestError(err)) {
-        setError(err.message);
-      } else if (err instanceof Error && err.message) {
-        setError(err.message);
-      } else {
-        setError("Something went wrong. Try again.");
-      }
+      setError(
+        isApiRequestError(err)
+          ? err.message
+          : err instanceof Error && err.message
+            ? err.message
+            : "Could not continue. Try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -47,27 +45,17 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
   const title = mode === "login" ? "Log in" : "Create account";
   const submit = mode === "login" ? "Log in" : "Create account";
-  const alt =
-    mode === "login" ? (
-      <>
-        No account? <Link href={`/register?next=${encodeURIComponent(nextPath)}`}>Create one</Link>
-      </>
-    ) : (
-      <>
-        Already have one? <Link href={`/login?next=${encodeURIComponent(nextPath)}`}>Log in</Link>
-      </>
-    );
 
   return (
     <div className="auth">
       <Link href="/app" className="auth__back">
         Back
       </Link>
-      <form className="auth__card" onSubmit={onSubmit}>
+      <form onSubmit={onSubmit}>
         <h1>{title}</h1>
-        <p className="auth__hint">Handle + password. No email.</p>
+        <p className="hint">Handle and password. No email.</p>
 
-        <label className="auth__field">
+        <label className="field">
           <span>Handle</span>
           <input
             name="handle"
@@ -85,7 +73,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         </label>
 
         {mode === "register" ? (
-          <label className="auth__field">
+          <label className="field">
             <span>Display name</span>
             <input
               name="display_name"
@@ -97,7 +85,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           </label>
         ) : null}
 
-        <label className="auth__field">
+        <label className="field">
           <span>Password</span>
           <input
             name="password"
@@ -111,13 +99,25 @@ export function AuthForm({ mode }: { mode: Mode }) {
           />
         </label>
 
-        {error ? <p className="auth__error">{error}</p> : null}
+        {error ? <p className="note note--err">{error}</p> : null}
 
-        <button type="submit" className="auth__submit" disabled={busy}>
+        <button type="submit" className="btn" disabled={busy}>
           {busy ? "…" : submit}
         </button>
 
-        <p className="auth__alt">{alt}</p>
+        <p className="alt">
+          {mode === "login" ? (
+            <>
+              No account?{" "}
+              <Link href={`/register?next=${encodeURIComponent(nextPath)}`}>Create one</Link>
+            </>
+          ) : (
+            <>
+              Already have one?{" "}
+              <Link href={`/login?next=${encodeURIComponent(nextPath)}`}>Log in</Link>
+            </>
+          )}
+        </p>
       </form>
     </div>
   );

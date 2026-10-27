@@ -13,7 +13,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="auth">
-          <p className="auth__hint">Loading…</p>
+          <p className="hint">Loading…</p>
         </div>
       }
     >

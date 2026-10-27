@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { WallAdminActions } from "@/components/wall-admin-actions";
-import { ProdList } from "@/components/studio/prod-list";
+import { WallActions } from "@/components/wall-actions";
+import { TrackList } from "@/components/track-list";
 import { apiUrl, isApiRequestError } from "@/lib/api";
 import { getArtist, listArtistTracks } from "@/lib/catalog";
 import { site } from "@/content/site";
@@ -34,8 +34,8 @@ export default async function ArtistWallPage({ params }: Props) {
   } catch (err) {
     if (isApiRequestError(err) && err.status === 0) {
       return (
-        <div className="profile">
-          <p className="profile__missing">{err.message}</p>
+        <div className="wall">
+          <p className="wall__missing">{err.message}</p>
         </div>
       );
     }
@@ -62,42 +62,42 @@ export default async function ArtistWallPage({ params }: Props) {
   }
 
   return (
-    <div className="profile">
-      <section className="profile__head">
-        <div className="profile__cover">
+    <div className="wall">
+      <section className="wall__head">
+        <div className="wall__cover">
           {cover ? (
             <img src={apiUrl(cover)} alt="" />
           ) : (
             <span aria-hidden>{artist.name.slice(0, 1).toUpperCase()}</span>
           )}
         </div>
-        <h1>{artist.name}</h1>
-        <span className={artist.is_official ? "profile__badge is-claimed" : "profile__badge"}>
-          {badgeLabel(artist.badge, artist.is_official)}
-        </span>
-        {artist.bio ? <p className="profile__bio">{artist.bio}</p> : null}
-        {artist.looking_for ? <p className="profile__bio">Looking for: {artist.looking_for}</p> : null}
-        {artist.genres?.length ? (
-          <ul className="profile__genres">
-            {artist.genres.map((g) => (
-              <li key={g}>{g}</li>
-            ))}
-          </ul>
-        ) : null}
-        <div className="profile__actions">
-          <Link href={`/upload?artist=${artist.slug}`} className="profile__action">
-            Add a production
-          </Link>
-          <Link href="/artists/new" className="profile__action profile__action--ghost">
-            Create another wall
-          </Link>
-          <WallAdminActions slug={artist.slug} official={artist.is_official} />
+        <div className="wall__intro">
+          <h1>{artist.name}</h1>
+          <span className="wall__badge">{badgeLabel(artist.badge, artist.is_official)}</span>
+          {artist.bio ? <p className="wall__bio">{artist.bio}</p> : null}
+          {artist.looking_for ? <p className="wall__bio">Looking for: {artist.looking_for}</p> : null}
+          {artist.genres?.length ? (
+            <ul className="wall__genres">
+              {artist.genres.map((g) => (
+                <li key={g}>{g}</li>
+              ))}
+            </ul>
+          ) : null}
+          <div className="wall__actions">
+            <Link href={`/upload?artist=${artist.slug}`} className="btn">
+              Add a production
+            </Link>
+            <Link href="/artists/new" className="btn btn--ghost">
+              Create another wall
+            </Link>
+            <WallActions slug={artist.slug} official={artist.is_official} />
+          </div>
         </div>
       </section>
 
-      <section className="prods">
+      <section className="tracks">
         <h2>Productions</h2>
-        <ProdList tracks={tracks} loadError={tracksError} />
+        <TrackList tracks={tracks} loadError={tracksError} />
       </section>
     </div>
   );

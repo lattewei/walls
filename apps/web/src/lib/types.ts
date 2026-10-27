@@ -94,7 +94,7 @@ export function toProdRow(
 }
 
 export function formatDuration(seconds?: number | null): string {
-  if (seconds == null || seconds < 0 || !Number.isFinite(seconds)) return "—";
+  if (seconds == null || seconds < 0 || !Number.isFinite(seconds)) return "";
   const total = Math.floor(seconds);
   const m = Math.floor(total / 60);
   const s = total % 60;

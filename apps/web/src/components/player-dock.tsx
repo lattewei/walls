@@ -1,26 +1,10 @@
 "use client";
 
 import { formatDuration } from "@/lib/types";
+import { IconNext, IconPause, IconPlay, IconPrev } from "./icons";
 import { usePlayerOptional } from "./player-context";
-import { IconPause, IconPlay } from "./icons";
 
-function IconPrev() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden>
-      <path d="M6 6h2.2v12H6V6Zm3.2 6 9.3 6.2V5.8L9.2 12Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function IconNext() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden>
-      <path d="M15.8 6H18v12h-2.2V6ZM5.5 5.8v12.4L14.8 12 5.5 5.8Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-export function PlayerBar() {
+export function PlayerDock() {
   const player = usePlayerOptional();
   if (!player?.track) return null;
 
@@ -29,42 +13,42 @@ export function PlayerBar() {
   const progress = total > 0 ? Math.min(100, (currentTime / total) * 100) : 0;
 
   return (
-    <div className="now">
-      <div className="now__inner">
-        <div className="now__meta">
-          <div className="now__art" aria-hidden>
+    <div className="dock">
+      <div className="dock__inner">
+        <div className="dock__meta">
+          <div className="dock__art" aria-hidden>
             {track.coverUrl ? (
               <img src={track.coverUrl} alt="" />
             ) : (
               <span>{track.title.slice(0, 1).toUpperCase()}</span>
             )}
           </div>
-          <div className="now__text">
+          <div className="dock__text">
             <strong>{track.title}</strong>
             <span>{track.meta}</span>
           </div>
         </div>
 
-        <div className="now__controls">
-          <button type="button" className="now__btn" onClick={prev} aria-label="Previous">
+        <div className="dock__controls">
+          <button type="button" className="dock__btn" onClick={prev} aria-label="Previous">
             <IconPrev />
           </button>
           <button
             type="button"
-            className="now__btn now__btn--main"
+            className="dock__btn dock__btn--main"
             onClick={toggle}
             aria-label={playing ? "Pause" : "Play"}
           >
             {playing ? <IconPause size={14} /> : <IconPlay size={14} />}
           </button>
-          <button type="button" className="now__btn" onClick={next} aria-label="Next">
+          <button type="button" className="dock__btn" onClick={next} aria-label="Next">
             <IconNext />
           </button>
         </div>
 
         <input
           type="range"
-          className="now__range"
+          className="dock__range"
           min={0}
           max={total || 0}
           step={0.1}

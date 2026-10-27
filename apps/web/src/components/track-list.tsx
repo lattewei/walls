@@ -33,7 +33,7 @@ type Draft = {
 
 const emptyDraft: Draft = { title: "", description: "", tags: "", artists: "" };
 
-export function ProdList({
+export function TrackList({
   tracks,
   loadError,
 }: {
@@ -132,9 +132,7 @@ export function ProdList({
       setNotice("Production updated.");
       router.refresh();
     } catch (err) {
-      setError(
-        isApiRequestError(err) ? err.message : "Could not update production.",
-      );
+      setError(isApiRequestError(err) ? err.message : "Could not update production.");
     } finally {
       setBusyId(null);
     }
@@ -156,9 +154,7 @@ export function ProdList({
       await withdrawTrack(trackId, token);
       setHidden((prev) => new Set(prev).add(trackId));
       setConfirmId(null);
-      if (player.track?.id === trackId) {
-        player.pause();
-      }
+      if (player.track?.id === trackId) player.pause();
       router.refresh();
     } catch (err) {
       setError(isApiRequestError(err) ? err.message : "Could not remove track.");
@@ -186,19 +182,14 @@ export function ProdList({
     }
   }
 
-  if (loadError) {
-    return <p className="prods__err">{loadError}</p>;
-  }
-
-  if (rows.length === 0) {
-    return <p className="prods__empty">No productions yet</p>;
-  }
+  if (loadError) return <p className="note note--err">{loadError}</p>;
+  if (rows.length === 0) return <p className="note note--empty">No productions yet.</p>;
 
   return (
     <>
-      {error ? <p className="prods__err">{error}</p> : null}
-      {notice ? <p className="prods__ok">{notice}</p> : null}
-      <ul className="prods__list">
+      {error ? <p className="note note--err">{error}</p> : null}
+      {notice ? <p className="note note--ok">{notice}</p> : null}
+      <ul className="tracks__list">
         {rows.map((track, i) => {
           const active = player.track?.id === track.id;
           const playing = active && player.playing;
@@ -207,10 +198,10 @@ export function ProdList({
 
           return (
             <li key={track.id}>
-              <div className={active ? "prod is-on" : "prod"}>
+              <div className={active ? "track is-on" : "track"}>
                 <button
                   type="button"
-                  className="prod__play"
+                  className="track__play"
                   disabled={!canPlay}
                   onClick={() => {
                     if (active) {
@@ -229,35 +220,34 @@ export function ProdList({
                 >
                   {playing ? <IconPause size={12} /> : <IconPlay size={12} />}
                 </button>
-                <span className="prod__n" aria-hidden>
+                <span className="track__n" aria-hidden>
                   {active && playing ? "" : i + 1}
                 </span>
-                <span className="prod__copy">
+                <span className="track__copy">
                   <strong>{track.title}</strong>
                   {track.metaHref ? (
-                    <Link href={track.metaHref} className="prod__meta">
+                    <Link href={track.metaHref} className="track__meta">
                       {track.meta}
                     </Link>
                   ) : (
                     <em>{track.meta}</em>
                   )}
-                  {track.detail ? <em className="prod__detail">{track.detail}</em> : null}
+                  {track.detail ? <em className="track__detail">{track.detail}</em> : null}
                 </span>
-                <span className="prod__dur">{formatDuration(track.durationSeconds ?? (active && player.duration > 0 ? player.duration : null))}</span>
-                <span className="prod__actions">
+                <span className="track__dur">
+                  {formatDuration(
+                    track.durationSeconds ?? (active && player.duration > 0 ? player.duration : null),
+                  )}
+                </span>
+                <span className="track__actions">
                   {owner ? (
-                    <button
-                      type="button"
-                      className="prod__rm"
-                      onClick={() => startEdit(track)}
-                    >
+                    <button type="button" className="btn btn--text" onClick={() => startEdit(track)}>
                       Edit
                     </button>
-                  ) : null}
-                  {!owner ? (
+                  ) : (
                     <button
                       type="button"
-                      className="prod__rm"
+                      className="btn btn--text"
                       onClick={() => {
                         setReportId(track.id);
                         setConfirmId(null);
@@ -268,11 +258,11 @@ export function ProdList({
                     >
                       Report
                     </button>
-                  ) : null}
+                  )}
                   {owner ? (
                     <button
                       type="button"
-                      className="prod__rm"
+                      className="btn btn--text btn--danger"
                       disabled={busyId === track.id}
                       onClick={() => onWithdraw(track.id)}
                     >
@@ -283,9 +273,9 @@ export function ProdList({
               </div>
 
               {editId === track.id ? (
-                <form className="prod__edit" onSubmit={onSaveEdit}>
-                  <div className="prod__edit-grid">
-                    <label className="auth__field">
+                <form className="track__edit" onSubmit={onSaveEdit}>
+                  <div className="track__edit-grid">
+                    <label className="field">
                       <span>Title</span>
                       <input
                         value={draft.title}
@@ -295,7 +285,7 @@ export function ProdList({
                         autoFocus
                       />
                     </label>
-                    <label className="auth__field">
+                    <label className="field">
                       <span>Tags</span>
                       <input
                         value={draft.tags}
@@ -305,17 +295,17 @@ export function ProdList({
                       />
                     </label>
                   </div>
-                  <label className="auth__field">
+                  <label className="field">
                     <span>Description</span>
                     <textarea
                       value={draft.description}
                       onChange={(e) => setDraft({ ...draft, description: e.target.value })}
                       rows={2}
                       maxLength={2000}
-                      placeholder="BPM, key, notes…"
+                      placeholder="BPM, key, notes"
                     />
                   </label>
-                  <label className="auth__field">
+                  <label className="field">
                     <span>Walls (slugs, comma-separated)</span>
                     <input
                       value={draft.artists}
@@ -324,13 +314,13 @@ export function ProdList({
                       maxLength={400}
                     />
                   </label>
-                  <div className="prod__edit-actions">
-                    <button type="submit" className="auth__submit" disabled={busyId === track.id}>
+                  <div className="wall__actions">
+                    <button type="submit" className="btn" disabled={busyId === track.id}>
                       {busyId === track.id ? "Saving…" : "Save"}
                     </button>
                     <button
                       type="button"
-                      className="prod__rm"
+                      className="btn btn--ghost"
                       onClick={() => {
                         setEditId(null);
                         setError(null);
@@ -346,8 +336,8 @@ export function ProdList({
         })}
       </ul>
       {reportId ? (
-        <form className="prod__report" onSubmit={onReport}>
-          <label className="auth__field">
+        <form className="tracks__report" onSubmit={onReport}>
+          <label className="field">
             <span>Why are you reporting this production?</span>
             <input
               value={reason}
@@ -357,13 +347,13 @@ export function ProdList({
               autoFocus
             />
           </label>
-          <div className="prod__report-actions">
-            <button type="submit" className="auth__submit">
+          <div className="wall__actions">
+            <button type="submit" className="btn">
               Send report
             </button>
             <button
               type="button"
-              className="prod__rm"
+              className="btn btn--ghost"
               onClick={() => {
                 setReportId(null);
                 setReason("");
@@ -376,4 +366,22 @@ export function ProdList({
       ) : null}
     </>
   );
+}
+
+export function OwnerTrackList({
+  handle,
+  tracks,
+  loadError,
+}: {
+  handle: string;
+  tracks: ProdRow[];
+  loadError?: string | null;
+}) {
+  const user = useSessionUser();
+  const owner = user?.handle === handle;
+  const rows = useMemo(
+    () => tracks.map((t) => ({ ...t, canWithdraw: owner })),
+    [tracks, owner],
+  );
+  return <TrackList tracks={rows} loadError={loadError} />;
 }

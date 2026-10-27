@@ -71,13 +71,8 @@ export function AdminConsole() {
         if (!cancelled) setDenied(false);
       } catch (err) {
         if (!cancelled) {
-          if (isApiRequestError(err) && err.status === 403) {
-            setDenied(true);
-          } else {
-            setError(
-              isApiRequestError(err) ? err.message : "Could not load the queue.",
-            );
-          }
+          if (isApiRequestError(err) && err.status === 403) setDenied(true);
+          else setError(isApiRequestError(err) ? err.message : "Could not load the queue.");
         }
       } finally {
         if (!cancelled) setLoadedKey(queryKey);
@@ -155,10 +150,9 @@ export function AdminConsole() {
 
   if (!token) {
     return (
-      <div className="admin">
-        <p className="admin__empty">
-          <Link href="/login?next=/admin">Log in</Link> with an admin account to
-          open moderation.
+      <div className="mod">
+        <p className="note note--empty">
+          <Link href="/login?next=/admin">Log in</Link> with an admin account to open moderation.
         </p>
       </div>
     );
@@ -166,30 +160,27 @@ export function AdminConsole() {
 
   if (denied) {
     return (
-      <div className="admin">
-        <p className="admin__empty">
-          This page is for admins only. The API checks your current role on every
-          request.
+      <div className="mod">
+        <p className="note note--empty">
+          This page is for admins only. The API checks your current role on every request.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="admin">
-      <header className="admin__head">
+    <div className="mod">
+      <header className="mod__head">
         <div>
           <h1>Moderation</h1>
-          <p className="admin__sub">
-            Reports and wall claims. Every action is reviewed by hand.
-          </p>
+          <p className="hint">Reports and wall claims. Every action is reviewed by hand.</p>
         </div>
-        <button type="button" className="admin__refresh" onClick={() => setNonce((n) => n + 1)}>
+        <button type="button" className="btn btn--ghost" onClick={() => setNonce((n) => n + 1)}>
           Refresh
         </button>
       </header>
 
-      <div className="admin__tabs" role="tablist" aria-label="Moderation queues">
+      <div className="mod__tabs" role="tablist" aria-label="Moderation queues">
         <button
           type="button"
           role="tab"
@@ -221,7 +212,7 @@ export function AdminConsole() {
       </div>
 
       {tab === "reports" ? (
-        <div className="admin__filters">
+        <div className="mod__filters">
           {reportFilters.map((f) => (
             <button
               key={f.value || "all"}
@@ -239,16 +230,16 @@ export function AdminConsole() {
         </div>
       ) : null}
 
-      {error ? <p className="auth__error">{error}</p> : null}
-      {notice ? <p className="settings__ok">{notice}</p> : null}
+      {error ? <p className="note note--err">{error}</p> : null}
+      {notice ? <p className="note note--ok">{notice}</p> : null}
 
       {loading ? (
-        <p className="admin__empty">Loading…</p>
+        <p className="note note--empty">Loading…</p>
       ) : tab === "reports" ? (
         reports.length === 0 ? (
-          <p className="admin__empty">No reports in this queue.</p>
+          <p className="note note--empty">No reports in this queue.</p>
         ) : (
-          <ul className="admin__list">
+          <ul className="mod__list">
             {reports.map((report) => {
               const label = report.target_label || report.target_id;
               const href =
@@ -258,33 +249,25 @@ export function AdminConsole() {
                     ? `/users/${report.target_slug}`
                     : null;
               return (
-                <li key={report.id} className="admin__row">
-                  <div className="admin__main">
-                    <div className="admin__title">
-                      <span className={`admin__tag is-${report.target_type}`}>
-                        {report.target_type}
-                      </span>
-                      {href ? (
-                        <Link href={href}>{label}</Link>
-                      ) : (
-                        <strong>{label}</strong>
-                      )}
-                      <span className={`admin__status is-${report.status}`}>
-                        {report.status}
-                      </span>
+                <li key={report.id} className="mod__row">
+                  <div>
+                    <div className="mod__title">
+                      <span className="mod__tag">{report.target_type}</span>
+                      {href ? <Link href={href}>{label}</Link> : <strong>{label}</strong>}
+                      <span className="mod__status">{report.status}</span>
                     </div>
-                    <p className="admin__meta">
+                    <p className="mod__meta">
                       {report.reporter_handle
                         ? `Reported by @${report.reporter_handle}`
                         : "Reported by a deleted account"}{" "}
                       · {formatDate(report.created_at)}
                     </p>
-                    <p className="admin__reason">
+                    <p className="mod__reason">
                       {report.reason}
-                      {report.details ? <span> — {report.details}</span> : null}
+                      {report.details ? <span>: {report.details}</span> : null}
                     </p>
                   </div>
-                  <div className="admin__actions">
+                  <div className="mod__actions">
                     {report.status !== "reviewing" ? (
                       <button
                         type="button"
@@ -329,14 +312,14 @@ export function AdminConsole() {
           </ul>
         )
       ) : claims.length === 0 ? (
-        <p className="admin__empty">No pending claims.</p>
+        <p className="note note--empty">No pending claims.</p>
       ) : (
-        <ul className="admin__list">
+        <ul className="mod__list">
           {claims.map((claim) => (
-            <li key={claim.id} className="admin__row">
-              <div className="admin__main">
-                <div className="admin__title">
-                  <span className="admin__tag is-artist">wall</span>
+            <li key={claim.id} className="mod__row">
+              <div>
+                <div className="mod__title">
+                  <span className="mod__tag">wall</span>
                   {claim.artist_slug ? (
                     <Link href={`/artists/${claim.artist_slug}`}>
                       {claim.artist_name || claim.artist_slug}
@@ -344,13 +327,13 @@ export function AdminConsole() {
                   ) : (
                     <strong>{claim.artist_name || claim.artist_id}</strong>
                   )}
-                  <span className="admin__status is-pending">pending</span>
+                  <span className="mod__status">pending</span>
                 </div>
-                <p className="admin__meta">
+                <p className="mod__meta">
                   @{claim.user_handle || "unknown"} · {formatDate(claim.created_at)}
                 </p>
-                <p className="admin__reason">
-                  Code <code className="admin__code">{claim.claim_code}</code>
+                <p className="mod__reason">
+                  Code <code className="mod__code">{claim.claim_code}</code>
                   {" · "}
                   {claim.identity_url ? (
                     <a href={claim.identity_url} rel="noreferrer" target="_blank">
@@ -369,10 +352,9 @@ export function AdminConsole() {
                   )}
                 </p>
               </div>
-              <div className="admin__actions">
+              <div className="mod__actions">
                 <button
                   type="button"
-                  className="is-approve"
                   disabled={busyKey === claim.id}
                   onClick={() => void onReviewClaim(claim, "accepted")}
                 >

@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { getArtistForSession, listMyClaims } from "@/lib/catalog";
-import { useSessionToken } from "@/lib/session";
+import { useSessionToken, useSessionUser } from "@/lib/session";
 import type { Claim } from "@/lib/types";
 
-export function WallAdminActions({
+export function WallActions({
   slug,
   official,
 }: {
@@ -56,10 +56,7 @@ export function WallAdminActions({
   if (official && !canEdit) return null;
   if (!canEdit && pending) {
     return (
-      <Link
-        href={`/artists/${slug}/claim`}
-        className="profile__action profile__action--ghost"
-      >
+      <Link href={`/artists/${slug}/claim`} className="btn btn--ghost">
         Claim pending
       </Link>
     );
@@ -69,7 +66,7 @@ export function WallAdminActions({
       ? `/artists/${slug}/claim`
       : `/login?next=${encodeURIComponent(`/artists/${slug}/claim`)}`;
     return (
-      <Link href={href} className="profile__action profile__action--ghost">
+      <Link href={href} className="btn btn--ghost">
         Claim this wall
       </Link>
     );
@@ -78,17 +75,24 @@ export function WallAdminActions({
 
   return (
     <>
-      <Link href={`/artists/${slug}/edit`} className="profile__action">
+      <Link href={`/artists/${slug}/edit`} className="btn">
         Edit wall
       </Link>
       {pending ? (
-        <Link
-          href={`/artists/${slug}/claim`}
-          className="profile__action profile__action--ghost"
-        >
+        <Link href={`/artists/${slug}/claim`} className="btn btn--ghost">
           Claim pending
         </Link>
       ) : null}
     </>
+  );
+}
+
+export function EditProfileLink({ handle }: { handle: string }) {
+  const user = useSessionUser();
+  if (!user || user.handle !== handle) return null;
+  return (
+    <Link href="/settings" className="btn btn--ghost">
+      Edit profile
+    </Link>
   );
 }

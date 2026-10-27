@@ -36,9 +36,7 @@ export function EditWallForm({ artist }: { artist: PublicArtist }) {
 
   useEffect(() => {
     if (!token) {
-      router.replace(
-        `/login?next=${encodeURIComponent(`/artists/${artist.slug}/edit`)}`,
-      );
+      router.replace(`/login?next=${encodeURIComponent(`/artists/${artist.slug}/edit`)}`);
       return;
     }
     let cancelled = false;
@@ -46,16 +44,11 @@ export function EditWallForm({ artist }: { artist: PublicArtist }) {
       try {
         const fresh = await getArtistForSession(artist.slug, token);
         if (cancelled) return;
-        if (!fresh) {
-          setError("This wall no longer exists.");
-        } else if (!fresh.can_edit) {
-          setDenied(true);
-        }
+        if (!fresh) setError("This wall no longer exists.");
+        else if (!fresh.can_edit) setDenied(true);
       } catch (err) {
         if (!cancelled) {
-          setError(
-            isApiRequestError(err) ? err.message : "Could not check permissions.",
-          );
+          setError(isApiRequestError(err) ? err.message : "Could not check permissions.");
         }
       } finally {
         if (!cancelled) setChecking(false);
@@ -75,8 +68,8 @@ export function EditWallForm({ artist }: { artist: PublicArtist }) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const token = getToken();
-    if (!token) {
+    const session = getToken();
+    if (!session) {
       router.push("/login");
       return;
     }
@@ -91,7 +84,7 @@ export function EditWallForm({ artist }: { artist: PublicArtist }) {
           looking_for: lookingFor.trim(),
           cover,
         },
-        token,
+        session,
       );
       router.push(`/artists/${artist.slug}`);
       router.refresh();
@@ -102,123 +95,77 @@ export function EditWallForm({ artist }: { artist: PublicArtist }) {
     }
   }
 
-  if (checking) {
+  if (!token || checking) {
     return (
-      <div className="wall-form">
-        <p className="wall-form__hint">Checking permissions…</p>
+      <div className="sheet">
+        <p className="hint">Checking this wall…</p>
       </div>
     );
   }
 
   if (denied) {
     return (
-      <div className="wall-form">
-        <div className="wall-form__inner">
-          <h1>Not your wall</h1>
-          <p className="wall-form__hint">
-            Unclaimed walls can be edited by their creator. Once a wall is
-            claimed, only the claimed owner or an admin can edit it.
-          </p>
-          <p className="auth__alt">
-            <Link href={`/artists/${artist.slug}`}>Back to the wall</Link>
-          </p>
-        </div>
+      <div className="sheet">
+        <h1>Cannot edit</h1>
+        <p className="hint">
+          You no longer have edit rights on this wall. If it was claimed, the owner edits it now.
+        </p>
+        <p className="alt">
+          <Link href={`/artists/${artist.slug}`}>Back to the wall</Link>
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="wall-form">
-      <div className="wall-form__inner">
+    <div className="sheet">
+      <form onSubmit={onSubmit}>
         <h1>Edit wall</h1>
-        <p className="wall-form__hint">
-          Public page for {artist.name}. The URL stays /artists/{artist.slug}.
-        </p>
+        <p className="hint">{artist.name}</p>
 
-        <form onSubmit={onSubmit}>
-          <label className="auth__field">
-            <span>Cover</span>
-            <div className="wall-form__cover">
-              <div className="wall-form__preview" aria-hidden>
-                {shown ? (
-                  <img src={shown} alt="" />
-                ) : (
-                  <span>{artist.name.slice(0, 1).toUpperCase()}</span>
-                )}
-              </div>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null;
-                  if (file && file.size > 5 * 1024 * 1024) {
-                    setError("Cover must be under 5MB.");
-                    setCover(null);
-                    return;
-                  }
-                  setError(null);
-                  setCover(file);
-                }}
-              />
+        <label className="field">
+          <span>Cover</span>
+          <div className="cover-pick">
+            <div className="cover-pick__face" aria-hidden>
+              {shown ? <img src={shown} alt="" /> : <span>{name.slice(0, 1).toUpperCase()}</span>}
             </div>
-          </label>
-
-          <label className="auth__field">
-            <span>Name</span>
             <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              maxLength={120}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={(e) => setCover(e.target.files?.[0] ?? null)}
             />
-          </label>
+          </div>
+        </label>
 
-          <label className="auth__field">
-            <span>Bio</span>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              rows={3}
-              maxLength={500}
-              placeholder="Who this wall is for…"
-            />
-          </label>
+        <label className="field">
+          <span>Name</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} />
+        </label>
 
-          <label className="auth__field">
-            <span>Genres</span>
-            <input
-              value={genres}
-              onChange={(e) => setGenres(e.target.value)}
-              placeholder="rap, drill, plugg"
-              maxLength={200}
-            />
-          </label>
+        <label className="field">
+          <span>Bio</span>
+          <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={500} />
+        </label>
 
-          <label className="auth__field">
-            <span>Looking for</span>
-            <input
-              value={lookingFor}
-              onChange={(e) => setLookingFor(e.target.value)}
-              placeholder="Dark drill beats, 140 BPM"
-              maxLength={500}
-            />
-          </label>
+        <label className="field">
+          <span>Genres</span>
+          <input value={genres} onChange={(e) => setGenres(e.target.value)} maxLength={120} />
+        </label>
 
-          {error ? <p className="auth__error">{error}</p> : null}
+        <label className="field">
+          <span>Looking for</span>
+          <input value={lookingFor} onChange={(e) => setLookingFor(e.target.value)} maxLength={120} />
+        </label>
 
-          <button
-            type="submit"
-            className="auth__submit"
-            disabled={busy || !name.trim()}
-          >
-            {busy ? "Saving…" : "Save wall"}
-          </button>
-        </form>
+        {error ? <p className="note note--err">{error}</p> : null}
 
-        <p className="auth__alt">
-          <Link href={`/artists/${artist.slug}`}>Cancel</Link>
-        </p>
-      </div>
+        <button type="submit" className="btn" disabled={busy}>
+          {busy ? "Saving…" : "Save wall"}
+        </button>
+      </form>
+      <p className="alt">
+        <Link href={`/artists/${artist.slug}`}>Back to the wall</Link>
+      </p>
     </div>
   );
 }

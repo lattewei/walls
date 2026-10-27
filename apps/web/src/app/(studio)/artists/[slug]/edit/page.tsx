@@ -26,6 +26,5 @@ export default async function EditWallPage({ params }: Props) {
   const { slug } = await params;
   const artist = await getArtist(slug);
   if (!artist) notFound();
-
   return <EditWallForm artist={artist} />;
 }

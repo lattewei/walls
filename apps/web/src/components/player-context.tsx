@@ -29,7 +29,6 @@ type PlayerState = {
   next: () => void;
   prev: () => void;
   seek: (seconds: number) => void;
-  skip: (delta: number) => void;
 };
 
 const PlayerContext = createContext<PlayerState | null>(null);
@@ -65,10 +64,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         return;
       }
       const nextTrack = q[i + 1];
-      const audio = audioRef.current;
-      if (audio && nextTrack.audioUrl) {
-        audio.src = nextTrack.audioUrl;
-        void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      const el = audioRef.current;
+      if (el && nextTrack.audioUrl) {
+        el.src = nextTrack.audioUrl;
+        void el.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
       }
       setIndex(i + 1);
     };
@@ -186,12 +185,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setCurrentTime(audio.currentTime);
   }, []);
 
-  const skip = useCallback((delta: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    seek(audio.currentTime + delta);
-  }, [seek]);
-
   const value = useMemo<PlayerState>(
     () => ({
       queue,
@@ -207,24 +200,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       next,
       prev,
       seek,
-      skip,
     }),
-    [
-      queue,
-      index,
-      track,
-      playing,
-      currentTime,
-      duration,
-      playQueue,
-      toggle,
-      play,
-      pause,
-      next,
-      prev,
-      seek,
-      skip,
-    ],
+    [queue, index, track, playing, currentTime, duration, playQueue, toggle, play, pause, next, prev, seek],
   );
 
   return (
