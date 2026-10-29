@@ -156,6 +156,38 @@ leave it. Empty string / empty `genres` clears it.
 
 ---
 
+## `GET /api/v1/me/wall-activity`
+
+Auth required. New ready tracks tagged on walls this user has claimed.
+
+| Param    | Default | Notes |
+|----------|---------|-------|
+| `since`  | 7 days ago | RFC3339. Lookback is capped at 30 days |
+| `limit`  | `20`    | Max `50` |
+| `offset` | `0`     | Pagination offset |
+
+**200**
+
+```json
+{
+  "items": [
+    {
+      "artist_slug": "johnny",
+      "artist_name": "Johnny",
+      "track": { "id": "…", "title": "Night run", "artist_slugs": ["johnny"] }
+    }
+  ],
+  "total": 1,
+  "limit": 20,
+  "offset": 0,
+  "since": "2026-10-22T00:00:00Z"
+}
+```
+
+Hidden walls are omitted. The client can persist `since` from the last fetch.
+
+---
+
 ## Trust badge
 
 Every artist payload includes:

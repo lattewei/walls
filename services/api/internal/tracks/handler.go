@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -165,6 +166,34 @@ func (h *Handler) RecordPlay(c *gin.Context) {
 		c.ClientIP(),
 		c.GetHeader("User-Agent"),
 	)
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *Handler) ListWallActivity(c *gin.Context) {
+	limit, err := httpx.ParseNonNegInt(c.Query("limit"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid limit")
+		return
+	}
+	offset, err := httpx.ParseNonNegInt(c.Query("offset"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid offset")
+		return
+	}
+	var since time.Time
+	if raw := strings.TrimSpace(c.Query("since")); raw != "" {
+		t, err := time.Parse(time.RFC3339, raw)
+		if err != nil {
+			httpx.BadRequest(c, "invalid since")
+			return
+		}
+		since = t
+	}
+	res, err := h.svc.ListWallActivity(c.Request.Context(), httpx.UserID(c), since, limit, offset)
 	if err != nil {
 		h.mapError(c, err)
 		return

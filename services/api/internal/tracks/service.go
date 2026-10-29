@@ -336,6 +336,68 @@ func (s *Service) ListByUploaderHandle(ctx context.Context, handle string, limit
 	return ListResult{Tracks: items, Total: total, Limit: limit, Offset: offset}, nil
 }
 
+type WallActivityItem struct {
+	ArtistSlug string             `json:"artist_slug"`
+	ArtistName string             `json:"artist_name"`
+	Track      domain.PublicTrack `json:"track"`
+}
+
+type WallActivityResult struct {
+	Items  []WallActivityItem `json:"items"`
+	Total  int                `json:"total"`
+	Limit  int                `json:"limit"`
+	Offset int                `json:"offset"`
+	Since  string             `json:"since"`
+}
+
+func (s *Service) ListWallActivity(ctx context.Context, userID string, since time.Time, limit, offset int) (WallActivityResult, error) {
+	if userID == "" {
+		return WallActivityResult{}, ErrNotFound
+	}
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+	if limit > maxLimit {
+		limit = maxLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > maxOffset {
+		return WallActivityResult{}, fmt.Errorf("%w: offset is too large", ErrValidation)
+	}
+
+	now := time.Now().UTC()
+	if since.IsZero() {
+		since = now.Add(-7 * 24 * time.Hour)
+	}
+	since = since.UTC()
+	oldest := now.Add(-30 * 24 * time.Hour)
+	if since.Before(oldest) {
+		since = oldest
+	}
+
+	rows, total, err := s.repo.ListWallActivity(ctx, userID, since, limit, offset)
+	if err != nil {
+		return WallActivityResult{}, err
+	}
+	items := make([]WallActivityItem, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, WallActivityItem{
+			ArtistSlug: row.ArtistSlug,
+			ArtistName: row.ArtistName,
+			Track:      row.Track.ToPublic(),
+		})
+	}
+	return WallActivityResult{
+		Items:  items,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+		Since:  since.Format(time.RFC3339),
+	}, nil
+}
+
 type ProducersResult struct {
 	Producers []domain.PublicProfileUser `json:"producers"`
 	Total     int                        `json:"total"`

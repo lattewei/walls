@@ -118,6 +118,7 @@ func (s *Server) routes() {
 			me.POST("/avatar", httpx.LimitBody(5<<20+1<<16), s.usersHandler.UploadAvatar)
 			me.GET("/claims", s.artistsHandler.ListMine)
 			me.PATCH("/claims/:id", s.artistsHandler.UpdateMyClaim)
+			me.GET("/wall-activity", s.tracksHandler.ListWallActivity)
 			me.DELETE("", s.usersHandler.Delete)
 		}
 

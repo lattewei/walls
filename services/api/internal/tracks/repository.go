@@ -248,6 +248,86 @@ func (r *Repository) ListByUploaderHandle(ctx context.Context, handle string, li
 	return out, total, nil
 }
 
+type WallActivityRow struct {
+	ArtistSlug string
+	ArtistName string
+	Track      domain.Track
+}
+
+func (r *Repository) ListWallActivity(ctx context.Context, claimedBy string, since time.Time, limit, offset int) ([]WallActivityRow, int, error) {
+	const countQ = `
+		SELECT COUNT(*)
+		FROM tracks t
+		JOIN track_artists ta ON ta.track_id = t.id
+		JOIN artists a ON a.id = ta.artist_id
+		JOIN users u ON u.id = t.uploader_user_id
+		WHERE a.claimed_by = $1
+		  AND a.claim_status = 'claimed'
+		  AND a.hidden_at IS NULL
+		  AND t.status = 'ready'
+		  AND t.created_at >= $2
+		  AND u.deleted_at IS NULL
+	`
+	var total int
+	if err := r.pool.QueryRow(ctx, countQ, claimedBy, since).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count wall activity: %w", err)
+	}
+
+	const listQ = `
+		SELECT t.id, t.uploader_user_id, t.title, t.description, t.audio_object_key, t.audio_format,
+		       t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at,
+		       u.handle, u.display_name, a.slug, a.name
+		FROM tracks t
+		JOIN track_artists ta ON ta.track_id = t.id
+		JOIN artists a ON a.id = ta.artist_id
+		JOIN users u ON u.id = t.uploader_user_id
+		WHERE a.claimed_by = $1
+		  AND a.claim_status = 'claimed'
+		  AND a.hidden_at IS NULL
+		  AND t.status = 'ready'
+		  AND t.created_at >= $2
+		  AND u.deleted_at IS NULL
+		ORDER BY t.created_at DESC
+		LIMIT $3 OFFSET $4
+	`
+	rows, err := r.pool.Query(ctx, listQ, claimedBy, since, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list wall activity: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]WallActivityRow, 0, limit)
+	for rows.Next() {
+		var t domain.Track
+		var desc, key, format *string
+		var dur *int
+		var removed *time.Time
+		var slug, name string
+		if err := rows.Scan(
+			&t.ID, &t.UploaderUserID, &t.Title, &desc, &key, &format,
+			&dur, &t.Status, &t.CreatedAt, &t.UpdatedAt, &removed,
+			&t.UploaderHandle, &t.UploaderName, &slug, &name,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan wall activity: %w", err)
+		}
+		t.Description = desc
+		t.AudioObjectKey = key
+		t.AudioFormat = format
+		t.DurationSeconds = dur
+		t.RemovedAt = removed
+		out = append(out, WallActivityRow{ArtistSlug: slug, ArtistName: name, Track: t})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	for i := range out {
+		if err := attachMeta(ctx, r.pool, &out[i].Track); err != nil {
+			return nil, 0, err
+		}
+	}
+	return out, total, nil
+}
+
 func (r *Repository) ListProducers(ctx context.Context, limit, offset int) ([]domain.PublicProfileUser, int, error) {
 	const countQ = `
 		SELECT COUNT(DISTINCT u.id)

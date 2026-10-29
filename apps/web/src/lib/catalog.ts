@@ -127,6 +127,22 @@ export async function updateClaimProof(
   );
 }
 
+export async function listWallActivity(
+  token: string,
+  since?: string,
+  limit = 20,
+  offset = 0,
+) {
+  const q = since ? `&since=${encodeURIComponent(since)}` : "";
+  return apiFetch<{
+    items: { artist_slug: string; artist_name: string; track: PublicTrack }[];
+    total: number;
+    limit: number;
+    offset: number;
+    since: string;
+  }>(`/api/v1/me/wall-activity?limit=${limit}&offset=${offset}${q}`, { token });
+}
+
 export async function listMyClaims(token: string, limit = 20, offset = 0) {
   return apiFetch<{
     claims: Claim[];
