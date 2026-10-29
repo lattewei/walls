@@ -210,6 +210,27 @@ export async function getMe(token: string) {
   }>("/api/v1/me", { token });
 }
 
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+  token: string,
+) {
+  return apiFetch<{
+    user: PublicProfileUser & { role?: string };
+    contacts: PublicContacts;
+    access_token: string;
+    token_type: string;
+    expires_at: string;
+  }>("/api/v1/me/password", {
+    method: "POST",
+    token,
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  });
+}
+
 export async function updateMe(input: UpdateMeInput, token: string) {
   return apiFetch<{
     user: PublicProfileUser & { role?: string };

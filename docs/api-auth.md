@@ -112,6 +112,21 @@ Contact rules:
 - `instagram_url` / links: `http://` or `https://` only (no `javascript:`)
 - max 10 `other_links`; label ≤ 40 chars
 
+### `POST /api/v1/me/password`
+
+Auth required. Verifies the current password, stores the new hash, and revokes other sessions by bumping `session_version`. Returns a fresh access token (same shape as login).
+
+```json
+{
+  "current_password": "oldpassword",
+  "new_password": "newpassword8+"
+}
+```
+
+**200** `{ "user", "contacts", "access_token", "token_type", "expires_at" }`  
+**400** `validation_error` — new password too short or too long  
+**401** `invalid_credentials` — current password is wrong
+
 ### `POST /api/v1/me/avatar`
 
 Auth required. Multipart field `avatar` (jpeg, png, webp, or gif, max 5MB).

@@ -115,6 +115,7 @@ func (s *Server) routes() {
 		{
 			me.GET("", s.authHandler.Me)
 			me.PATCH("", s.authHandler.UpdateMe)
+			me.POST("/password", s.authHandler.ChangePassword)
 			me.POST("/avatar", httpx.LimitBody(5<<20+1<<16), s.usersHandler.UploadAvatar)
 			me.GET("/claims", s.artistsHandler.ListMine)
 			me.PATCH("/claims/:id", s.artistsHandler.UpdateMyClaim)

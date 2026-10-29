@@ -113,6 +113,33 @@ func (s *Service) Logout(ctx context.Context, userID string) error {
 	return nil
 }
 
+func (s *Service) ChangePassword(ctx context.Context, userID, current, next string) (AuthResult, error) {
+	if err := ValidatePassword(next); err != nil {
+		return AuthResult{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+	}
+	user, err := s.users.GetByID(ctx, userID)
+	if errors.Is(err, users.ErrNotFound) {
+		return AuthResult{}, ErrUnauthorized
+	}
+	if err != nil {
+		return AuthResult{}, err
+	}
+	if !CheckPassword(user.PasswordHash, current) {
+		return AuthResult{}, ErrInvalidCredentials
+	}
+	hash, err := HashPassword(next)
+	if err != nil {
+		return AuthResult{}, err
+	}
+	if err := s.users.UpdatePassword(ctx, userID, hash); err != nil {
+		if errors.Is(err, users.ErrNotFound) {
+			return AuthResult{}, ErrUnauthorized
+		}
+		return AuthResult{}, err
+	}
+	return s.issue(ctx, user)
+}
+
 func (s *Service) Me(ctx context.Context, userID string) (domain.MeResponse, error) {
 	user, err := s.users.GetByID(ctx, userID)
 	if errors.Is(err, users.ErrNotFound) {

@@ -84,6 +84,23 @@ func (h *Handler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+func (h *Handler) ChangePassword(c *gin.Context) {
+	var req struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequest(c, "invalid JSON body")
+		return
+	}
+	res, err := h.svc.ChangePassword(c.Request.Context(), httpx.UserID(c), req.CurrentPassword, req.NewPassword)
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
 func (h *Handler) Me(c *gin.Context) {
 	uid := httpx.UserID(c)
 	res, err := h.svc.Me(c.Request.Context(), uid)

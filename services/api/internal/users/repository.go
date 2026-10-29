@@ -120,6 +120,23 @@ func (r *Repository) BumpSession(ctx context.Context, id string) error {
 	return nil
 }
 
+func (r *Repository) UpdatePassword(ctx context.Context, id, passwordHash string) error {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE users
+		SET password_hash = $2,
+		    session_version = session_version + 1,
+		    updated_at = now()
+		WHERE id = $1 AND deleted_at IS NULL
+	`, id, passwordHash)
+	if err != nil {
+		return fmt.Errorf("update password: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (r *Repository) GetByID(ctx context.Context, id string) (domain.User, error) {
 	const q = `
 		SELECT id, handle, password_hash, display_name, avatar_url, bio, role,
