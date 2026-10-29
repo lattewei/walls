@@ -155,6 +155,7 @@ func (s *Server) routes() {
 			admin.GET("/reports", s.moderationHandler.ListReports)
 			admin.PATCH("/reports/:id", s.moderationHandler.UpdateReport)
 			admin.POST("/tracks/:id/hide", s.moderationHandler.HideTrack)
+			admin.POST("/artists/:slug/hide", s.artistsHandler.Hide)
 			admin.GET("/claims", s.artistsHandler.ListPendingClaims)
 			admin.PATCH("/claims/:id", s.artistsHandler.ReviewClaim)
 		}

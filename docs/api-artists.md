@@ -126,7 +126,7 @@ includes `can_edit` for the caller.
 creator **while the wall is unclaimed or pending**. Once a wall is claimed, the
 original creator loses edit rights. Anonymous requests always get `false`.
 
-**404** if slug is unknown or invalid.
+**404** if slug is unknown, invalid, or the wall was hidden by an admin.
 
 ```bash
 curl -s http://localhost:8080/api/v1/artists/johnny

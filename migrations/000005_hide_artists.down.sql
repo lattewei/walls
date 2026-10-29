@@ -1,0 +1,1 @@
+ALTER TABLE artists DROP COLUMN IF EXISTS hidden_at;

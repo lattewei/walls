@@ -255,6 +255,14 @@ func (h *Handler) ReviewClaim(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"claim": cl})
 }
 
+func (h *Handler) Hide(c *gin.Context) {
+	if err := h.svc.Hide(c.Request.Context(), c.Param("slug")); err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
 func (h *Handler) List(c *gin.Context) {
 	limit, err := httpx.ParseNonNegInt(c.Query("limit"), 0)
 	if err != nil {

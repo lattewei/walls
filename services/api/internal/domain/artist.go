@@ -29,6 +29,7 @@ type Artist struct {
 	ClaimedBy   *string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	HiddenAt    *time.Time
 }
 
 type PublicArtist struct {

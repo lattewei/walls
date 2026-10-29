@@ -1,0 +1,2 @@
+ALTER TABLE artists
+    ADD COLUMN hidden_at TIMESTAMPTZ;

@@ -85,7 +85,7 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Artist,
 		INSERT INTO artists (name, slug, bio, avatar_url, cover_url, genres, looking_for, created_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, name, slug, bio, avatar_url, cover_url, genres, looking_for,
-		          claim_status, created_by, claimed_by, created_at, updated_at
+		          claim_status, created_by, claimed_by, created_at, updated_at, hidden_at
 	`
 	a, err := scanArtist(tx.QueryRow(ctx, q,
 		in.Name, in.Slug, in.Bio, in.AvatarURL, in.CoverURL, genres, in.LookingFor, in.CreatedBy,
@@ -104,6 +104,28 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Artist,
 		return domain.Artist{}, fmt.Errorf("commit: %w", err)
 	}
 	return a, nil
+}
+
+func (r *Repository) HideBySlug(ctx context.Context, slug string) error {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE artists
+		SET hidden_at = now(), updated_at = now()
+		WHERE lower(slug) = lower($1) AND hidden_at IS NULL
+	`, slug)
+	if err != nil {
+		return fmt.Errorf("hide artist: %w", err)
+	}
+	if tag.RowsAffected() > 0 {
+		return nil
+	}
+	ok, err := r.ExistsBySlug(ctx, slug)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (r *Repository) ExistsBySlug(ctx context.Context, slug string) (bool, error) {
@@ -137,9 +159,9 @@ func (r *Repository) existsByNormalizedName(ctx context.Context, name, exceptID 
 func (r *Repository) GetBySlug(ctx context.Context, slug string) (domain.Artist, error) {
 	const q = `
 		SELECT id, name, slug, bio, avatar_url, cover_url, genres, looking_for,
-		       claim_status, created_by, claimed_by, created_at, updated_at
+		       claim_status, created_by, claimed_by, created_at, updated_at, hidden_at
 		FROM artists
-		WHERE lower(slug) = lower($1)
+		WHERE lower(slug) = lower($1) AND hidden_at IS NULL
 	`
 	a, err := scanArtist(r.pool.QueryRow(ctx, q, slug))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -154,7 +176,7 @@ func (r *Repository) GetBySlug(ctx context.Context, slug string) (domain.Artist,
 func (r *Repository) GetByID(ctx context.Context, id string) (domain.Artist, error) {
 	const q = `
 		SELECT id, name, slug, bio, avatar_url, cover_url, genres, looking_for,
-		       claim_status, created_by, claimed_by, created_at, updated_at
+		       claim_status, created_by, claimed_by, created_at, updated_at, hidden_at
 		FROM artists
 		WHERE id = $1
 	`
@@ -193,7 +215,7 @@ func (r *Repository) Update(ctx context.Context, id string, in UpdateFields) (do
 		    updated_at = now()
 		WHERE id = $1
 		RETURNING id, name, slug, bio, avatar_url, cover_url, genres, looking_for,
-		          claim_status, created_by, claimed_by, created_at, updated_at
+		          claim_status, created_by, claimed_by, created_at, updated_at, hidden_at
 	`
 	a, err := scanArtist(r.pool.QueryRow(ctx, q,
 		id, in.Name, in.Bio, in.CoverURL, in.AvatarURL, genres, in.LookingFor,
@@ -508,7 +530,8 @@ func (r *Repository) List(ctx context.Context, p ListParams) ([]domain.Artist, i
 	const countQ = `
 		SELECT COUNT(*)
 		FROM artists
-		WHERE ($1 = '' OR name ILIKE $1 ESCAPE '\' OR slug ILIKE $1 ESCAPE '\')
+		WHERE hidden_at IS NULL
+		  AND ($1 = '' OR name ILIKE $1 ESCAPE '\' OR slug ILIKE $1 ESCAPE '\')
 	`
 	var total int
 	if err := r.pool.QueryRow(ctx, countQ, pattern).Scan(&total); err != nil {
@@ -517,9 +540,10 @@ func (r *Repository) List(ctx context.Context, p ListParams) ([]domain.Artist, i
 
 	const listQ = `
 		SELECT id, name, slug, bio, avatar_url, cover_url, genres, looking_for,
-		       claim_status, created_by, claimed_by, created_at, updated_at
+		       claim_status, created_by, claimed_by, created_at, updated_at, hidden_at
 		FROM artists
-		WHERE ($1 = '' OR name ILIKE $1 ESCAPE '\' OR slug ILIKE $1 ESCAPE '\')
+		WHERE hidden_at IS NULL
+		  AND ($1 = '' OR name ILIKE $1 ESCAPE '\' OR slug ILIKE $1 ESCAPE '\')
 		ORDER BY lower(name) ASC, created_at ASC
 		LIMIT $2 OFFSET $3
 	`
@@ -557,6 +581,7 @@ func scanArtist(row scannable) (domain.Artist, error) {
 	var bio, avatar, cover, looking *string
 	var createdBy, claimedBy *string
 	var genres []string
+	var hiddenAt *time.Time
 	err := row.Scan(
 		&a.ID,
 		&a.Name,
@@ -571,6 +596,7 @@ func scanArtist(row scannable) (domain.Artist, error) {
 		&claimedBy,
 		&a.CreatedAt,
 		&a.UpdatedAt,
+		&hiddenAt,
 	)
 	if err != nil {
 		return domain.Artist{}, err
@@ -581,6 +607,7 @@ func scanArtist(row scannable) (domain.Artist, error) {
 	a.LookingFor = looking
 	a.CreatedBy = createdBy
 	a.ClaimedBy = claimedBy
+	a.HiddenAt = hiddenAt
 	if genres == nil {
 		genres = []string{}
 	}

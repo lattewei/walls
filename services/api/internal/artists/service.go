@@ -174,6 +174,14 @@ func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.Publ
 	return artist.ToPublic(), nil
 }
 
+func (s *Service) Hide(ctx context.Context, slug string) error {
+	slug = strings.TrimSpace(strings.ToLower(slug))
+	if err := ValidateSlug(slug); err != nil {
+		return ErrNotFound
+	}
+	return s.repo.HideBySlug(ctx, slug)
+}
+
 func (s *Service) GetBySlug(ctx context.Context, slug string) (domain.PublicArtist, error) {
 	return s.GetBySlugForActor(ctx, slug, "", "")
 }

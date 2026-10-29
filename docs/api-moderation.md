@@ -105,6 +105,7 @@ Admin routes require an authenticated user whose **current** database role is `a
 - `GET /api/v1/admin/reports?status=open`
 - `PATCH /api/v1/admin/reports/{id}` — `{ "status": "reviewing"|"resolved"|"dismissed" }`
 - `POST /api/v1/admin/tracks/{id}/hide` — mark the track removed and delete the audio file
+- `POST /api/v1/admin/artists/{slug}/hide` — hide the wall from public list and detail. Slug stays reserved. Idempotent.
 
 Admin report rows are enriched with `target_label`, `target_slug` (artist slug or
 user handle), and `reporter_handle` so the console does not have to resolve three
