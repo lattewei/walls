@@ -18,14 +18,15 @@ import (
 )
 
 const (
-	maxTitleLen  = 120
-	maxDescLen   = 2000
-	maxTags      = 20
-	maxTagLen    = 40
-	maxArtists   = 10
-	defaultLimit = 20
-	maxLimit     = 50
-	maxOffset    = 10000
+	maxTitleLen    = 120
+	maxDescLen     = 2000
+	maxTags        = 20
+	maxTagLen      = 40
+	maxArtists     = 10
+	defaultLimit   = 20
+	maxLimit       = 50
+	maxOffset      = 10000
+	maxSearchQuery = 100
 )
 
 type Service struct {
@@ -405,7 +406,11 @@ type ProducersResult struct {
 	Offset    int                        `json:"offset"`
 }
 
-func (s *Service) ListProducers(ctx context.Context, limit, offset int) (ProducersResult, error) {
+func (s *Service) ListProducers(ctx context.Context, query string, limit, offset int) (ProducersResult, error) {
+	q := strings.TrimSpace(query)
+	if utf8.RuneCountInString(q) > maxSearchQuery {
+		return ProducersResult{}, fmt.Errorf("%w: q is too long", ErrValidation)
+	}
 	if limit <= 0 {
 		limit = defaultLimit
 	}
@@ -418,7 +423,7 @@ func (s *Service) ListProducers(ctx context.Context, limit, offset int) (Produce
 	if offset > maxOffset {
 		return ProducersResult{}, fmt.Errorf("%w: offset is too large", ErrValidation)
 	}
-	rows, total, err := s.repo.ListProducers(ctx, limit, offset)
+	rows, total, err := s.repo.ListProducers(ctx, q, limit, offset)
 	if err != nil {
 		return ProducersResult{}, err
 	}

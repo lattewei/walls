@@ -86,3 +86,9 @@ Public list of ready tracks uploaded by that user.
 ## `GET /api/v1/producers`
 
 Public list of users who have at least one ready track, ordered by track count.
+
+| Param    | Default | Notes |
+|----------|---------|-------|
+| `q`      | (empty) | Case-insensitive match on **handle** or **display_name** |
+| `limit`  | `20`    | Max `50` |
+| `offset` | `0`     | Pagination offset |

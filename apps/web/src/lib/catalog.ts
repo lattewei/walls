@@ -84,13 +84,15 @@ export async function recordPlay(trackId: string, token?: string | null) {
   }
 }
 
-export async function listProducers(limit = 24) {
+export async function listProducers(limit = 24, query = "") {
+  const q = query.trim();
+  const search = q ? `&q=${encodeURIComponent(q)}` : "";
   return apiFetch<{
     producers: PublicProfileUser[];
     total: number;
     limit: number;
     offset: number;
-  }>(`/api/v1/producers?limit=${limit}&offset=0`);
+  }>(`/api/v1/producers?limit=${limit}&offset=0${search}`);
 }
 
 export async function requestClaim(

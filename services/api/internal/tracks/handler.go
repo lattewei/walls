@@ -213,7 +213,7 @@ func (h *Handler) ListProducers(c *gin.Context) {
 		return
 	}
 
-	res, err := h.svc.ListProducers(c.Request.Context(), limit, offset)
+	res, err := h.svc.ListProducers(c.Request.Context(), c.Query("q"), limit, offset)
 	if err != nil {
 		h.mapError(c, err)
 		return

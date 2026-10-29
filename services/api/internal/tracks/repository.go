@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -328,15 +329,21 @@ func (r *Repository) ListWallActivity(ctx context.Context, claimedBy string, sin
 	return out, total, nil
 }
 
-func (r *Repository) ListProducers(ctx context.Context, limit, offset int) ([]domain.PublicProfileUser, int, error) {
+func (r *Repository) ListProducers(ctx context.Context, query string, limit, offset int) ([]domain.PublicProfileUser, int, error) {
+	pattern := ""
+	if query != "" {
+		pattern = "%" + escapeILIKE(query) + "%"
+	}
+
 	const countQ = `
 		SELECT COUNT(DISTINCT u.id)
 		FROM users u
 		JOIN tracks t ON t.uploader_user_id = u.id AND t.status = 'ready'
 		WHERE u.deleted_at IS NULL
+		  AND ($1 = '' OR u.handle ILIKE $1 ESCAPE '\' OR u.display_name ILIKE $1 ESCAPE '\')
 	`
 	var total int
-	if err := r.pool.QueryRow(ctx, countQ).Scan(&total); err != nil {
+	if err := r.pool.QueryRow(ctx, countQ, pattern).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count producers: %w", err)
 	}
 
@@ -346,11 +353,12 @@ func (r *Repository) ListProducers(ctx context.Context, limit, offset int) ([]do
 		FROM users u
 		JOIN tracks t ON t.uploader_user_id = u.id AND t.status = 'ready'
 		WHERE u.deleted_at IS NULL
+		  AND ($1 = '' OR u.handle ILIKE $1 ESCAPE '\' OR u.display_name ILIKE $1 ESCAPE '\')
 		GROUP BY u.id, u.handle, u.display_name, u.avatar_url, u.bio, u.created_at
 		ORDER BY track_count DESC, u.created_at DESC
-		LIMIT $1 OFFSET $2
+		LIMIT $2 OFFSET $3
 	`
-	rows, err := r.pool.Query(ctx, listQ, limit, offset)
+	rows, err := r.pool.Query(ctx, listQ, pattern, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list producers: %w", err)
 	}
@@ -678,4 +686,9 @@ func scanTrackWithUploader(row scannable) (domain.Track, error) {
 	t.DurationSeconds = dur
 	t.RemovedAt = removed
 	return t, nil
+}
+
+func escapeILIKE(s string) string {
+	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return replacer.Replace(s)
 }
