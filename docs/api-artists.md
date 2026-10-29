@@ -44,7 +44,8 @@ Initial `claim_status`: `unclaimed`.
 
 **400** `validation_error` — invalid name/slug  
 **401** — not authenticated  
-**409** `conflict` — slug or name already taken
+**409** `conflict` — slug or name already taken  
+**429** `rate_limited` — daily wall cap (`ARTIST_DAILY_CREATE_LIMIT`, default 10)
 
 ### Example
 

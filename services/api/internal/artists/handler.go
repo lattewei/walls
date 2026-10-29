@@ -289,6 +289,8 @@ func (h *Handler) mapError(c *gin.Context, err error) {
 		httpx.JSONError(c, http.StatusConflict, "conflict", msg)
 	case errors.Is(err, ErrForbidden):
 		httpx.Forbidden(c, "forbidden")
+	case errors.Is(err, ErrRateLimit):
+		httpx.JSONError(c, http.StatusTooManyRequests, "rate_limited", "daily wall limit reached")
 	case errors.Is(err, ErrNotFound):
 		httpx.NotFound(c, "artist not found")
 	default:

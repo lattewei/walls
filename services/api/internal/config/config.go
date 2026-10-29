@@ -9,21 +9,22 @@ import (
 )
 
 type Config struct {
-	Host            string
-	Port            int
-	Env             string
-	CORSOrigins     []string
-	DatabaseURL     string
-	MigrationsPath  string
-	JWTSecret       string
-	JWTAccessTTL    time.Duration
-	MediaStorage    string
-	MediaLocalPath  string
-	MediaMaxBytes   int64
-	AuthRateLimit   int
-	AuthRateWindow  time.Duration
-	TrackDailyLimit int
-	TrustedProxies  []string
+	Host             string
+	Port             int
+	Env              string
+	CORSOrigins      []string
+	DatabaseURL      string
+	MigrationsPath   string
+	JWTSecret        string
+	JWTAccessTTL     time.Duration
+	MediaStorage     string
+	MediaLocalPath   string
+	MediaMaxBytes    int64
+	AuthRateLimit    int
+	AuthRateWindow   time.Duration
+	TrackDailyLimit  int
+	ArtistDailyLimit int
+	TrustedProxies   []string
 }
 
 func Load() (Config, error) {
@@ -51,23 +52,28 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	walls, err := envInt("ARTIST_DAILY_CREATE_LIMIT", 10)
+	if err != nil {
+		return Config{}, err
+	}
 
 	cfg := Config{
-		Host:            getEnv("API_HOST", "0.0.0.0"),
-		Port:            port,
-		Env:             getEnv("API_ENV", "development"),
-		CORSOrigins:     splitCSV(getEnv("API_CORS_ORIGINS", "http://localhost:3001,http://127.0.0.1:3001")),
-		DatabaseURL:     os.Getenv("DATABASE_URL"),
-		MigrationsPath:  getEnv("MIGRATIONS_PATH", "../../migrations"),
-		JWTSecret:       getEnv("JWT_SECRET", "dev-only-change-me"),
-		JWTAccessTTL:    accessTTL,
-		MediaStorage:    getEnv("MEDIA_STORAGE", "local"),
-		MediaLocalPath:  getEnv("MEDIA_LOCAL_PATH", "./data/media"),
-		MediaMaxBytes:   maxBytes,
-		AuthRateLimit:   rateLimit,
-		AuthRateWindow:  rateWindow,
-		TrackDailyLimit: daily,
-		TrustedProxies:  splitCSV(getEnv("API_TRUSTED_PROXIES", "127.0.0.1,::1")),
+		Host:             getEnv("API_HOST", "0.0.0.0"),
+		Port:             port,
+		Env:              getEnv("API_ENV", "development"),
+		CORSOrigins:      splitCSV(getEnv("API_CORS_ORIGINS", "http://localhost:3001,http://127.0.0.1:3001")),
+		DatabaseURL:      os.Getenv("DATABASE_URL"),
+		MigrationsPath:   getEnv("MIGRATIONS_PATH", "../../migrations"),
+		JWTSecret:        getEnv("JWT_SECRET", "dev-only-change-me"),
+		JWTAccessTTL:     accessTTL,
+		MediaStorage:     getEnv("MEDIA_STORAGE", "local"),
+		MediaLocalPath:   getEnv("MEDIA_LOCAL_PATH", "./data/media"),
+		MediaMaxBytes:    maxBytes,
+		AuthRateLimit:    rateLimit,
+		AuthRateWindow:   rateWindow,
+		TrackDailyLimit:  daily,
+		ArtistDailyLimit: walls,
+		TrustedProxies:   splitCSV(getEnv("API_TRUSTED_PROXIES", "127.0.0.1,::1")),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -87,6 +93,9 @@ func Load() (Config, error) {
 	}
 	if cfg.TrackDailyLimit < 1 {
 		return Config{}, fmt.Errorf("TRACK_DAILY_UPLOAD_LIMIT must be greater than 0")
+	}
+	if cfg.ArtistDailyLimit < 1 {
+		return Config{}, fmt.Errorf("ARTIST_DAILY_CREATE_LIMIT must be greater than 0")
 	}
 	if cfg.MediaStorage != "local" {
 		return Config{}, fmt.Errorf("MEDIA_STORAGE %q is not implemented (only local)", cfg.MediaStorage)

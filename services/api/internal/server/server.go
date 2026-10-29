@@ -72,7 +72,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) (*Server, erro
 	tokens := auth.NewTokenService(cfg.JWTSecret, cfg.JWTAccessTTL)
 	authSvc := auth.NewService(userRepo, tokens)
 	usersSvc := users.NewService(userRepo, storage)
-	artistsSvc := artists.NewService(artistRepo, storage)
+	artistsSvc := artists.NewService(artistRepo, storage, cfg.ArtistDailyLimit)
 	tracksSvc := tracks.NewService(trackRepo, artistRepo, storage, cfg.MediaMaxBytes, cfg.TrackDailyLimit)
 	modSvc := moderation.NewService(reportRepo)
 

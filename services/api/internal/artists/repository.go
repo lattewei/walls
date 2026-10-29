@@ -42,6 +42,8 @@ type CreateInput struct {
 	Genres     []string
 	LookingFor *string
 	CreatedBy  string
+	DailyLimit int
+	Since      time.Time
 }
 
 func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Artist, error) {
@@ -50,13 +52,42 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Artist,
 		genres = []string{}
 	}
 
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Artist{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	var locked string
+	err = tx.QueryRow(ctx, `
+		SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE
+	`, in.CreatedBy).Scan(&locked)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Artist{}, ErrNotFound
+	}
+	if err != nil {
+		return domain.Artist{}, fmt.Errorf("lock creator: %w", err)
+	}
+	if in.DailyLimit > 0 {
+		var n int
+		if err := tx.QueryRow(ctx, `
+			SELECT COUNT(*) FROM artists
+			WHERE created_by = $1 AND created_at >= $2
+		`, in.CreatedBy, in.Since).Scan(&n); err != nil {
+			return domain.Artist{}, fmt.Errorf("count walls: %w", err)
+		}
+		if n >= in.DailyLimit {
+			return domain.Artist{}, ErrRateLimit
+		}
+	}
+
 	const q = `
 		INSERT INTO artists (name, slug, bio, avatar_url, cover_url, genres, looking_for, created_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, name, slug, bio, avatar_url, cover_url, genres, looking_for,
 		          claim_status, created_by, claimed_by, created_at, updated_at
 	`
-	a, err := scanArtist(r.pool.QueryRow(ctx, q,
+	a, err := scanArtist(tx.QueryRow(ctx, q,
 		in.Name, in.Slug, in.Bio, in.AvatarURL, in.CoverURL, genres, in.LookingFor, in.CreatedBy,
 	))
 	if err != nil {
@@ -68,6 +99,9 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Artist,
 			return domain.Artist{}, ErrSlugTaken
 		}
 		return domain.Artist{}, fmt.Errorf("create artist: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return domain.Artist{}, fmt.Errorf("commit: %w", err)
 	}
 	return a, nil
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/lattewei/walls/services/api/internal/auth"
@@ -22,13 +23,17 @@ const (
 )
 
 type Service struct {
-	repo     *Repository
-	storage  *media.LocalStorage
-	maxCover int64
+	repo       *Repository
+	storage    *media.LocalStorage
+	maxCover   int64
+	dailyLimit int
 }
 
-func NewService(repo *Repository, storage *media.LocalStorage) *Service {
-	return &Service{repo: repo, storage: storage, maxCover: maxCoverBytes}
+func NewService(repo *Repository, storage *media.LocalStorage, dailyLimit int) *Service {
+	if dailyLimit < 1 {
+		dailyLimit = 10
+	}
+	return &Service{repo: repo, storage: storage, maxCover: maxCoverBytes, dailyLimit: dailyLimit}
 }
 
 type CreateArtistInput struct {
@@ -46,6 +51,7 @@ var (
 	ErrValidation = errors.New("validation_error")
 	ErrConflict   = errors.New("conflict")
 	ErrForbidden  = errors.New("forbidden")
+	ErrRateLimit  = errors.New("rate_limited")
 )
 
 func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.PublicArtist, error) {
@@ -137,7 +143,15 @@ func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.Publ
 		Genres:     genres,
 		LookingFor: looking,
 		CreatedBy:  in.CreatedBy,
+		DailyLimit: s.dailyLimit,
+		Since:      time.Now().UTC().Truncate(24 * time.Hour),
 	})
+	if errors.Is(err, ErrRateLimit) {
+		if coverURL != nil && s.storage != nil {
+			_ = s.storage.Delete(*coverURL)
+		}
+		return domain.PublicArtist{}, fmt.Errorf("%w: daily wall limit reached", ErrRateLimit)
+	}
 	if errors.Is(err, ErrNameTaken) {
 		if coverURL != nil && s.storage != nil {
 			_ = s.storage.Delete(*coverURL)
