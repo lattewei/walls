@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { PreviewButton } from "@/components/am-ui";
 import { WallActions } from "@/components/wall-actions";
 import { TrackList } from "@/components/track-list";
 import { apiUrl, isApiRequestError } from "@/lib/api";
@@ -61,44 +62,40 @@ export default async function ArtistWallPage({ params }: Props) {
     tracksError = isApiRequestError(err) ? err.message : "Could not load productions.";
   }
 
+  const updated = new Date(artist.created_at).toLocaleDateString("en-US", {
+    weekday: "long",
+  });
+
   return (
-    <div className="wall">
-      <section className="wall__head">
-        <div className="wall__cover">
+    <div className="am-page">
+      <section className="am-detail">
+        <div className="am-detail__cover">
           {cover ? (
             <img src={apiUrl(cover)} alt="" />
           ) : (
             <span aria-hidden>{artist.name.slice(0, 1).toUpperCase()}</span>
           )}
         </div>
-        <div className="wall__intro">
+        <div className="am-detail__copy">
           <h1>{artist.name}</h1>
-          <span className="wall__badge">{badgeLabel(artist.badge, artist.is_official)}</span>
-          {artist.bio ? <p className="wall__bio">{artist.bio}</p> : null}
-          {artist.looking_for ? <p className="wall__bio">Looking for: {artist.looking_for}</p> : null}
-          {artist.genres?.length ? (
-            <ul className="wall__genres">
-              {artist.genres.map((g) => (
-                <li key={g}>{g}</li>
-              ))}
-            </ul>
-          ) : null}
-          <div className="wall__actions">
-            <Link href={`/upload?artist=${artist.slug}`} className="btn">
+          <p className="am-detail__by">{site.name}</p>
+          <p className="am-detail__when">Updated {updated}</p>
+          <p className="am-detail__desc">
+            {artist.bio?.trim() ||
+              artist.looking_for?.trim() ||
+              badgeLabel(artist.badge, artist.is_official)}
+          </p>
+          <div className="am-detail__actions">
+            <PreviewButton tracks={tracks} />
+            <Link href={`/upload?artist=${artist.slug}`} className="am-textlink">
               Add a production
-            </Link>
-            <Link href="/artists/new" className="btn btn--ghost">
-              Create another wall
             </Link>
             <WallActions slug={artist.slug} official={artist.is_official} />
           </div>
         </div>
       </section>
 
-      <section className="tracks">
-        <h2>Productions</h2>
-        <TrackList tracks={tracks} loadError={tracksError} />
-      </section>
+      <TrackList tracks={tracks} loadError={tracksError} />
     </div>
   );
 }

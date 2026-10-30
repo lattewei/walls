@@ -1,116 +1,214 @@
 import Link from "next/link";
 
+import { FeaturePlay, SongGrid, Station } from "@/components/am-ui";
+import { IconChevron } from "@/components/icons";
 import { apiUrl, isApiRequestError } from "@/lib/api";
-import { listArtists, listProducers } from "@/lib/catalog";
+import { listArtists, listArtistTracks, listProducers, listTracks } from "@/lib/catalog";
 import { site } from "@/content/site";
+import { toProdRow, type ProdRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: `${site.name} · Home`,
+  title: `${site.name} · New`,
 };
+
+function blurb(artist: { bio?: string | null; looking_for?: string | null; name: string }) {
+  const text = artist.bio?.trim() || artist.looking_for?.trim();
+  if (!text) return `Open ${artist.name}`;
+  return text.length > 72 ? `${text.slice(0, 69)}…` : text;
+}
 
 export default async function AppHome({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; view?: string }>;
 }) {
-  const query = ((await searchParams).q ?? "").trim();
+  const params = await searchParams;
+  const query = (params.q ?? "").trim();
+  const view = params.view === "new" || params.view === "radio" ? params.view : "";
+  const mode = query ? "search" : view || "home";
   let artists: Awaited<ReturnType<typeof listArtists>>["artists"] = [];
   let producers: Awaited<ReturnType<typeof listProducers>>["producers"] = [];
   let loadError: string | null = null;
-  let producersError: string | null = null;
+  let tracks: ProdRow[] = [];
+  let tracksError: string | null = null;
 
-  try {
-    const data = await listArtists(24, query);
-    artists = data.artists;
-  } catch (err) {
-    loadError = isApiRequestError(err)
-      ? err.message
-      : "Could not load artists. Is the API running?";
+  if (mode === "home" || mode === "search") {
+    try {
+      const data = await listArtists(24, query);
+      artists = data.artists;
+    } catch (err) {
+      loadError = isApiRequestError(err) ? err.message : "Could not load artists.";
+    }
   }
 
-  try {
-    const data = await listProducers(24);
-    producers = data.producers;
-  } catch (err) {
-    producersError = isApiRequestError(err) ? err.message : "Could not load producers.";
+  if (mode === "home" || mode === "search") {
+    try {
+      const data = await listProducers(12, query);
+      producers = data.producers;
+    } catch {
+      producers = [];
+    }
   }
+
+  if (mode !== "search") {
+    try {
+      const data = await listTracks(mode === "home" ? 16 : 40, mode === "radio" ? "plays" : "recent");
+      tracks = data.tracks.map((t) =>
+        toProdRow(t, {
+          meta: t.uploader_display_name || t.uploader_handle || "Unknown",
+          metaHref: t.uploader_handle ? `/users/${t.uploader_handle}` : undefined,
+        }),
+      );
+    } catch (err) {
+      tracksError = isApiRequestError(err) ? err.message : "Could not load songs.";
+    }
+  }
+
+  const featured = mode === "home"
+    ? await Promise.all(
+        artists.slice(0, 3).map(async (artist) => {
+          let rows: ProdRow[] = [];
+          try {
+            const list = await listArtistTracks(artist.slug, 12);
+            const cover = artist.cover_url || artist.avatar_url;
+            rows = list.tracks.map((t) =>
+              toProdRow(t, {
+                meta: t.uploader_display_name || t.uploader_handle || artist.name,
+                metaHref: t.uploader_handle ? `/users/${t.uploader_handle}` : undefined,
+                coverUrl: cover || undefined,
+              }),
+            );
+          } catch {
+            rows = [];
+          }
+          return { artist, rows };
+        }),
+      )
+    : [];
 
   return (
-    <div className="home">
-      <div className="home__bar">
-        <h1>Walls</h1>
-        <Link href="/artists/new" className="btn btn--ghost">
-          Create a wall
-        </Link>
-      </div>
+    <div className="am-page">
+      <h1>{query ? `“${query}”` : mode === "new" ? "New" : mode === "radio" ? "Radio" : "Home"}</h1>
 
-      <section id="artists" className="shelf">
-        <h2>{query ? `Artists matching “${query}”` : "Artists"}</h2>
-        {loadError ? (
-          <p className="shelf__empty">{loadError}</p>
-        ) : artists.length === 0 ? (
-          <p className="shelf__empty">
-            No walls yet.{" "}
-            <Link href="/artists/new">Create the first one</Link>.
-          </p>
-        ) : (
-          <ul>
-            {artists.map((artist) => {
-              const initial = artist.name.slice(0, 1).toUpperCase();
-              const cover = artist.cover_url || artist.avatar_url;
-              return (
-                <li key={artist.id}>
-                  <Link href={`/artists/${artist.slug}`} className="tile tile--wall">
-                    <div className="tile__face">
-                      {cover ? <img src={apiUrl(cover)} alt="" /> : <span aria-hidden>{initial}</span>}
-                    </div>
-                    <p className="tile__title">{artist.name}</p>
-                    <p className="tile__meta">
-                      {artist.is_official ? "Claimed" : "Community"}
-                      {artist.genres?.length ? ` · ${artist.genres.slice(0, 2).join(", ")}` : ""}
-                    </p>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      {loadError ? <p className="am-empty">{loadError}</p> : null}
 
-      <section id="beatmakers" className="shelf">
-        <h2>Producers</h2>
-        {producersError ? (
-          <p className="shelf__empty">{producersError}</p>
-        ) : producers.length === 0 ? (
-          <p className="shelf__empty">No uploads yet. Be the first to drop a prod.</p>
-        ) : (
-          <ul>
-            {producers.map((p) => {
-              const initial = p.display_name.slice(0, 1).toUpperCase();
-              return (
-                <li key={p.id}>
-                  <Link href={`/users/${p.handle}`} className="tile tile--person">
-                    <div className="tile__face">
-                      {p.avatar_url ? (
-                        <img src={apiUrl(p.avatar_url)} alt="" />
-                      ) : (
-                        <span aria-hidden>{initial}</span>
-                      )}
-                    </div>
-                    <p className="tile__title">{p.display_name}</p>
-                    <p className="tile__meta">
-                      @{p.handle}
-                      {p.track_count ? ` · ${p.track_count} prods` : ""}
-                    </p>
+      {mode === "home" && featured.length > 0 ? (
+        <div className="am-feature">
+          {featured.map(({ artist, rows }) => {
+            const cover = artist.cover_url || artist.avatar_url;
+            const eyebrow = artist.genres?.[0]?.toUpperCase() || "WALL";
+            return (
+              <article key={artist.id} className="am-feature__item">
+                <p className="am-kicker">{eyebrow}</p>
+                <h2>
+                  <Link href={`/artists/${artist.slug}`}>{artist.name}</Link>
+                </h2>
+                <p className="am-feature__sub">{artist.is_official ? "Claimed" : "Community"}</p>
+                <div className="am-cardwrap">
+                  <Link href={`/artists/${artist.slug}`} className="am-card">
+                    {cover ? (
+                      <img src={apiUrl(cover)} alt="" />
+                    ) : (
+                      <span className="am-card__fallback" aria-hidden>
+                        {artist.name.slice(0, 1).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="am-card__shade" aria-hidden />
+                    <span className="am-card__cap">{blurb(artist)}</span>
                   </Link>
-                </li>
-              );
-            })}
+                  <FeaturePlay tracks={rows} />
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {mode === "search" ? (
+        <section className="am-shelf">
+          <h2>
+            Artists <IconChevron />
+          </h2>
+          {artists.length === 0 ? (
+            <p className="am-empty">
+              No walls for that search. <Link href="/artists/new">New wall</Link>.
+            </p>
+          ) : (
+            <ul className="am-hits">
+              {artists.map((artist) => {
+                const cover = artist.cover_url || artist.avatar_url;
+                return (
+                  <li key={artist.id}>
+                    <Link href={`/artists/${artist.slug}`} className="am-hit">
+                      <span className="am-song__art" aria-hidden>
+                        {cover ? <img src={apiUrl(cover)} alt="" /> : artist.name.slice(0, 1)}
+                      </span>
+                      <span className="am-song__copy">
+                        <strong>{artist.name}</strong>
+                        <em>{artist.is_official ? "Claimed" : "Community"}</em>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
+      {mode === "new" ? (
+        <section className="am-shelf am-shelf--songs">
+          <h2>Best New Songs</h2>
+          {tracksError ? <p className="am-empty">{tracksError}</p> : <SongGrid tracks={tracks} />}
+        </section>
+      ) : null}
+
+      {mode === "radio" ? (
+        <section className="am-shelf">
+          <p className="am-feature__sub">A shuffle of the tracks people actually play.</p>
+          {tracksError ? <p className="am-empty">{tracksError}</p> : <Station tracks={tracks} />}
+        </section>
+      ) : null}
+
+      {mode === "home" ? (
+        <section className="am-shelf am-shelf--songs">
+          <h2>
+            <Link href="/app?view=new">
+              Best New Songs <IconChevron />
+            </Link>
+          </h2>
+          {tracksError ? <p className="am-empty">{tracksError}</p> : <SongGrid tracks={tracks} />}
+        </section>
+      ) : null}
+
+      {mode !== "new" && mode !== "radio" && producers.length > 0 ? (
+        <section className="am-shelf" id="producers">
+          <h2>
+            Producers <IconChevron />
+          </h2>
+          <ul className="am-hits">
+            {producers.map((p) => (
+              <li key={p.id}>
+                <Link href={`/users/${p.handle}`} className="am-hit">
+                  <span className="am-song__art" aria-hidden>
+                    {p.avatar_url ? (
+                      <img src={apiUrl(p.avatar_url)} alt="" />
+                    ) : (
+                      p.display_name.slice(0, 1).toUpperCase()
+                    )}
+                  </span>
+                  <span className="am-song__copy">
+                    <strong>{p.display_name}</strong>
+                    <em>@{p.handle}</em>
+                  </span>
+                </Link>
+              </li>
+            ))}
           </ul>
-        )}
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }

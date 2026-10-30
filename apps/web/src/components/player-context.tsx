@@ -15,6 +15,8 @@ import { getToken } from "@/lib/auth";
 import { recordPlay } from "@/lib/catalog";
 import type { ProdRow } from "@/lib/types";
 
+export type RepeatMode = "off" | "all" | "one";
+
 type PlayerState = {
   queue: ProdRow[];
   index: number;
@@ -22,6 +24,9 @@ type PlayerState = {
   playing: boolean;
   currentTime: number;
   duration: number;
+  shuffle: boolean;
+  repeat: RepeatMode;
+  volume: number;
   playQueue: (tracks: ProdRow[], startId: string) => void;
   toggle: () => void;
   play: () => void;
@@ -29,6 +34,9 @@ type PlayerState = {
   next: () => void;
   prev: () => void;
   seek: (seconds: number) => void;
+  toggleShuffle: () => void;
+  cycleRepeat: () => void;
+  setVolume: (value: number) => void;
 };
 
 const PlayerContext = createContext<PlayerState | null>(null);
@@ -37,18 +45,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const indexRef = useRef(-1);
   const queueRef = useRef<ProdRow[]>([]);
+  const sourceRef = useRef<ProdRow[]>([]);
+  const repeatRef = useRef<RepeatMode>("off");
   const [queue, setQueue] = useState<ProdRow[]>([]);
   const [index, setIndex] = useState(-1);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState<RepeatMode>("off");
+  const [volume, setVolumeState] = useState(1);
 
   const track = index >= 0 && index < queue.length ? queue[index] : null;
 
   useEffect(() => {
     indexRef.current = index;
     queueRef.current = queue;
-  }, [index, queue]);
+    repeatRef.current = repeat;
+  }, [index, queue, repeat]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) audio.volume = volume;
+  }, [volume]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -59,17 +78,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const onEnded = () => {
       const q = queueRef.current;
       const i = indexRef.current;
-      if (i < 0 || i + 1 >= q.length) {
+      const el = audioRef.current;
+      const mode = repeatRef.current;
+      if (!el || i < 0 || q.length === 0) {
         setPlaying(false);
         return;
       }
-      const nextTrack = q[i + 1];
-      const el = audioRef.current;
-      if (el && nextTrack.audioUrl) {
+      if (mode === "one") {
+        el.currentTime = 0;
+        void el.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+        return;
+      }
+      const wrap = mode === "all";
+      const nextIndex = i + 1 < q.length ? i + 1 : wrap ? 0 : -1;
+      if (nextIndex < 0) {
+        setPlaying(false);
+        return;
+      }
+      const nextTrack = q[nextIndex];
+      if (nextTrack.audioUrl) {
         el.src = nextTrack.audioUrl;
         void el.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
       }
-      setIndex(i + 1);
+      setIndex(nextIndex);
     };
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
@@ -132,9 +163,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const playable = tracks.filter((t) => t.audioUrl);
     const i = playable.findIndex((t) => t.id === startId);
     if (i < 0) return;
+    sourceRef.current = playable;
     start(playable[i]);
     setQueue(playable);
     setIndex(i);
+    setShuffle(false);
   }, [start]);
 
   const toggle = useCallback(() => {
@@ -160,10 +193,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const next = useCallback(() => {
-    if (index < 0 || index + 1 >= queue.length) return;
-    start(queue[index + 1]);
-    setIndex(index + 1);
-  }, [index, queue, start]);
+    if (index < 0 || queue.length === 0) return;
+    if (index + 1 < queue.length) {
+      start(queue[index + 1]);
+      setIndex(index + 1);
+      return;
+    }
+    if (repeat === "all") {
+      start(queue[0]);
+      setIndex(0);
+    }
+  }, [index, queue, repeat, start]);
 
   const prev = useCallback(() => {
     const audio = audioRef.current;
@@ -185,6 +225,43 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setCurrentTime(audio.currentTime);
   }, []);
 
+  const toggleShuffle = useCallback(() => {
+    const current = queueRef.current[indexRef.current];
+    if (!current) {
+      setShuffle((on) => !on);
+      return;
+    }
+    setShuffle((on) => {
+      if (on) {
+        const source = sourceRef.current.length ? sourceRef.current : queueRef.current;
+        const i = source.findIndex((t) => t.id === current.id);
+        setQueue(source);
+        setIndex(i < 0 ? 0 : i);
+        return false;
+      }
+      const rest = queueRef.current.filter((t) => t.id !== current.id);
+      for (let n = rest.length - 1; n > 0; n -= 1) {
+        const j = Math.floor(Math.random() * (n + 1));
+        const swap = rest[n];
+        rest[n] = rest[j];
+        rest[j] = swap;
+      }
+      setQueue([current, ...rest]);
+      setIndex(0);
+      return true;
+    });
+  }, []);
+
+  const cycleRepeat = useCallback(() => {
+    setRepeat((mode) => (mode === "off" ? "all" : mode === "all" ? "one" : "off"));
+  }, []);
+
+  const setVolume = useCallback((value: number) => {
+    const next = Math.max(0, Math.min(1, value));
+    setVolumeState(next);
+    if (audioRef.current) audioRef.current.volume = next;
+  }, []);
+
   const value = useMemo<PlayerState>(
     () => ({
       queue,
@@ -193,6 +270,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       playing,
       currentTime,
       duration: duration || track?.durationSeconds || 0,
+      shuffle,
+      repeat,
+      volume,
       playQueue,
       toggle,
       play,
@@ -200,8 +280,31 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       next,
       prev,
       seek,
+      toggleShuffle,
+      cycleRepeat,
+      setVolume,
     }),
-    [queue, index, track, playing, currentTime, duration, playQueue, toggle, play, pause, next, prev, seek],
+    [
+      queue,
+      index,
+      track,
+      playing,
+      currentTime,
+      duration,
+      shuffle,
+      repeat,
+      volume,
+      playQueue,
+      toggle,
+      play,
+      pause,
+      next,
+      prev,
+      seek,
+      toggleShuffle,
+      cycleRepeat,
+      setVolume,
+    ],
   );
 
   return (

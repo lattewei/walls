@@ -66,15 +66,15 @@ export default async function UserPage({ params }: Props) {
   }
 
   return (
-    <div className="wall">
-      <section className="wall__head">
-        <div className="wall__avatar" aria-hidden>
+    <div className="am-page">
+      <section className="am-detail">
+        <div className="am-detail__cover am-detail__cover--round" aria-hidden>
           {user.avatar_url ? <img src={apiUrl(user.avatar_url)} alt="" /> : initial}
         </div>
-        <div className="wall__intro">
+        <div className="am-detail__copy">
           <h1>{user.display_name}</h1>
-          <p className="wall__handle">@{user.handle}</p>
-          {user.bio ? <p className="wall__bio">{user.bio}</p> : null}
+          <p className="am-detail__by">@{user.handle}</p>
+          {user.bio ? <p className="am-detail__desc">{user.bio}</p> : null}
           {hasContacts ? (
             <ul className="wall__links">
               {contacts.public_contact_email ? (
@@ -102,16 +102,12 @@ export default async function UserPage({ params }: Props) {
                 ))}
             </ul>
           ) : null}
-          <div className="wall__actions">
+          <div className="am-detail__actions">
             <EditProfileLink handle={user.handle} />
           </div>
         </div>
       </section>
-
-      <section className="tracks">
-        <h2>Productions</h2>
-        <OwnerTrackList handle={user.handle} tracks={tracks} loadError={tracksError} />
-      </section>
+      <OwnerTrackList handle={user.handle} tracks={tracks} loadError={tracksError} />
     </div>
   );
 }

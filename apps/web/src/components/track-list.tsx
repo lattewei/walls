@@ -11,7 +11,7 @@ import { useSessionUser } from "@/lib/session";
 import type { ProdRow } from "@/lib/types";
 import { formatDuration } from "@/lib/types";
 import { usePlayer } from "./player-context";
-import { IconPause, IconPlay } from "./icons";
+import { IconMore, IconPause, IconPlay } from "./icons";
 
 function parseList(raw: string): string[] {
   return Array.from(
@@ -49,6 +49,7 @@ export function TrackList({
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [menuId, setMenuId] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -189,19 +190,27 @@ export function TrackList({
     <>
       {error ? <p className="note note--err">{error}</p> : null}
       {notice ? <p className="note note--ok">{notice}</p> : null}
-      <ul className="tracks__list">
-        {rows.map((track, i) => {
+      <div className="am-cols" aria-hidden>
+        <span>Song</span>
+        <span>Artist</span>
+        <span>Album</span>
+        <span>Time</span>
+        <span />
+      </div>
+      <ul className="am-table">
+        {rows.map((track) => {
           const active = player.track?.id === track.id;
           const playing = active && player.playing;
           const canPlay = Boolean(track.audioUrl);
           const owner = canManage(track);
+          const album = track.artistSlugs?.[0] || "Single";
 
           return (
             <li key={track.id}>
-              <div className={active ? "track is-on" : "track"}>
+              <div className={active ? "am-row is-on" : "am-row"}>
                 <button
                   type="button"
-                  className="track__play"
+                  className="am-row__song"
                   disabled={!canPlay}
                   onClick={() => {
                     if (active) {
@@ -218,56 +227,85 @@ export function TrackList({
                         : `Play ${track.title}`
                   }
                 >
-                  {playing ? <IconPause size={12} /> : <IconPlay size={12} />}
-                </button>
-                <span className="track__n" aria-hidden>
-                  {active && playing ? "" : i + 1}
-                </span>
-                <span className="track__copy">
+                  <span className="am-row__art" aria-hidden>
+                    {playing ? (
+                      <IconPause size={12} />
+                    ) : track.coverUrl ? (
+                      <img src={track.coverUrl} alt="" />
+                    ) : (
+                      <IconPlay size={11} />
+                    )}
+                  </span>
                   <strong>{track.title}</strong>
-                  {track.metaHref ? (
-                    <Link href={track.metaHref} className="track__meta">
-                      {track.meta}
-                    </Link>
-                  ) : (
-                    <em>{track.meta}</em>
-                  )}
-                  {track.detail ? <em className="track__detail">{track.detail}</em> : null}
-                </span>
-                <span className="track__dur">
+                </button>
+                {track.metaHref ? (
+                  <Link href={track.metaHref} className="am-row__artist">
+                    {track.meta}
+                  </Link>
+                ) : (
+                  <span className="am-row__artist">{track.meta}</span>
+                )}
+                {track.artistSlugs?.[0] ? (
+                  <Link href={`/artists/${track.artistSlugs[0]}`} className="am-row__album">
+                    {album}
+                  </Link>
+                ) : (
+                  <span className="am-row__album">{album}</span>
+                )}
+                <span className="am-row__time">
                   {formatDuration(
                     track.durationSeconds ?? (active && player.duration > 0 ? player.duration : null),
                   )}
                 </span>
-                <span className="track__actions">
-                  {owner ? (
-                    <button type="button" className="btn btn--text" onClick={() => startEdit(track)}>
-                      Edit
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn--text"
-                      onClick={() => {
-                        setReportId(track.id);
-                        setConfirmId(null);
-                        setEditId(null);
-                        setNotice(null);
-                        setError(null);
-                      }}
-                    >
-                      Report
-                    </button>
-                  )}
-                  {owner ? (
-                    <button
-                      type="button"
-                      className="btn btn--text btn--danger"
-                      disabled={busyId === track.id}
-                      onClick={() => onWithdraw(track.id)}
-                    >
-                      {busyId === track.id ? "…" : confirmId === track.id ? "Confirm" : "Remove"}
-                    </button>
+                <span className="am-more">
+                  <button
+                    type="button"
+                    aria-label={`More actions for ${track.title}`}
+                    aria-expanded={menuId === track.id}
+                    onClick={() => setMenuId(menuId === track.id ? null : track.id)}
+                  >
+                    <IconMore />
+                  </button>
+                  {menuId === track.id ? (
+                    <div className="am-menu" role="menu">
+                      {owner ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            startEdit(track);
+                            setMenuId(null);
+                          }}
+                        >
+                          Edit
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setReportId(track.id);
+                            setMenuId(null);
+                            setConfirmId(null);
+                            setEditId(null);
+                            setNotice(null);
+                            setError(null);
+                          }}
+                        >
+                          Report
+                        </button>
+                      )}
+                      {owner ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          disabled={busyId === track.id}
+                          onClick={() => onWithdraw(track.id)}
+                        >
+                          {busyId === track.id ? "…" : confirmId === track.id ? "Confirm remove" : "Remove"}
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </span>
               </div>
