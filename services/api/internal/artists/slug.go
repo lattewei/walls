@@ -53,21 +53,6 @@ func ValidateSlug(slug string) error {
 	return nil
 }
 
-func ValidateName(name string) error {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return fmt.Errorf("name is required")
-	}
-	n := 0
-	for range name {
-		n++
-	}
-	if n > maxNameLen {
-		return fmt.Errorf("name must be at most %d characters", maxNameLen)
-	}
-	return nil
-}
-
 func ValidateBio(bio string) error {
 	n := 0
 	for range bio {

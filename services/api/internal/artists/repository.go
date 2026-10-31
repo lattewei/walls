@@ -43,6 +43,7 @@ type CreateInput struct {
 	LookingFor *string
 	CreatedBy  string
 	DailyLimit int
+	MinAge     time.Duration
 	Since      time.Time
 }
 
@@ -59,14 +60,18 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Artist,
 	defer tx.Rollback(ctx) //nolint:errcheck
 
 	var locked string
+	var createdAt time.Time
 	err = tx.QueryRow(ctx, `
-		SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE
-	`, in.CreatedBy).Scan(&locked)
+		SELECT id, created_at FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE
+	`, in.CreatedBy).Scan(&locked, &createdAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Artist{}, ErrNotFound
 	}
 	if err != nil {
 		return domain.Artist{}, fmt.Errorf("lock creator: %w", err)
+	}
+	if in.MinAge > 0 && time.Since(createdAt) < in.MinAge {
+		return domain.Artist{}, ErrTooNew
 	}
 	if in.DailyLimit > 0 {
 		var n int
@@ -114,6 +119,28 @@ func (r *Repository) HideBySlug(ctx context.Context, slug string) error {
 	`, slug)
 	if err != nil {
 		return fmt.Errorf("hide artist: %w", err)
+	}
+	if tag.RowsAffected() > 0 {
+		return nil
+	}
+	ok, err := r.ExistsBySlug(ctx, slug)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (r *Repository) UnhideBySlug(ctx context.Context, slug string) error {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE artists
+		SET hidden_at = NULL, updated_at = now()
+		WHERE lower(slug) = lower($1) AND hidden_at IS NOT NULL
+	`, slug)
+	if err != nil {
+		return fmt.Errorf("unhide artist: %w", err)
 	}
 	if tag.RowsAffected() > 0 {
 		return nil

@@ -263,6 +263,14 @@ func (h *Handler) Hide(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+func (h *Handler) Unhide(c *gin.Context) {
+	if err := h.svc.Unhide(c.Request.Context(), c.Param("slug")); err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
 func (h *Handler) List(c *gin.Context) {
 	limit, err := httpx.ParseNonNegInt(c.Query("limit"), 0)
 	if err != nil {
@@ -297,6 +305,8 @@ func (h *Handler) mapError(c *gin.Context, err error) {
 		httpx.JSONError(c, http.StatusConflict, "conflict", msg)
 	case errors.Is(err, ErrForbidden):
 		httpx.Forbidden(c, "forbidden")
+	case errors.Is(err, ErrTooNew):
+		httpx.JSONError(c, http.StatusForbidden, "account_too_new", "account is too new to create a wall")
 	case errors.Is(err, ErrRateLimit):
 		httpx.JSONError(c, http.StatusTooManyRequests, "rate_limited", "daily wall limit reached")
 	case errors.Is(err, ErrNotFound):

@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import {
+  hideAdminArtist,
   hideAdminTrack,
   listAdminClaims,
   listAdminReports,
   reviewAdminClaim,
+  unhideAdminArtist,
   updateAdminReport,
 } from "@/lib/admin";
 import { isApiRequestError } from "@/lib/api";
@@ -102,6 +104,41 @@ export function AdminConsole() {
       setNotice(`Report marked ${updated.status}.`);
     } catch (err) {
       setError(isApiRequestError(err) ? err.message : "Could not update the report.");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function onHideWall(report: AdminReport) {
+    if (!token || !report.target_slug) return;
+    if (confirmHide !== report.id) {
+      setConfirmHide(report.id);
+      return;
+    }
+    setBusyKey(report.id);
+    setError(null);
+    setNotice(null);
+    try {
+      await hideAdminArtist(report.target_slug, token);
+      setConfirmHide(null);
+      setNotice("Wall hidden from the catalog.");
+    } catch (err) {
+      setError(isApiRequestError(err) ? err.message : "Could not hide the wall.");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function onUnhideWall(report: AdminReport) {
+    if (!token || !report.target_slug) return;
+    setBusyKey(report.id);
+    setError(null);
+    setNotice(null);
+    try {
+      await unhideAdminArtist(report.target_slug, token);
+      setNotice("Wall restored.");
+    } catch (err) {
+      setError(isApiRequestError(err) ? err.message : "Could not restore the wall.");
     } finally {
       setBusyKey(null);
     }
@@ -304,6 +341,25 @@ export function AdminConsole() {
                       >
                         {confirmHide === report.id ? "Confirm hide" : "Hide track"}
                       </button>
+                    ) : null}
+                    {report.target_type === "artist" && report.target_slug ? (
+                      <>
+                        <button
+                          type="button"
+                          className="is-danger"
+                          disabled={busyKey === report.id}
+                          onClick={() => void onHideWall(report)}
+                        >
+                          {confirmHide === report.id ? "Confirm hide" : "Hide wall"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busyKey === report.id}
+                          onClick={() => void onUnhideWall(report)}
+                        >
+                          Unhide
+                        </button>
+                      </>
                     ) : null}
                   </div>
                 </li>

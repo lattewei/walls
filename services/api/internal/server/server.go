@@ -35,6 +35,7 @@ type Server struct {
 	moderationHandler *moderation.Handler
 	authLimiter       *httpx.MemoryRateLimiter
 	playLimiter       *httpx.MemoryRateLimiter
+	artistLimiter     *httpx.MemoryRateLimiter
 }
 
 func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) (*Server, error) {
@@ -72,7 +73,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) (*Server, erro
 	tokens := auth.NewTokenService(cfg.JWTSecret, cfg.JWTAccessTTL)
 	authSvc := auth.NewService(userRepo, tokens)
 	usersSvc := users.NewService(userRepo, storage)
-	artistsSvc := artists.NewService(artistRepo, storage, cfg.ArtistDailyLimit)
+	artistsSvc := artists.NewService(artistRepo, storage, cfg.ArtistDailyLimit, cfg.ArtistMinAccountAge)
 	tracksSvc := tracks.NewService(trackRepo, artistRepo, storage, cfg.MediaMaxBytes, cfg.TrackDailyLimit)
 	modSvc := moderation.NewService(reportRepo)
 
@@ -90,6 +91,7 @@ func New(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool) (*Server, erro
 		moderationHandler: moderation.NewHandler(modSvc, tracksSvc),
 		authLimiter:       httpx.NewMemoryRateLimiter(cfg.AuthRateLimit, cfg.AuthRateWindow),
 		playLimiter:       httpx.NewMemoryRateLimiter(40, time.Minute),
+		artistLimiter:     httpx.NewMemoryRateLimiter(cfg.ArtistCreateRateLimit, cfg.ArtistCreateRateWindow),
 	}
 	s.routes()
 	return s, nil
@@ -131,7 +133,7 @@ func (s *Server) routes() {
 		artistsGroup := v1.Group("/artists")
 		{
 			artistsGroup.GET("", s.artistsHandler.List)
-			artistsGroup.POST("", s.authMW.RequireAuth(), httpx.LimitBody((5<<20)+1<<20), s.artistsHandler.Create)
+			artistsGroup.POST("", s.authMW.RequireAuth(), httpx.RateLimit(s.artistLimiter), httpx.LimitBody((5<<20)+1<<20), s.artistsHandler.Create)
 			artistsGroup.GET("/:slug", s.authMW.Optional(), s.artistsHandler.GetBySlug)
 			artistsGroup.PATCH("/:slug", s.authMW.RequireAuth(), httpx.LimitBody((5<<20)+1<<20), s.artistsHandler.Update)
 			artistsGroup.GET("/:slug/tracks", s.tracksHandler.ListByArtist)
@@ -158,6 +160,7 @@ func (s *Server) routes() {
 			admin.PATCH("/reports/:id", s.moderationHandler.UpdateReport)
 			admin.POST("/tracks/:id/hide", s.moderationHandler.HideTrack)
 			admin.POST("/artists/:slug/hide", s.artistsHandler.Hide)
+			admin.POST("/artists/:slug/unhide", s.artistsHandler.Unhide)
 			admin.GET("/claims", s.artistsHandler.ListPendingClaims)
 			admin.PATCH("/claims/:id", s.artistsHandler.ReviewClaim)
 		}

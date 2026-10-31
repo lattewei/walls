@@ -27,13 +27,17 @@ type Service struct {
 	storage    *media.LocalStorage
 	maxCover   int64
 	dailyLimit int
+	minAge     time.Duration
 }
 
-func NewService(repo *Repository, storage *media.LocalStorage, dailyLimit int) *Service {
+func NewService(repo *Repository, storage *media.LocalStorage, dailyLimit int, minAge time.Duration) *Service {
 	if dailyLimit < 1 {
 		dailyLimit = 10
 	}
-	return &Service{repo: repo, storage: storage, maxCover: maxCoverBytes, dailyLimit: dailyLimit}
+	if minAge < 0 {
+		minAge = 0
+	}
+	return &Service{repo: repo, storage: storage, maxCover: maxCoverBytes, dailyLimit: dailyLimit, minAge: minAge}
 }
 
 type CreateArtistInput struct {
@@ -52,6 +56,7 @@ var (
 	ErrConflict   = errors.New("conflict")
 	ErrForbidden  = errors.New("forbidden")
 	ErrRateLimit  = errors.New("rate_limited")
+	ErrTooNew     = errors.New("account_too_new")
 )
 
 func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.PublicArtist, error) {
@@ -64,7 +69,7 @@ func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.Publ
 	if slug == "" {
 		slug = Slugify(name)
 	}
-	if err := ValidateSlug(slug); err != nil {
+	if err := CheckWallIdentity(name, slug); err != nil {
 		return domain.PublicArtist{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
 	}
 
@@ -144,8 +149,15 @@ func (s *Service) Create(ctx context.Context, in CreateArtistInput) (domain.Publ
 		LookingFor: looking,
 		CreatedBy:  in.CreatedBy,
 		DailyLimit: s.dailyLimit,
+		MinAge:     s.minAge,
 		Since:      time.Now().UTC().Truncate(24 * time.Hour),
 	})
+	if errors.Is(err, ErrTooNew) {
+		if coverURL != nil && s.storage != nil {
+			_ = s.storage.Delete(*coverURL)
+		}
+		return domain.PublicArtist{}, ErrTooNew
+	}
 	if errors.Is(err, ErrRateLimit) {
 		if coverURL != nil && s.storage != nil {
 			_ = s.storage.Delete(*coverURL)
@@ -180,6 +192,14 @@ func (s *Service) Hide(ctx context.Context, slug string) error {
 		return ErrNotFound
 	}
 	return s.repo.HideBySlug(ctx, slug)
+}
+
+func (s *Service) Unhide(ctx context.Context, slug string) error {
+	slug = strings.TrimSpace(strings.ToLower(slug))
+	if err := ValidateSlug(slug); err != nil {
+		return ErrNotFound
+	}
+	return s.repo.UnhideBySlug(ctx, slug)
 }
 
 func (s *Service) GetBySlug(ctx context.Context, slug string) (domain.PublicArtist, error) {
@@ -254,7 +274,7 @@ func (s *Service) Update(ctx context.Context, in UpdateArtistInput) (domain.Publ
 	name := current.Name
 	if in.Name != nil {
 		name = NormalizeName(*in.Name)
-		if err := ValidateName(name); err != nil {
+		if err := CheckWallIdentity(name, current.Slug); err != nil {
 			return domain.PublicArtist{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
 		}
 		if name != current.Name {

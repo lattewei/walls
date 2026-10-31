@@ -35,6 +35,20 @@ export async function hideAdminTrack(trackId: string, token: string) {
   );
 }
 
+export async function hideAdminArtist(slug: string, token: string) {
+  return apiFetch<{ status: string }>(
+    `/api/v1/admin/artists/${encodeURIComponent(slug)}/hide`,
+    { method: "POST", token },
+  );
+}
+
+export async function unhideAdminArtist(slug: string, token: string) {
+  return apiFetch<{ status: string }>(
+    `/api/v1/admin/artists/${encodeURIComponent(slug)}/unhide`,
+    { method: "POST", token },
+  );
+}
+
 export async function listAdminClaims(token: string, limit = 50) {
   return apiFetch<{
     claims: Claim[];

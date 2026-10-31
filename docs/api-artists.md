@@ -42,10 +42,13 @@ Initial `claim_status`: `unclaimed`.
 }
 ```
 
-**400** `validation_error` — invalid name/slug  
+Names cannot be reserved product slugs, URLs, emails, or a short deny list of spam/abuse tokens. A name needs at least two letters.
+
+**400** `validation_error` — invalid or blocked name/slug  
 **401** — not authenticated  
+**403** `account_too_new` — account younger than `ARTIST_MIN_ACCOUNT_AGE` (15m in production, 0 in development unless set)  
 **409** `conflict` — slug or name already taken  
-**429** `rate_limited` — daily wall cap (`ARTIST_DAILY_CREATE_LIMIT`, default 10)
+**429** `rate_limited` — daily wall cap (`ARTIST_DAILY_CREATE_LIMIT`, default 10) or per-IP create cap (`ARTIST_CREATE_RATE_LIMIT`, default 8 / 10m)
 
 ### Example
 
