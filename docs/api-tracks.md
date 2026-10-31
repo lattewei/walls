@@ -7,6 +7,7 @@ Auth required. Multipart form upload.
 | Field | Required | Notes |
 |-------|----------|--------|
 | `audio` | yes | file (mp3 or wav) |
+| `cover` | no | jpeg, png, webp, or gif, max 5MB |
 | `title` | yes | max 120 chars |
 | `description` | no | |
 | `artist_slugs` | yes | comma-separated or repeated field |
@@ -21,7 +22,7 @@ curl -X POST http://localhost:8080/api/v1/tracks \
   -F "tags=drill,dark"
 ```
 
-**201** `{ "track": { …, "duration_seconds": 142, "audio_url": "/api/v1/tracks/{id}/audio" } }`  
+**201** `{ "track": { …, "duration_seconds": 142, "cover_url": "/api/v1/media/…", "audio_url": "/api/v1/tracks/{id}/audio" } }`  
 Duration is computed at insert for mp3 and wav.  
 **400** validation · **429** daily upload limit (`TRACK_DAILY_UPLOAD_LIMIT`)
 
@@ -62,6 +63,12 @@ Auth required. Owner only. JSON. Omit a field to leave it. Empty `description` c
 ```
 
 **200** `{ "track": { … } }` · **403** not the uploader
+
+## `POST /api/v1/tracks/{id}/cover`
+
+Auth required. Owner only. Multipart field `cover` (jpeg, png, webp, or gif, max 5MB).
+
+**200** `{ "track": { …, "cover_url": "/api/v1/media/…" } }`
 
 ## `GET /api/v1/tracks/{id}/audio`
 

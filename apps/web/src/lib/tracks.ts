@@ -7,6 +7,7 @@ export type UploadTrackInput = {
   artistSlugs: string[];
   tags?: string[];
   audio: File;
+  cover?: File | null;
 };
 
 export async function uploadTrack(input: UploadTrackInput, token: string) {
@@ -20,6 +21,9 @@ export async function uploadTrack(input: UploadTrackInput, token: string) {
     form.set("tags", input.tags.join(","));
   }
   form.set("audio", input.audio);
+  if (input.cover) {
+    form.set("cover", input.cover);
+  }
 
   const data = await apiFetch<{ track: PublicTrack }>("/api/v1/tracks", {
     method: "POST",

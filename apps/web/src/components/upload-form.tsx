@@ -32,6 +32,7 @@ export function UploadForm() {
   const [tags, setTags] = useState("");
   const [artistSlug, setArtistSlug] = useState(presetSlug);
   const [audio, setAudio] = useState<File | null>(null);
+  const [cover, setCover] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
@@ -104,6 +105,7 @@ export function UploadForm() {
           artistSlugs: [artistSlug],
           tags: parseTags(tags),
           audio,
+          cover,
         },
         session,
       );
@@ -154,6 +156,16 @@ export function UploadForm() {
         <label className="field">
           <span>Title</span>
           <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={120} />
+        </label>
+
+        <label className="field">
+          <span>Cover</span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+            onChange={(e) => setCover(e.target.files?.[0] ?? null)}
+          />
+          {cover ? <span className="field__help">{cover.name}</span> : null}
         </label>
 
         <label className="field">

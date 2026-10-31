@@ -142,10 +142,11 @@ func (s *Server) routes() {
 
 		tracksGroup := v1.Group("/tracks")
 		{
-			tracksGroup.POST("", s.authMW.RequireAuth(), httpx.LimitBody(s.cfg.MediaMaxBytes+1<<20), s.tracksHandler.Create)
+			tracksGroup.POST("", s.authMW.RequireAuth(), httpx.LimitBody(s.cfg.MediaMaxBytes+(5<<20)+1<<20), s.tracksHandler.Create)
 			tracksGroup.GET("", s.tracksHandler.List)
 			tracksGroup.GET("/:id", s.tracksHandler.Get)
 			tracksGroup.PATCH("/:id", s.authMW.RequireAuth(), s.tracksHandler.Update)
+			tracksGroup.POST("/:id/cover", s.authMW.RequireAuth(), httpx.LimitBody(5<<20+1<<16), s.tracksHandler.SetCover)
 			tracksGroup.POST("/:id/plays", httpx.RateLimit(s.playLimiter), s.authMW.Optional(), s.tracksHandler.RecordPlay)
 			tracksGroup.GET("/:id/audio", s.tracksHandler.StreamAudio)
 			tracksGroup.DELETE("/:id", s.authMW.RequireAuth(), s.tracksHandler.Withdraw)

@@ -14,6 +14,7 @@ type Track struct {
 	UploaderUserID  string
 	Title           string
 	Description     *string
+	CoverURL        *string
 	AudioObjectKey  *string
 	AudioFormat     *string
 	DurationSeconds *int
@@ -33,6 +34,7 @@ type PublicTrack struct {
 	ID              string   `json:"id"`
 	Title           string   `json:"title"`
 	Description     *string  `json:"description,omitempty"`
+	CoverURL        *string  `json:"cover_url,omitempty"`
 	AudioFormat     *string  `json:"audio_format,omitempty"`
 	DurationSeconds *int     `json:"duration_seconds,omitempty"`
 	Status          string   `json:"status"`
@@ -58,6 +60,7 @@ func (t Track) ToPublic() PublicTrack {
 		ID:              t.ID,
 		Title:           t.Title,
 		Description:     t.Description,
+		CoverURL:        publicMediaURL(t.CoverURL),
 		AudioFormat:     t.AudioFormat,
 		DurationSeconds: t.DurationSeconds,
 		Status:          t.Status,

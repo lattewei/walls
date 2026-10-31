@@ -48,7 +48,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	uid := httpx.UserID(c)
-	track, err := h.svc.Create(c.Request.Context(), UploadInput{
+	in := UploadInput{
 		UploaderID:  uid,
 		Title:       c.PostForm("title"),
 		Description: c.PostForm("description"),
@@ -56,7 +56,23 @@ func (h *Handler) Create(c *gin.Context) {
 		Tags:        tags,
 		File:        f,
 		FileSize:    fileHeader.Size,
-	})
+	}
+	if fh, err := c.FormFile("cover"); err != nil {
+		if httpx.IsBodyTooLarge(err) {
+			httpx.JSONError(c, http.StatusRequestEntityTooLarge, "validation_error", "file too large")
+			return
+		}
+	} else if fh != nil {
+		cf, err := fh.Open()
+		if err != nil {
+			httpx.BadRequest(c, "cannot read cover image")
+			return
+		}
+		defer cf.Close()
+		in.Cover = cf
+		in.CoverSize = fh.Size
+	}
+	track, err := h.svc.Create(c.Request.Context(), in)
 	if err != nil {
 		h.mapError(c, err)
 		return
@@ -66,6 +82,30 @@ func (h *Handler) Create(c *gin.Context) {
 
 func (h *Handler) Get(c *gin.Context) {
 	track, err := h.svc.Get(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"track": track})
+}
+
+func (h *Handler) SetCover(c *gin.Context) {
+	fh, err := c.FormFile("cover")
+	if err != nil {
+		if httpx.IsBodyTooLarge(err) {
+			httpx.JSONError(c, http.StatusRequestEntityTooLarge, "validation_error", "file too large")
+			return
+		}
+		httpx.BadRequest(c, "cover image is required (multipart field: cover)")
+		return
+	}
+	f, err := fh.Open()
+	if err != nil {
+		httpx.BadRequest(c, "cannot read cover image")
+		return
+	}
+	defer f.Close()
+	track, err := h.svc.SetCover(c.Request.Context(), c.Param("id"), httpx.UserID(c), f, fh.Size)
 	if err != nil {
 		h.mapError(c, err)
 		return

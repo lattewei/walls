@@ -182,20 +182,23 @@ func (r *Repository) SoftDelete(ctx context.Context, id string) (avatar string, 
 	defer tx.Rollback(ctx) //nolint:errcheck
 
 	rows, err := tx.Query(ctx, `
-		SELECT audio_object_key FROM tracks
-		WHERE uploader_user_id = $1 AND status <> 'removed' AND audio_object_key IS NOT NULL
+		SELECT audio_object_key, cover_url FROM tracks
+		WHERE uploader_user_id = $1 AND status <> 'removed'
 	`, id)
 	if err != nil {
 		return "", nil, fmt.Errorf("list audio: %w", err)
 	}
 	for rows.Next() {
-		var key *string
-		if err := rows.Scan(&key); err != nil {
+		var audio, cover *string
+		if err := rows.Scan(&audio, &cover); err != nil {
 			rows.Close()
 			return "", nil, err
 		}
-		if key != nil && *key != "" {
-			audioKeys = append(audioKeys, *key)
+		if audio != nil && *audio != "" {
+			audioKeys = append(audioKeys, *audio)
+		}
+		if cover != nil && *cover != "" {
+			audioKeys = append(audioKeys, *cover)
 		}
 	}
 	rows.Close()
@@ -205,7 +208,7 @@ func (r *Repository) SoftDelete(ctx context.Context, id string) (avatar string, 
 
 	if _, err := tx.Exec(ctx, `
 		UPDATE tracks
-		SET status = 'removed', removed_at = now(), updated_at = now(), audio_object_key = NULL
+		SET status = 'removed', removed_at = now(), updated_at = now(), audio_object_key = NULL, cover_url = NULL
 		WHERE uploader_user_id = $1 AND status <> 'removed'
 	`, id); err != nil {
 		return "", nil, fmt.Errorf("withdraw tracks: %w", err)

@@ -27,6 +27,7 @@ const (
 	maxLimit       = 50
 	maxOffset      = 10000
 	maxSearchQuery = 100
+	maxCoverBytes  = 5 << 20
 )
 
 type Service struct {
@@ -73,6 +74,8 @@ type UploadInput struct {
 	Tags        []string
 	File        io.Reader
 	FileSize    int64
+	Cover       io.Reader
+	CoverSize   int64
 }
 
 func (s *Service) Create(ctx context.Context, in UploadInput) (domain.PublicTrack, error) {
@@ -143,10 +146,17 @@ func (s *Service) Create(ctx context.Context, in UploadInput) (domain.PublicTrac
 		return domain.PublicTrack{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
 	}
 
+	coverURL, err := s.saveCover(in.Cover, in.CoverSize)
+	if err != nil {
+		_ = s.storage.Delete(key)
+		return domain.PublicTrack{}, err
+	}
+
 	track, err := s.repo.Create(ctx, CreateInput{
 		UploaderUserID:  in.UploaderID,
 		Title:           title,
 		Description:     desc,
+		CoverURL:        coverURL,
 		AudioObjectKey:  key,
 		AudioFormat:     info.Format,
 		DurationSeconds: duration,
@@ -158,6 +168,9 @@ func (s *Service) Create(ctx context.Context, in UploadInput) (domain.PublicTrac
 	})
 	if err != nil {
 		_ = s.storage.Delete(key)
+		if coverURL != nil {
+			_ = s.storage.Delete(*coverURL)
+		}
 		if errors.Is(err, ErrDailyLimit) {
 			return domain.PublicTrack{}, fmt.Errorf("%w: daily upload limit reached", ErrRateLimit)
 		}
@@ -511,21 +524,82 @@ func (s *Service) Withdraw(ctx context.Context, trackID, userID string) error {
 	if t.Status == domain.TrackRemoved {
 		return ErrNotFound
 	}
-	key, err := s.repo.SoftDelete(ctx, trackID, userID)
+	audio, cover, err := s.repo.SoftDelete(ctx, trackID, userID)
 	if err != nil {
 		return err
 	}
-	s.deleteAudio(key)
+	s.deleteAudio(audio)
+	s.deleteAudio(cover)
 	return nil
 }
 
 func (s *Service) Hide(ctx context.Context, trackID string) error {
-	key, err := s.repo.Hide(ctx, trackID)
+	audio, cover, err := s.repo.Hide(ctx, trackID)
 	if err != nil {
 		return err
 	}
-	s.deleteAudio(key)
+	s.deleteAudio(audio)
+	s.deleteAudio(cover)
 	return nil
+}
+
+func (s *Service) SetCover(ctx context.Context, trackID, actorID string, cover io.Reader, coverSize int64) (domain.PublicTrack, error) {
+	t, err := s.repo.GetByID(ctx, trackID)
+	if errors.Is(err, ErrNotFound) {
+		return domain.PublicTrack{}, ErrNotFound
+	}
+	if err != nil {
+		return domain.PublicTrack{}, err
+	}
+	if t.Status == domain.TrackRemoved {
+		return domain.PublicTrack{}, ErrNotFound
+	}
+	if t.UploaderUserID != actorID {
+		return domain.PublicTrack{}, ErrForbidden
+	}
+	coverURL, err := s.saveCover(cover, coverSize)
+	if err != nil {
+		return domain.PublicTrack{}, err
+	}
+	if coverURL == nil {
+		return domain.PublicTrack{}, fmt.Errorf("%w: cover image is required", ErrValidation)
+	}
+	old, updated, err := s.repo.SetCover(ctx, t.ID, actorID, coverURL)
+	if err != nil {
+		_ = s.storage.Delete(*coverURL)
+		return domain.PublicTrack{}, err
+	}
+	if old != nil && *old != "" && *old != *coverURL {
+		s.deleteAudio(old)
+	}
+	return updated.ToPublic(), nil
+}
+
+func (s *Service) saveCover(cover io.Reader, size int64) (*string, error) {
+	if cover == nil {
+		return nil, nil
+	}
+	if size > 0 && size > maxCoverBytes {
+		return nil, fmt.Errorf("%w: cover image is too large (max 5MB)", ErrValidation)
+	}
+	if s.storage == nil {
+		return nil, fmt.Errorf("%w: media storage unavailable", ErrValidation)
+	}
+	info, reader, err := media.DetectImage(cover)
+	if err != nil {
+		if errors.Is(err, media.ErrUnsupported) {
+			return nil, fmt.Errorf("%w: unsupported image type", ErrValidation)
+		}
+		return nil, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+	}
+	key, err := s.storage.SaveCapped(reader, info.Ext, maxCoverBytes)
+	if errors.Is(err, media.ErrTooLarge) {
+		return nil, fmt.Errorf("%w: cover image is too large (max 5MB)", ErrValidation)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &key, nil
 }
 
 func (s *Service) deleteAudio(key *string) {

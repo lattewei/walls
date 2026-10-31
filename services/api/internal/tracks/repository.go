@@ -30,6 +30,7 @@ type CreateInput struct {
 	UploaderUserID  string
 	Title           string
 	Description     *string
+	CoverURL        *string
 	AudioObjectKey  string
 	AudioFormat     string
 	DurationSeconds *int
@@ -71,13 +72,13 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Track, 
 	}
 
 	const insertTrack = `
-		INSERT INTO tracks (uploader_user_id, title, description, audio_object_key, audio_format, duration_seconds, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, uploader_user_id, title, description, audio_object_key, audio_format,
+		INSERT INTO tracks (uploader_user_id, title, description, cover_url, audio_object_key, audio_format, duration_seconds, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, uploader_user_id, title, description, cover_url, audio_object_key, audio_format,
 		          duration_seconds, status, created_at, updated_at, removed_at
 	`
 	t, err := scanTrack(tx.QueryRow(ctx, insertTrack,
-		in.UploaderUserID, in.Title, in.Description, in.AudioObjectKey, in.AudioFormat, in.DurationSeconds, in.Status,
+		in.UploaderUserID, in.Title, in.Description, in.CoverURL, in.AudioObjectKey, in.AudioFormat, in.DurationSeconds, in.Status,
 	))
 	if err != nil {
 		return domain.Track{}, fmt.Errorf("insert track: %w", err)
@@ -115,7 +116,7 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (domain.Track, 
 
 func (r *Repository) GetByID(ctx context.Context, id string) (domain.Track, error) {
 	const q = `
-		SELECT t.id, t.uploader_user_id, t.title, t.description, t.audio_object_key, t.audio_format,
+		SELECT t.id, t.uploader_user_id, t.title, t.description, t.cover_url, t.audio_object_key, t.audio_format,
 		       t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at,
 		       u.handle, u.display_name
 		FROM tracks t
@@ -156,7 +157,7 @@ func (r *Repository) ListByArtistSlug(ctx context.Context, slug string, limit, o
 	}
 
 	listQ := `
-		SELECT t.id, t.uploader_user_id, t.title, t.description, t.audio_object_key, t.audio_format,
+		SELECT t.id, t.uploader_user_id, t.title, t.description, t.cover_url, t.audio_object_key, t.audio_format,
 		       t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at,
 		       u.handle, u.display_name
 		FROM tracks t
@@ -215,7 +216,7 @@ func (r *Repository) ListByUploaderHandle(ctx context.Context, handle string, li
 	}
 
 	listQ := `
-		SELECT t.id, t.uploader_user_id, t.title, t.description, t.audio_object_key, t.audio_format,
+		SELECT t.id, t.uploader_user_id, t.title, t.description, t.cover_url, t.audio_object_key, t.audio_format,
 		       t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at,
 		       u.handle, u.display_name
 		FROM tracks t
@@ -275,7 +276,7 @@ func (r *Repository) ListWallActivity(ctx context.Context, claimedBy string, sin
 	}
 
 	const listQ = `
-		SELECT t.id, t.uploader_user_id, t.title, t.description, t.audio_object_key, t.audio_format,
+		SELECT t.id, t.uploader_user_id, t.title, t.description, t.cover_url, t.audio_object_key, t.audio_format,
 		       t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at,
 		       u.handle, u.display_name, a.slug, a.name
 		FROM tracks t
@@ -300,18 +301,19 @@ func (r *Repository) ListWallActivity(ctx context.Context, claimedBy string, sin
 	out := make([]WallActivityRow, 0, limit)
 	for rows.Next() {
 		var t domain.Track
-		var desc, key, format *string
+		var desc, cover, key, format *string
 		var dur *int
 		var removed *time.Time
 		var slug, name string
 		if err := rows.Scan(
-			&t.ID, &t.UploaderUserID, &t.Title, &desc, &key, &format,
+			&t.ID, &t.UploaderUserID, &t.Title, &desc, &cover, &key, &format,
 			&dur, &t.Status, &t.CreatedAt, &t.UpdatedAt, &removed,
 			&t.UploaderHandle, &t.UploaderName, &slug, &name,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan wall activity: %w", err)
 		}
 		t.Description = desc
+		t.CoverURL = cover
 		t.AudioObjectKey = key
 		t.AudioFormat = format
 		t.DurationSeconds = dur
@@ -389,7 +391,7 @@ func (r *Repository) ListReady(ctx context.Context, limit, offset int, sort stri
 		return nil, 0, fmt.Errorf("count ready tracks: %w", err)
 	}
 	listQ := `
-		SELECT t.id, t.uploader_user_id, t.title, t.description, t.audio_object_key, t.audio_format,
+		SELECT t.id, t.uploader_user_id, t.title, t.description, t.cover_url, t.audio_object_key, t.audio_format,
 		       t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at,
 		       u.handle, u.display_name
 		FROM tracks t
@@ -480,7 +482,7 @@ func (r *Repository) Update(ctx context.Context, id, title string, description *
 		UPDATE tracks
 		SET title = $2, description = $3, updated_at = now()
 		WHERE id = $1 AND status <> 'removed'
-		RETURNING id, uploader_user_id, title, description, audio_object_key, audio_format,
+		RETURNING id, uploader_user_id, title, description, cover_url, audio_object_key, audio_format,
 		          duration_seconds, status, created_at, updated_at, removed_at
 	`
 	t, err := scanTrack(tx.QueryRow(ctx, q, id, title, description))
@@ -521,52 +523,84 @@ func (r *Repository) Update(ctx context.Context, id, title string, description *
 	return t, nil
 }
 
-func (r *Repository) SoftDelete(ctx context.Context, id, uploaderID string) (*string, error) {
+func (r *Repository) SoftDelete(ctx context.Context, id, uploaderID string) (audio *string, cover *string, err error) {
 	const q = `
 		WITH old AS (
-			SELECT id, audio_object_key
+			SELECT id, audio_object_key, cover_url
 			FROM tracks
 			WHERE id = $1 AND uploader_user_id = $2 AND status <> 'removed'
 		)
 		UPDATE tracks t
-		SET status = 'removed', removed_at = now(), updated_at = now(), audio_object_key = NULL
+		SET status = 'removed', removed_at = now(), updated_at = now(), audio_object_key = NULL, cover_url = NULL
 		FROM old
 		WHERE t.id = old.id
-		RETURNING old.audio_object_key
+		RETURNING old.audio_object_key, old.cover_url
 	`
-	var key *string
-	err := r.pool.QueryRow(ctx, q, id, uploaderID).Scan(&key)
+	err = r.pool.QueryRow(ctx, q, id, uploaderID).Scan(&audio, &cover)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrNotFound
+		return nil, nil, ErrNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("soft delete track: %w", err)
+		return nil, nil, fmt.Errorf("soft delete track: %w", err)
 	}
-	return key, nil
+	return audio, cover, nil
 }
 
-func (r *Repository) Hide(ctx context.Context, id string) (*string, error) {
+func (r *Repository) Hide(ctx context.Context, id string) (audio *string, cover *string, err error) {
 	const q = `
 		WITH old AS (
-			SELECT id, audio_object_key
+			SELECT id, audio_object_key, cover_url
 			FROM tracks
 			WHERE id = $1 AND status <> 'removed'
 		)
 		UPDATE tracks t
-		SET status = 'removed', removed_at = now(), updated_at = now(), audio_object_key = NULL
+		SET status = 'removed', removed_at = now(), updated_at = now(), audio_object_key = NULL, cover_url = NULL
 		FROM old
 		WHERE t.id = old.id
-		RETURNING old.audio_object_key
+		RETURNING old.audio_object_key, old.cover_url
 	`
-	var key *string
-	err := r.pool.QueryRow(ctx, q, id).Scan(&key)
+	err = r.pool.QueryRow(ctx, q, id).Scan(&audio, &cover)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrNotFound
+		return nil, nil, ErrNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("hide track: %w", err)
+		return nil, nil, fmt.Errorf("hide track: %w", err)
 	}
-	return key, nil
+	return audio, cover, nil
+}
+
+func (r *Repository) SetCover(ctx context.Context, id, uploaderID string, coverURL *string) (old *string, t domain.Track, err error) {
+	const q = `
+		WITH old AS (
+			SELECT id, cover_url
+			FROM tracks
+			WHERE id = $1 AND uploader_user_id = $2 AND status <> 'removed'
+		)
+		UPDATE tracks t
+		SET cover_url = $3, updated_at = now()
+		FROM old
+		WHERE t.id = old.id
+		RETURNING old.cover_url,
+		          t.id, t.uploader_user_id, t.title, t.description, t.cover_url, t.audio_object_key, t.audio_format,
+		          t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at
+	`
+	var prev *string
+	row := r.pool.QueryRow(ctx, q, id, uploaderID, coverURL)
+	t, err = scanTrackCoverUpdate(row, &prev)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.Track{}, ErrNotFound
+	}
+	if err != nil {
+		return nil, domain.Track{}, fmt.Errorf("set cover: %w", err)
+	}
+	if err := r.pool.QueryRow(ctx, `SELECT handle, display_name FROM users WHERE id = $1`, t.UploaderUserID).
+		Scan(&t.UploaderHandle, &t.UploaderName); err != nil {
+		return nil, domain.Track{}, fmt.Errorf("uploader: %w", err)
+	}
+	if err := attachMeta(ctx, r.pool, &t); err != nil {
+		return nil, domain.Track{}, err
+	}
+	return prev, t, nil
 }
 
 func (r *Repository) CountCreatedSince(ctx context.Context, userID string, since time.Time) (int, error) {
@@ -649,17 +683,40 @@ type scannable interface {
 
 func scanTrack(row scannable) (domain.Track, error) {
 	var t domain.Track
-	var desc, key, format *string
+	var desc, cover, key, format *string
 	var dur *int
 	var removed *time.Time
 	err := row.Scan(
-		&t.ID, &t.UploaderUserID, &t.Title, &desc, &key, &format,
+		&t.ID, &t.UploaderUserID, &t.Title, &desc, &cover, &key, &format,
 		&dur, &t.Status, &t.CreatedAt, &t.UpdatedAt, &removed,
 	)
 	if err != nil {
 		return domain.Track{}, err
 	}
 	t.Description = desc
+	t.CoverURL = cover
+	t.AudioObjectKey = key
+	t.AudioFormat = format
+	t.DurationSeconds = dur
+	t.RemovedAt = removed
+	return t, nil
+}
+
+func scanTrackCoverUpdate(row scannable, old **string) (domain.Track, error) {
+	var t domain.Track
+	var desc, cover, key, format *string
+	var dur *int
+	var removed *time.Time
+	err := row.Scan(
+		old,
+		&t.ID, &t.UploaderUserID, &t.Title, &desc, &cover, &key, &format,
+		&dur, &t.Status, &t.CreatedAt, &t.UpdatedAt, &removed,
+	)
+	if err != nil {
+		return domain.Track{}, err
+	}
+	t.Description = desc
+	t.CoverURL = cover
 	t.AudioObjectKey = key
 	t.AudioFormat = format
 	t.DurationSeconds = dur
@@ -669,11 +726,11 @@ func scanTrack(row scannable) (domain.Track, error) {
 
 func scanTrackWithUploader(row scannable) (domain.Track, error) {
 	var t domain.Track
-	var desc, key, format *string
+	var desc, cover, key, format *string
 	var dur *int
 	var removed *time.Time
 	err := row.Scan(
-		&t.ID, &t.UploaderUserID, &t.Title, &desc, &key, &format,
+		&t.ID, &t.UploaderUserID, &t.Title, &desc, &cover, &key, &format,
 		&dur, &t.Status, &t.CreatedAt, &t.UpdatedAt, &removed,
 		&t.UploaderHandle, &t.UploaderName,
 	)
@@ -681,6 +738,7 @@ func scanTrackWithUploader(row scannable) (domain.Track, error) {
 		return domain.Track{}, err
 	}
 	t.Description = desc
+	t.CoverURL = cover
 	t.AudioObjectKey = key
 	t.AudioFormat = format
 	t.DurationSeconds = dur

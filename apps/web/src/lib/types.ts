@@ -20,6 +20,7 @@ export type PublicTrack = {
   id: string;
   title: string;
   description?: string | null;
+  cover_url?: string | null;
   audio_format?: string | null;
   duration_seconds?: number | null;
   status: string;
@@ -81,7 +82,7 @@ export function toProdRow(
     metaHref: extra.metaHref,
     durationSeconds: t.duration_seconds,
     audioUrl: apiUrl(t.audio_url),
-    coverUrl: apiUrl(extra.coverUrl),
+    coverUrl: apiUrl(t.cover_url || extra.coverUrl),
     playCount: t.play_count ?? 0,
     uploaderHandle: t.uploader_handle,
     description: t.description ?? null,
