@@ -208,26 +208,26 @@ export function TrackList({
           return (
             <li key={track.id}>
               <div className={active ? "am-row is-on" : "am-row"}>
-                <button
-                  type="button"
-                  className="am-row__song"
-                  disabled={!canPlay}
-                  onClick={() => {
-                    if (active) {
-                      player.toggle();
-                      return;
+                <div className="am-row__song">
+                  <button
+                    type="button"
+                    className="am-row__art"
+                    disabled={!canPlay}
+                    onClick={() => {
+                      if (active) {
+                        player.toggle();
+                        return;
+                      }
+                      player.playQueue(rows, track.id);
+                    }}
+                    aria-label={
+                      !canPlay
+                        ? `${track.title} not ready`
+                        : playing
+                          ? "Pause"
+                          : `Play ${track.title}`
                     }
-                    player.playQueue(rows, track.id);
-                  }}
-                  aria-label={
-                    !canPlay
-                      ? `${track.title} not ready`
-                      : playing
-                        ? "Pause"
-                        : `Play ${track.title}`
-                  }
-                >
-                  <span className="am-row__art" aria-hidden>
+                  >
                     {playing ? (
                       <IconPause size={12} />
                     ) : track.coverUrl ? (
@@ -235,9 +235,11 @@ export function TrackList({
                     ) : (
                       <IconPlay size={11} />
                     )}
-                  </span>
-                  <strong>{track.title}</strong>
-                </button>
+                  </button>
+                  <Link href={`/tracks/${track.id}`} className="am-row__title">
+                    <strong>{track.title}</strong>
+                  </Link>
+                </div>
                 {track.metaHref ? (
                   <Link href={track.metaHref} className="am-row__artist">
                     {track.meta}
@@ -268,6 +270,9 @@ export function TrackList({
                   </button>
                   {menuId === track.id ? (
                     <div className="am-menu" role="menu">
+                      <Link href={`/tracks/${track.id}`} role="menuitem" onClick={() => setMenuId(null)}>
+                        Open
+                      </Link>
                       {owner ? (
                         <button
                           type="button"

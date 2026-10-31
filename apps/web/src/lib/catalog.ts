@@ -27,6 +27,18 @@ export async function listArtists(limit = 24, query = "") {
   }>(`/api/v1/artists?limit=${limit}&offset=0${search}`);
 }
 
+export async function getTrack(id: string) {
+  try {
+    const data = await apiFetch<{ track: PublicTrack }>(
+      `/api/v1/tracks/${encodeURIComponent(id)}`,
+    );
+    return data.track;
+  } catch (err) {
+    if (isApiRequestError(err) && (err.status === 404 || err.status === 400)) return null;
+    throw err;
+  }
+}
+
 export async function getArtist(slug: string) {
   try {
     const data = await apiFetch<{ artist: PublicArtist }>(

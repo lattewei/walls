@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import type { ProdRow } from "@/lib/types";
 import { IconPlay } from "./icons";
 import { usePlayerOptional } from "./player-context";
@@ -100,27 +102,34 @@ export function SongGrid({ tracks }: { tracks: ProdRow[] }) {
         const active = player?.track?.id === track.id;
         return (
           <li key={track.id}>
-            <button
-              type="button"
-              className={active ? "am-song is-on" : "am-song"}
-              disabled={!track.audioUrl}
-              onClick={() => {
-                if (!player || !track.audioUrl) return;
-                if (active) {
-                  player.toggle();
-                  return;
+            <div className={active ? "am-song is-on" : "am-song"}>
+              <button
+                type="button"
+                className="am-song__art"
+                disabled={!track.audioUrl}
+                aria-label={
+                  !track.audioUrl
+                    ? `${track.title} not ready`
+                    : active
+                      ? "Pause"
+                      : `Play ${track.title}`
                 }
-                player.playQueue(tracks, track.id);
-              }}
-            >
-              <span className="am-song__art" aria-hidden>
+                onClick={() => {
+                  if (!player || !track.audioUrl) return;
+                  if (active) {
+                    player.toggle();
+                    return;
+                  }
+                  player.playQueue(tracks, track.id);
+                }}
+              >
                 {track.coverUrl ? <img src={track.coverUrl} alt="" /> : track.title.slice(0, 1)}
-              </span>
-              <span className="am-song__copy">
+              </button>
+              <Link href={`/tracks/${track.id}`} className="am-song__copy">
                 <strong>{track.title}</strong>
                 <em>{track.meta}</em>
-              </span>
-            </button>
+              </Link>
+            </div>
           </li>
         );
       })}
