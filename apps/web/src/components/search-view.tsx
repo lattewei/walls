@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 
 import { apiUrl } from "@/lib/api";
 import { IconNavSearch } from "./icons";
@@ -33,7 +33,15 @@ export type SearchHit = {
   image?: string;
 };
 
-export function SearchView({
+export function SearchView(props: {
+  query: string;
+  artists: SearchHit[];
+  producers: SearchHit[];
+}) {
+  return <SearchViewInner key={props.query} {...props} />;
+}
+
+function SearchViewInner({
   query,
   artists,
   producers,
@@ -44,10 +52,6 @@ export function SearchView({
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState(query);
-
-  useEffect(() => {
-    setDraft(query);
-  }, [query]);
 
   function submit(e: FormEvent) {
     e.preventDefault();
