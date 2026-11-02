@@ -35,6 +35,7 @@ export type SearchHit = {
 
 export function SearchView(props: {
   query: string;
+  tracks: SearchHit[];
   artists: SearchHit[];
   producers: SearchHit[];
 }) {
@@ -43,10 +44,12 @@ export function SearchView(props: {
 
 function SearchViewInner({
   query,
+  tracks,
   artists,
   producers,
 }: {
   query: string;
+  tracks: SearchHit[];
   artists: SearchHit[];
   producers: SearchHit[];
 }) {
@@ -78,6 +81,26 @@ function SearchViewInner({
 
       {searching ? (
         <>
+          <section className="browse__block">
+            <h2>Productions</h2>
+            {tracks.length === 0 ? (
+              <p className="browse__empty">No productions for “{query}”.</p>
+            ) : (
+              <ul className="browse__hits">
+                {tracks.map((hit) => (
+                  <li key={hit.id}>
+                    <Link href={hit.href}>
+                      <Thumb hit={hit} />
+                      <span>
+                        <strong>{hit.title}</strong>
+                        <em>{hit.subtitle}</em>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           <section className="browse__block">
             <h2>Walls</h2>
             {artists.length === 0 ? (

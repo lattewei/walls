@@ -385,9 +385,32 @@ func (r *Repository) ListProducers(ctx context.Context, query string, limit, off
 	return out, total, nil
 }
 
-func (r *Repository) ListReady(ctx context.Context, limit, offset int, sort string) ([]domain.Track, int, error) {
+func (r *Repository) ListReady(ctx context.Context, query string, limit, offset int, sort string) ([]domain.Track, int, error) {
+	pattern := ""
+	if query != "" {
+		pattern = "%" + escapeILIKE(query) + "%"
+	}
+
+	const countQ = `
+		SELECT COUNT(*)
+		FROM tracks t
+		JOIN users u ON u.id = t.uploader_user_id
+		WHERE t.status = 'ready' AND u.deleted_at IS NULL
+		  AND ($1 = '' OR t.title ILIKE $1 ESCAPE '\'
+		    OR u.handle ILIKE $1 ESCAPE '\'
+		    OR u.display_name ILIKE $1 ESCAPE '\'
+		    OR EXISTS (
+		      SELECT 1 FROM track_tags tt
+		      WHERE tt.track_id = t.id AND tt.tag ILIKE $1 ESCAPE '\'
+		    )
+		    OR EXISTS (
+		      SELECT 1 FROM track_artists ta
+		      JOIN artists a ON a.id = ta.artist_id AND a.hidden_at IS NULL
+		      WHERE ta.track_id = t.id AND (a.name ILIKE $1 ESCAPE '\' OR a.slug ILIKE $1 ESCAPE '\')
+		    ))
+	`
 	var total int
-	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM tracks WHERE status = 'ready'`).Scan(&total); err != nil {
+	if err := r.pool.QueryRow(ctx, countQ, pattern).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count ready tracks: %w", err)
 	}
 	listQ := `
@@ -397,10 +420,22 @@ func (r *Repository) ListReady(ctx context.Context, limit, offset int, sort stri
 		FROM tracks t
 		JOIN users u ON u.id = t.uploader_user_id
 		WHERE t.status = 'ready' AND u.deleted_at IS NULL
+		  AND ($1 = '' OR t.title ILIKE $1 ESCAPE '\'
+		    OR u.handle ILIKE $1 ESCAPE '\'
+		    OR u.display_name ILIKE $1 ESCAPE '\'
+		    OR EXISTS (
+		      SELECT 1 FROM track_tags tt
+		      WHERE tt.track_id = t.id AND tt.tag ILIKE $1 ESCAPE '\'
+		    )
+		    OR EXISTS (
+		      SELECT 1 FROM track_artists ta
+		      JOIN artists a ON a.id = ta.artist_id AND a.hidden_at IS NULL
+		      WHERE ta.track_id = t.id AND (a.name ILIKE $1 ESCAPE '\' OR a.slug ILIKE $1 ESCAPE '\')
+		    ))
 		ORDER BY ` + trackOrder(sort) + `
-		LIMIT $1 OFFSET $2
+		LIMIT $2 OFFSET $3
 	`
-	rows, err := r.pool.Query(ctx, listQ, limit, offset)
+	rows, err := r.pool.Query(ctx, listQ, pattern, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list ready tracks: %w", err)
 	}

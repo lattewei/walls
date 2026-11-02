@@ -7,13 +7,19 @@ import type {
   PublicTrack,
 } from "./types";
 
-export async function listTracks(limit = 24, sort: "recent" | "plays" = "recent") {
+export async function listTracks(
+  limit = 24,
+  sort: "recent" | "plays" = "recent",
+  query = "",
+) {
+  const q = query.trim();
+  const search = q ? `&q=${encodeURIComponent(q)}` : "";
   return apiFetch<{
     tracks: PublicTrack[];
     total: number;
     limit: number;
     offset: number;
-  }>(`/api/v1/tracks?limit=${limit}&offset=0&sort=${sort}`);
+  }>(`/api/v1/tracks?limit=${limit}&offset=0&sort=${sort}${search}`);
 }
 
 export async function listArtists(limit = 24, query = "") {

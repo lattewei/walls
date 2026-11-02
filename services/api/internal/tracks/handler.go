@@ -190,7 +190,7 @@ func (h *Handler) List(c *gin.Context) {
 		httpx.BadRequest(c, "invalid offset")
 		return
 	}
-	res, err := h.svc.List(c.Request.Context(), limit, offset, c.Query("sort"))
+	res, err := h.svc.List(c.Request.Context(), c.Query("q"), limit, offset, c.Query("sort"))
 	if err != nil {
 		h.mapError(c, err)
 		return

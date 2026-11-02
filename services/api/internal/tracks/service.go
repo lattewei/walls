@@ -459,7 +459,11 @@ func viewerKey(userID, ip, ua string, now time.Time) string {
 	return "i:" + hex.EncodeToString(sum[:16])
 }
 
-func (s *Service) List(ctx context.Context, limit, offset int, sort string) (ListResult, error) {
+func (s *Service) List(ctx context.Context, query string, limit, offset int, sort string) (ListResult, error) {
+	q := strings.TrimSpace(query)
+	if utf8.RuneCountInString(q) > maxSearchQuery {
+		return ListResult{}, fmt.Errorf("%w: q is too long", ErrValidation)
+	}
 	if limit <= 0 {
 		limit = defaultLimit
 	}
@@ -472,7 +476,7 @@ func (s *Service) List(ctx context.Context, limit, offset int, sort string) (Lis
 	if offset > maxOffset {
 		return ListResult{}, fmt.Errorf("%w: offset is too large", ErrValidation)
 	}
-	rows, total, err := s.repo.ListReady(ctx, limit, offset, parseSort(sort))
+	rows, total, err := s.repo.ListReady(ctx, q, limit, offset, parseSort(sort))
 	if err != nil {
 		return ListResult{}, err
 	}

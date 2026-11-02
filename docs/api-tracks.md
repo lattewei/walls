@@ -30,6 +30,13 @@ Duration is computed at insert for mp3 and wav.
 
 Public catalog. `sort=recent` (default) or `sort=plays`. Paginated `limit` / `offset`.
 
+| Param    | Default | Notes |
+|----------|---------|-------|
+| `q`      | (empty) | Case-insensitive match on **title**, **tags**, uploader handle/name, or tagged wall name/slug |
+| `sort`   | `recent` | `recent` or `plays` |
+| `limit`  | `20`    | Max `50` |
+| `offset` | `0`     | Pagination offset |
+
 ## Play counts
 
 `POST /api/v1/tracks/{id}/plays` — public. Call after ~15s of real playback, not on every stream byte.

@@ -1,7 +1,7 @@
 import { SearchView, type SearchHit } from "@/components/search-view";
 import { site } from "@/content/site";
 import { isApiRequestError } from "@/lib/api";
-import { listArtists, listProducers } from "@/lib/catalog";
+import { listArtists, listProducers, listTracks } from "@/lib/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -15,16 +15,25 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const query = ((await searchParams).q ?? "").trim();
+  let tracks: SearchHit[] = [];
   let artists: SearchHit[] = [];
   let producers: SearchHit[] = [];
   let error: string | null = null;
 
   if (query) {
     try {
-      const [walls, people] = await Promise.all([
+      const [songs, walls, people] = await Promise.all([
+        listTracks(24, "recent", query),
         listArtists(24, query),
         listProducers(24, query),
       ]);
+      tracks = songs.tracks.map((track) => ({
+        id: track.id,
+        title: track.title,
+        subtitle: track.uploader_display_name || track.uploader_handle || "Unknown",
+        href: `/tracks/${track.id}`,
+        image: track.cover_url || undefined,
+      }));
       artists = walls.artists.map((artist) => ({
         id: artist.id,
         title: artist.name,
@@ -47,7 +56,7 @@ export default async function SearchPage({
   return (
     <div className="am-page">
       {error ? <p className="browse__empty">{error}</p> : null}
-      <SearchView query={query} artists={artists} producers={producers} />
+      <SearchView query={query} tracks={tracks} artists={artists} producers={producers} />
     </div>
   );
 }
