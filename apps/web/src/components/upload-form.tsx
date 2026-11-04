@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
-import { isApiRequestError } from "@/lib/api";
+import { apiUrl, isApiRequestError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import { listArtists } from "@/lib/catalog";
+import { getArtist, listArtists } from "@/lib/catalog";
 import { useSessionToken } from "@/lib/session";
 import { uploadTrack } from "@/lib/tracks";
 import type { PublicArtist } from "@/lib/types";
@@ -26,17 +26,20 @@ export function UploadForm() {
   const search = useSearchParams();
   const presetSlug = search.get("artist")?.trim().toLowerCase() ?? "";
   const token = useSessionToken();
-  const [artists, setArtists] = useState<PublicArtist[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
-  const [artistSlug, setArtistSlug] = useState(presetSlug);
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<PublicArtist | null>(null);
+  const [hits, setHits] = useState<PublicArtist[]>([]);
+  const [open, setOpen] = useState(false);
+  const [looking, setLooking] = useState(false);
   const [audio, setAudio] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const pickRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!token) {
@@ -44,31 +47,65 @@ export function UploadForm() {
         ? `/login?next=${encodeURIComponent(`/upload?artist=${presetSlug}`)}`
         : "/login?next=/upload";
       router.replace(next);
-      return;
     }
+  }, [router, presetSlug, token]);
+
+  useEffect(() => {
+    if (!token || !presetSlug) return;
     let cancelled = false;
     (async () => {
       try {
-        const data = await listArtists(50);
-        if (cancelled) return;
-        setArtists(data.artists);
-        if (!presetSlug && data.artists.length === 1) {
-          setArtistSlug(data.artists[0].slug);
+        const artist = await getArtist(presetSlug);
+        if (!cancelled && artist) {
+          setSelected(artist);
+          setQuery(artist.name);
         }
-      } catch (err) {
-        if (!cancelled) {
-          setLoadError(isApiRequestError(err) ? err.message : "Could not load walls.");
-        }
+      } catch {
+        if (!cancelled) setError("Could not load that wall.");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [router, presetSlug, token]);
+  }, [presetSlug, token]);
 
-  const selectedName = useMemo(() => {
-    return artists.find((a) => a.slug === artistSlug)?.name ?? artistSlug;
-  }, [artists, artistSlug]);
+  useEffect(() => {
+    const q = query.trim();
+    if (selected || q.length < 1) return;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      if (!cancelled) setLooking(true);
+      try {
+        const data = await listArtists(8, q);
+        if (cancelled) return;
+        setHits(data.artists);
+        setOpen(true);
+      } catch {
+        if (!cancelled) setHits([]);
+      } finally {
+        if (!cancelled) setLooking(false);
+      }
+    }, 180);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, selected]);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!pickRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  function pick(artist: PublicArtist) {
+    setSelected(artist);
+    setQuery(artist.name);
+    setHits([]);
+    setOpen(false);
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -85,8 +122,8 @@ export function UploadForm() {
       submitting.current = false;
       return;
     }
-    if (!artistSlug) {
-      setError("Pick a wall to tag.");
+    if (!selected) {
+      setError("Search and pick a wall to tag.");
       submitting.current = false;
       return;
     }
@@ -102,14 +139,14 @@ export function UploadForm() {
         {
           title,
           description: description || undefined,
-          artistSlugs: [artistSlug],
+          artistSlugs: [selected.slug],
           tags: parseTags(tags),
           audio,
           cover,
         },
         session,
       );
-      router.push(`/artists/${artistSlug}`);
+      router.push(`/artists/${selected.slug}`);
       router.refresh();
     } catch (err) {
       setError(isApiRequestError(err) ? err.message : "Upload failed.");
@@ -132,26 +169,62 @@ export function UploadForm() {
       <form onSubmit={onSubmit}>
         <h1>Upload</h1>
         <p className="hint">
-          {selectedName ? `Tag ${selectedName} and drop the file.` : "Tag a wall and drop the file."}
+          {selected ? `Tag ${selected.name} and drop the file.` : "Search a wall and drop the file."}
         </p>
 
-        {loadError ? <p className="note note--err">{loadError}</p> : null}
-
-        <label className="field">
+        <div className="field" ref={pickRef}>
           <span>Wall</span>
-          <select
-            value={artistSlug}
-            onChange={(e) => setArtistSlug(e.target.value)}
-            required
-          >
-            <option value="">Pick a wall</option>
-            {artists.map((a) => (
-              <option key={a.id} value={a.slug}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          <input
+            value={query}
+            onChange={(e) => {
+              setSelected(null);
+              setQuery(e.target.value);
+            }}
+            onFocus={() => {
+              if (!selected && hits.length > 0) setOpen(true);
+            }}
+            placeholder="Search a wall"
+            autoComplete="off"
+            role="combobox"
+            aria-expanded={open && !selected}
+            aria-controls="wall-hits"
+            aria-autocomplete="list"
+          />
+          {selected ? (
+            <span className="field__help">Tagged {selected.name}</span>
+          ) : looking ? (
+            <span className="field__help">Searching…</span>
+          ) : query.trim() && open && hits.length === 0 ? (
+            <span className="field__help">
+              No walls. <Link href="/artists/new">New wall</Link>
+            </span>
+          ) : null}
+          {open && !selected && query.trim() && hits.length > 0 ? (
+            <ul id="wall-hits" className="wall-pick" role="listbox">
+              {hits.map((artist) => {
+                const coverSrc = artist.cover_url || artist.avatar_url;
+                return (
+                  <li key={artist.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={false}
+                      onClick={() => pick(artist)}
+                    >
+                      <span className="wall-pick__art" aria-hidden>
+                        {coverSrc ? <img src={apiUrl(coverSrc)} alt="" /> : artist.name.slice(0, 1)}
+                      </span>
+                      <span>
+                        <strong>{artist.name}</strong>
+                        <em>{artist.slug}</em>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
 
         <label className="field">
           <span>Title</span>

@@ -1338,6 +1338,73 @@ textarea {
   flex-direction: column;
   gap: var(--space-2xs);
   text-align: left;
+  position: relative;
+}
+
+.wall-pick {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 8;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.wall-pick button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wall-pick button:hover {
+  background: var(--hover);
+}
+
+.wall-pick strong {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.wall-pick em {
+  display: block;
+  color: var(--ink-3);
+  font-style: normal;
+  font-size: 0.78rem;
+}
+
+.wall-pick__art {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.wall-pick__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .field > span:first-child {
