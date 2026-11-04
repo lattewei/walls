@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { apiUrl, isApiRequestError } from "@/lib/api";
 import { getToken } from "@/lib/auth";
@@ -40,6 +40,20 @@ export function UploadForm() {
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
   const pickRef = useRef<HTMLDivElement>(null);
+  const coverPreview = useMemo(() => (cover ? URL.createObjectURL(cover) : null), [cover]);
+  const audioPreview = useMemo(() => (audio ? URL.createObjectURL(audio) : null), [audio]);
+
+  useEffect(() => {
+    return () => {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (audioPreview) URL.revokeObjectURL(audioPreview);
+    };
+  }, [audioPreview]);
 
   useEffect(() => {
     if (!token) {
@@ -231,15 +245,26 @@ export function UploadForm() {
           <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={120} />
         </label>
 
-        <label className="field">
+        <div className="field">
           <span>Cover</span>
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
-            onChange={(e) => setCover(e.target.files?.[0] ?? null)}
-          />
-          {cover ? <span className="field__help">{cover.name}</span> : null}
-        </label>
+          <div className="cover-pick">
+            <label className="cover-pick__face is-album">
+              {coverPreview ? (
+                <img src={coverPreview} alt="" />
+              ) : (
+                <span>{title.trim() ? title.trim().slice(0, 1).toUpperCase() : "+"}</span>
+              )}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                onChange={(e) => setCover(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            <span className="field__help">
+              {cover ? cover.name : "Square image. Click the artwork to choose one."}
+            </span>
+          </div>
+        </div>
 
         <label className="field">
           <span>Audio</span>
@@ -249,6 +274,9 @@ export function UploadForm() {
             onChange={(e) => setAudio(e.target.files?.[0] ?? null)}
             required
           />
+          {audioPreview ? (
+            <audio className="prod-audio" src={audioPreview} controls preload="metadata" />
+          ) : null}
           {audio ? <span className="field__help">{audio.name}</span> : null}
         </label>
 

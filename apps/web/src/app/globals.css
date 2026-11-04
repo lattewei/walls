@@ -1471,6 +1471,7 @@ textarea {
 }
 
 .cover-pick__face {
+  position: relative;
   width: 120px;
   height: 120px;
   border-radius: var(--radius-art);
@@ -1497,6 +1498,37 @@ textarea {
 .cover-pick input[type="file"] {
   color: var(--ink-2);
   font-size: var(--step--1);
+}
+
+.cover-pick__face.is-album {
+  width: min(100%, 220px);
+  height: auto;
+  aspect-ratio: 1;
+  cursor: pointer;
+  border: 1px solid var(--line);
+}
+
+.cover-pick__face.is-album input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.cover-pick__face.is-album:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.prod-audio {
+  width: 100%;
+  height: 36px;
+  margin-top: 4px;
 }
 
 .claim__code {
