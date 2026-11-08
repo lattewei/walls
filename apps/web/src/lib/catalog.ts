@@ -91,6 +91,20 @@ export async function getPublicProfile(handle: string) {
   }
 }
 
+export async function listMyTracks(
+  token: string,
+  limit = 50,
+  sort: "recent" | "plays" = "recent",
+  offset = 0,
+) {
+  return apiFetch<{
+    tracks: PublicTrack[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/api/v1/me/tracks?limit=${limit}&offset=${offset}&sort=${sort}`, { token });
+}
+
 export async function listUserTracks(handle: string, limit = 50, sort: "recent" | "plays" = "recent") {
   return apiFetch<{
     tracks: PublicTrack[];

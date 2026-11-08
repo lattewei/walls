@@ -122,6 +122,7 @@ func (s *Server) routes() {
 			me.GET("/claims", s.artistsHandler.ListMine)
 			me.PATCH("/claims/:id", s.artistsHandler.UpdateMyClaim)
 			me.GET("/wall-activity", s.tracksHandler.ListWallActivity)
+			me.GET("/tracks", s.tracksHandler.ListMine)
 			me.DELETE("", s.usersHandler.Delete)
 		}
 

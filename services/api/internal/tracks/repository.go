@@ -250,6 +250,53 @@ func (r *Repository) ListByUploaderHandle(ctx context.Context, handle string, li
 	return out, total, nil
 }
 
+func (r *Repository) ListByUploaderID(ctx context.Context, userID string, limit, offset int, sort string) ([]domain.Track, int, error) {
+	const countQ = `
+		SELECT COUNT(*)
+		FROM tracks t
+		JOIN users u ON u.id = t.uploader_user_id
+		WHERE t.uploader_user_id = $1 AND u.deleted_at IS NULL
+	`
+	var total int
+	if err := r.pool.QueryRow(ctx, countQ, userID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count my tracks: %w", err)
+	}
+
+	listQ := `
+		SELECT t.id, t.uploader_user_id, t.title, t.description, t.cover_url, t.audio_object_key, t.audio_format,
+		       t.duration_seconds, t.status, t.created_at, t.updated_at, t.removed_at,
+		       u.handle, u.display_name
+		FROM tracks t
+		JOIN users u ON u.id = t.uploader_user_id
+		WHERE t.uploader_user_id = $1 AND u.deleted_at IS NULL
+		ORDER BY ` + trackOrder(sort) + `
+		LIMIT $2 OFFSET $3
+	`
+	rows, err := r.pool.Query(ctx, listQ, userID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list my tracks: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]domain.Track, 0, limit)
+	for rows.Next() {
+		t, err := scanTrackWithUploader(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	for i := range out {
+		if err := attachMeta(ctx, r.pool, &out[i]); err != nil {
+			return nil, 0, err
+		}
+	}
+	return out, total, nil
+}
+
 type WallActivityRow struct {
 	ArtistSlug string
 	ArtistName string

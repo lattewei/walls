@@ -127,6 +127,10 @@ Auth required. Verifies the current password, stores the new hash, and revokes o
 **400** `validation_error` — new password too short or too long  
 **401** `invalid_credentials` — current password is wrong
 
+### `GET /api/v1/me/tracks`
+
+Auth required. Your uploads, including withdrawn tracks. See [tracks](./api-tracks.md).
+
 ### `POST /api/v1/me/avatar`
 
 Auth required. Multipart field `avatar` (jpeg, png, webp, or gif, max 5MB).

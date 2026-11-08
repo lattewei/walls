@@ -97,6 +97,10 @@ curl "http://localhost:8080/api/v1/artists/johnny/tracks?limit=20&offset=0"
 
 Public list of ready tracks uploaded by that user.
 
+## `GET /api/v1/me/tracks`
+
+Auth required. Your uploads, including withdrawn (`status=removed`). Same `limit` / `offset` / `sort` as the public lists. Removed tracks have no `audio_url`.
+
 ## `GET /api/v1/producers`
 
 Public list of users who have at least one ready track, ordered by track count.

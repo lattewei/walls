@@ -179,6 +179,25 @@ func (h *Handler) ListByUploader(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+func (h *Handler) ListMine(c *gin.Context) {
+	limit, err := httpx.ParseNonNegInt(c.Query("limit"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid limit")
+		return
+	}
+	offset, err := httpx.ParseNonNegInt(c.Query("offset"), 0)
+	if err != nil {
+		httpx.BadRequest(c, "invalid offset")
+		return
+	}
+	res, err := h.svc.ListMine(c.Request.Context(), httpx.UserID(c), limit, offset, c.Query("sort"))
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
 func (h *Handler) List(c *gin.Context) {
 	limit, err := httpx.ParseNonNegInt(c.Query("limit"), 0)
 	if err != nil {

@@ -350,6 +350,33 @@ func (s *Service) ListByUploaderHandle(ctx context.Context, handle string, limit
 	return ListResult{Tracks: items, Total: total, Limit: limit, Offset: offset}, nil
 }
 
+func (s *Service) ListMine(ctx context.Context, userID string, limit, offset int, sort string) (ListResult, error) {
+	if userID == "" {
+		return ListResult{}, ErrNotFound
+	}
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+	if limit > maxLimit {
+		limit = maxLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > maxOffset {
+		return ListResult{}, fmt.Errorf("%w: offset is too large", ErrValidation)
+	}
+	rows, total, err := s.repo.ListByUploaderID(ctx, userID, limit, offset, parseSort(sort))
+	if err != nil {
+		return ListResult{}, err
+	}
+	items := make([]domain.PublicTrack, 0, len(rows))
+	for _, t := range rows {
+		items = append(items, t.ToPublic())
+	}
+	return ListResult{Tracks: items, Total: total, Limit: limit, Offset: offset}, nil
+}
+
 type WallActivityItem struct {
 	ArtistSlug string             `json:"artist_slug"`
 	ArtistName string             `json:"artist_name"`
