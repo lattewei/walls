@@ -857,7 +857,21 @@ body {
   margin-bottom: 28px;
 }
 
+.prod-cover {
+  width: 248px;
+}
+
+.prod-cover__hit {
+  display: block;
+  cursor: pointer;
+}
+
+.prod-cover .field__help {
+  margin: 8px 0 0;
+}
+
 .am-detail__cover {
+  position: relative;
   width: 248px;
   height: 248px;
   border-radius: 8px;
@@ -867,6 +881,14 @@ body {
   place-items: center;
   font-size: 3rem;
   font-weight: 600;
+}
+
+.am-detail__cover.is-edit input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
 }
 
 .am-detail__cover img {
@@ -1395,6 +1417,10 @@ body {
   .am-detail__cover {
     width: 180px;
     height: 180px;
+  }
+
+  .prod-cover {
+    width: 180px;
   }
 
   .am-cols span:nth-child(3),

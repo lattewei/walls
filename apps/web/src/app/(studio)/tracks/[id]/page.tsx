@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { PreviewButton } from "@/components/am-ui";
 import { ProdActions } from "@/components/prod-actions";
+import { ProdCover } from "@/components/prod-cover";
 import { isApiRequestError } from "@/lib/api";
 import { getTrack } from "@/lib/catalog";
 import { site } from "@/content/site";
@@ -61,13 +62,13 @@ export default async function TrackPage({ params }: Props) {
   return (
     <div className="am-page">
       <section className="am-detail">
-        <div className="am-detail__cover">
-          {cover ? (
-            <img src={cover} alt="" />
-          ) : (
-            <span aria-hidden>{track.title.slice(0, 1).toUpperCase()}</span>
-          )}
-        </div>
+        <ProdCover
+          trackId={track.id}
+          coverUrl={cover}
+          title={track.title}
+          uploaderHandle={track.uploader_handle}
+          canReplace={Boolean(track.audio_url)}
+        />
         <div className="am-detail__copy">
           <p className="am-kicker">Production</p>
           <h1>{track.title}</h1>

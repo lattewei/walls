@@ -229,6 +229,15 @@ export async function updateTrack(trackId: string, input: UpdateTrackInput, toke
   });
 }
 
+export async function setTrackCover(trackId: string, cover: File, token: string) {
+  const form = new FormData();
+  form.set("cover", cover);
+  return apiFetch<{ track: PublicTrack }>(
+    `/api/v1/tracks/${encodeURIComponent(trackId)}/cover`,
+    { method: "POST", token, body: form },
+  );
+}
+
 export async function withdrawTrack(trackId: string, token: string) {
   return apiFetch<{ status: string }>(`/api/v1/tracks/${encodeURIComponent(trackId)}`, {
     method: "DELETE",
