@@ -60,6 +60,22 @@ Health checks:
 - `GET /health` - process up
 - `GET /api/v1/health` - process + DB
 
+## Seed data
+
+Development only (`API_ENV=development`). Populates users, walls, tagged tracks, plays and generated cover art / audio so the UI is not empty.
+
+```bash
+cd services/api
+go run ./cmd/seed
+```
+
+- Safe to rerun: rows and files are deterministic and skipped when present. It stops with an error if a demo handle or wall slug already belongs to a different row.
+- Demo password for every seeded account: `walls-demo-pass`
+- `yunaray` - claimed wall, own uploads (one withdrawn), wall activity
+- `wallsadmin` - admin role for moderation screens
+- Covers are generated JPEGs and audio is a synthesized WAV loop; no external assets and no network access.
+- Files land in `MEDIA_LOCAL_PATH` (`./data/media` by default).
+
 ## Tests
 
 ```bash
