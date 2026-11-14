@@ -72,6 +72,7 @@ export function TrackList({
   }
 
   function canManage(track: ProdRow) {
+    if (track.readOnly) return false;
     if (track.canWithdraw) return true;
     return Boolean(user?.handle && track.uploaderHandle === user.handle);
   }
@@ -273,7 +274,7 @@ export function TrackList({
                       <Link href={`/tracks/${track.id}`} role="menuitem" onClick={() => setMenuId(null)}>
                         Open
                       </Link>
-                      {owner ? (
+                      {track.readOnly ? null : owner ? (
                         <button
                           type="button"
                           role="menuitem"

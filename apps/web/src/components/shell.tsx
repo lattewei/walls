@@ -59,6 +59,9 @@ function SideNav({
             <Link href="/upload" className={path === "/upload" ? "am-side__quiet is-on" : "am-side__quiet"}>
               Upload
             </Link>
+            <Link href="/library" className={path === "/library" ? "am-side__quiet is-on" : "am-side__quiet"}>
+              My uploads
+            </Link>
             <Link href="/artists/new" className={path === "/artists/new" ? "am-side__quiet is-on" : "am-side__quiet"}>
               New wall
             </Link>

@@ -69,6 +69,8 @@ export type ProdRow = {
   artistSlugs?: string[];
   detail?: string;
   playCount?: number;
+  readOnly?: boolean;
+  status?: string;
 };
 
 export function toProdRow(
@@ -91,6 +93,7 @@ export function toProdRow(
     detail: [t.description, t.tags?.length ? t.tags.join(", ") : ""]
       .filter(Boolean)
       .join(" · "),
+    status: t.status,
   };
 }
 
