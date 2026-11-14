@@ -163,6 +163,14 @@ export function IconNavRadio() {
   );
 }
 
+export function IconNavActivity() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden fill="none">
+      <path d="M4 13.5h3l2-5 3 9 2.5-6 1.5 2H20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconPerson() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden fill="none">

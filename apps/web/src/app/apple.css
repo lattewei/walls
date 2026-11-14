@@ -100,6 +100,22 @@ body {
   opacity: 0.92;
 }
 
+.am-item__badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #fa2d48;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .am-item:hover {
   background: rgba(255, 255, 255, 0.06);
 }

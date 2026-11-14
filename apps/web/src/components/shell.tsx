@@ -2,15 +2,23 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { site } from "@/content/site";
 import { logout, updateStoredUser } from "@/lib/auth";
-import { getMe } from "@/lib/catalog";
+import { getMe, listWallActivity } from "@/lib/catalog";
 import { useSessionToken, useSessionUser } from "@/lib/session";
-import { IconNavHome, IconNavNew, IconNavRadio, IconNavSearch, IconPerson } from "./icons";
+import {
+  IconNavActivity,
+  IconNavHome,
+  IconNavNew,
+  IconNavRadio,
+  IconNavSearch,
+  IconPerson,
+} from "./icons";
 import { PlayerDock } from "./player-dock";
 import { PlayerProvider } from "./player-context";
+import { ACTIVITY_SEEN_KEY } from "./wall-activity";
 
 function SideNav({
   path,
@@ -23,12 +31,32 @@ function SideNav({
 }) {
   const params = useSearchParams();
   const view = params.get("view") ?? "";
+  const token = useSessionToken();
   const onApp = path === "/app";
   const onSearch = path === "/search";
   const onHome = onApp && view !== "new" && view !== "radio";
   const onNew = onApp && view === "new";
   const onRadio = onApp && view === "radio";
+  const onActivity = path === "/activity";
   const here = `${path}${params.toString() ? `?${params.toString()}` : ""}`;
+  const [unseen, setUnseen] = useState(0);
+
+  useEffect(() => {
+    if (!token || onActivity) return;
+    let cancelled = false;
+    (async () => {
+      const seen = localStorage.getItem(ACTIVITY_SEEN_KEY) ?? undefined;
+      try {
+        const res = await listWallActivity(token, seen, 1);
+        if (!cancelled) setUnseen(res.total);
+      } catch {
+        // The badge is best-effort; the page reports real errors.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, onActivity]);
 
   return (
     <>
@@ -48,6 +76,15 @@ function SideNav({
         <Link href="/app?view=radio" className={onRadio ? "am-item is-on" : "am-item"} aria-current={onRadio ? "page" : undefined}>
           <IconNavRadio />
           <span>Radio</span>
+        </Link>
+        <Link href="/activity" className={onActivity ? "am-item is-on" : "am-item"} aria-current={onActivity ? "page" : undefined}>
+          <IconNavActivity />
+          <span>Activity</span>
+          {unseen > 0 && !onActivity ? (
+            <span className="am-item__badge" aria-label={`${unseen} new`}>
+              {unseen > 9 ? "9+" : unseen}
+            </span>
+          ) : null}
         </Link>
       </nav>
       <div className="am-side__foot">
