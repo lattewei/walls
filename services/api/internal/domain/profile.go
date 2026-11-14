@@ -35,6 +35,7 @@ func EmptyContacts() PublicContacts {
 }
 
 type MeResponse struct {
-	User     PublicUser     `json:"user"`
-	Contacts PublicContacts `json:"contacts"`
+	User                   PublicUser     `json:"user"`
+	Contacts               PublicContacts `json:"contacts"`
+	RecoveryCodesRemaining int            `json:"recovery_codes_remaining"`
 }

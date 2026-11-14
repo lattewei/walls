@@ -130,7 +130,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const token = useSessionToken();
   const user = useSessionUser();
-  const bare = path === "/" || path === "/login" || path === "/register";
+  const bare = path === "/" || path === "/login" || path === "/register" || path === "/recover";
 
   useEffect(() => {
     if (!token) return;

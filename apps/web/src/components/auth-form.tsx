@@ -17,6 +17,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [codes, setCodes] = useState<string[] | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -26,7 +27,15 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       if (mode === "login") {
         await login(handle.trim(), password);
       } else {
-        await register(handle.trim(), password, displayName.trim() || undefined);
+        const session = await register(
+          handle.trim(),
+          password,
+          displayName.trim() || undefined,
+        );
+        if (session.recovery_codes?.length) {
+          setCodes(session.recovery_codes);
+          return;
+        }
       }
       router.push(nextPath);
       router.refresh();
@@ -41,6 +50,50 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  function finish() {
+    router.push(nextPath);
+    router.refresh();
+  }
+
+  async function copyCodes() {
+    if (!codes) return;
+    try {
+      await navigator.clipboard.writeText(codes.join("\n"));
+    } catch {
+      setError("Could not copy. Select the codes and copy them manually.");
+    }
+  }
+
+  if (codes) {
+    return (
+      <div className="auth">
+        <div>
+          <h1>Save your recovery codes</h1>
+          <p className="hint">
+            Each code works once. They are the only way back into your account if you forget
+            your password. We cannot show them again.
+          </p>
+          <ul className="codes">
+            {codes.map((code) => (
+              <li key={code}>
+                <code>{code}</code>
+              </li>
+            ))}
+          </ul>
+          <div className="wall__actions">
+            <button type="button" className="btn btn--ghost" onClick={copyCodes}>
+              Copy all
+            </button>
+            <button type="button" className="btn" onClick={finish}>
+              I saved them
+            </button>
+          </div>
+          {error ? <p className="note note--err">{error}</p> : null}
+        </div>
+      </div>
+    );
   }
 
   const title = mode === "login" ? "Log in" : "Create account";
@@ -118,6 +171,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             </>
           )}
         </p>
+        {mode === "login" ? (
+          <p className="alt">
+            Forgot your password?{" "}
+            <Link href="/recover">Use a recovery code</Link>
+          </p>
+        ) : null}
       </form>
     </div>
   );

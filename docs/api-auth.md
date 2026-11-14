@@ -39,9 +39,15 @@ No email at launch. Identity = **handle** + password.
   },
   "access_token": "eyJ…",
   "token_type": "Bearer",
-  "expires_at": "…"
+  "expires_at": "…",
+  "recovery_codes": [
+    "XXXXX-XXXXX",
+    "…"
+  ]
 }
 ```
+
+`recovery_codes` contains **10 single-use codes** shown only in this response. Store them offline; they are hashed server-side and cannot be retrieved again. Login responses never include them.
 
 Errors: `400 validation_error`, `409 handle_taken`.
 
@@ -51,8 +57,27 @@ Errors: `400 validation_error`, `409 handle_taken`.
 { "handle": "johnny_beats", "password": "password8+" }
 ```
 
-**200**: same shape as register.  
+**200**: same shape as register, without `recovery_codes`.  
 **401** `invalid_credentials` if handle or password is wrong.
+
+### `POST /api/v1/auth/recover`
+
+Resets the password with a recovery code. No email involved.
+
+```json
+{
+  "handle": "johnny_beats",
+  "code": "XXXXX-XXXXX",
+  "new_password": "newpassword8+"
+}
+```
+
+**200**: same shape as register, **including a fresh set of 10 `recovery_codes`**. The used code is consumed, all other old codes are deleted, and every existing session is revoked.
+
+- The code is case-insensitive and ignores dashes/spaces.
+- Every code works **once**.
+- **401** `invalid_recovery_code` if the handle or code is wrong (same message for both, to avoid account enumeration).
+- **400** `validation_error` if the new password fails the password rules.
 
 ### `POST /api/v1/auth/logout`
 
@@ -79,13 +104,29 @@ Header: `Authorization: Bearer <access_token>`
     "other_links": [
       { "label": "SoundCloud", "url": "https://soundcloud.com/johnny" }
     ]
-  }
+  },
+  "recovery_codes_remaining": 10
 }
 ```
 
 `contacts` only contains what the user chose to publish. There is no account email in the MVP.
 
+The response also includes `recovery_codes_remaining`: the number of unused recovery codes for this account.
+
 Register / login also return `contacts` (empty at first).
+
+### `POST /api/v1/me/recovery-codes`
+
+Auth required. Replaces **all** recovery codes with a fresh set of 10 and returns them:
+
+```json
+{
+  "recovery_codes": ["XXXXX-XXXXX", "…"],
+  "remaining": 10
+}
+```
+
+Use this when codes are lost or few remain. Old codes stop working immediately.
 
 ### `PATCH /api/v1/me`
 
@@ -180,3 +221,4 @@ Per IP, fixed window (in-memory, single instance):
 - 8–72 bytes (bcrypt’s limit)
 - bcrypt hash (cost 12)
 - never returned by the API
+- forgotten password: use a recovery code via `POST /api/v1/auth/recover`; every account gets 10 single-use codes at registration

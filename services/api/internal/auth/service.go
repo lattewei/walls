@@ -31,12 +31,24 @@ type LoginInput struct {
 	Password string
 }
 
+type RecoverInput struct {
+	Handle      string
+	Code        string
+	NewPassword string
+}
+
+type RecoveryCodesResult struct {
+	Codes     []string `json:"recovery_codes"`
+	Remaining int      `json:"remaining"`
+}
+
 type AuthResult struct {
-	User        domain.PublicUser     `json:"user"`
-	Contacts    domain.PublicContacts `json:"contacts"`
-	AccessToken string                `json:"access_token"`
-	TokenType   string                `json:"token_type"`
-	ExpiresAt   string                `json:"expires_at"`
+	User          domain.PublicUser     `json:"user"`
+	Contacts      domain.PublicContacts `json:"contacts"`
+	AccessToken   string                `json:"access_token"`
+	TokenType     string                `json:"token_type"`
+	ExpiresAt     string                `json:"expires_at"`
+	RecoveryCodes []string              `json:"recovery_codes,omitempty"`
 }
 
 type UpdateProfileInput struct {
@@ -69,7 +81,16 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (AuthResult, e
 		return AuthResult{}, err
 	}
 
-	user, err := s.users.Create(ctx, handle, hash, displayName)
+	codes, err := GenerateRecoveryCodes(RecoveryCodeCount)
+	if err != nil {
+		return AuthResult{}, err
+	}
+	hashes := make([]string, len(codes))
+	for i, code := range codes {
+		hashes[i] = HashRecoveryCode(code)
+	}
+
+	user, err := s.users.Create(ctx, handle, hash, displayName, hashes)
 	if errors.Is(err, users.ErrHandleTaken) {
 		return AuthResult{}, ErrHandleTaken
 	}
@@ -77,7 +98,12 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (AuthResult, e
 		return AuthResult{}, err
 	}
 
-	return s.issue(ctx, user)
+	res, err := s.issue(ctx, user)
+	if err != nil {
+		return AuthResult{}, err
+	}
+	res.RecoveryCodes = codes
+	return res, nil
 }
 
 func (s *Service) Login(ctx context.Context, in LoginInput) (AuthResult, error) {
@@ -101,6 +127,77 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (AuthResult, error) 
 	}
 
 	return s.issue(ctx, user)
+}
+
+func (s *Service) Recover(ctx context.Context, in RecoverInput) (AuthResult, error) {
+	if err := ValidatePassword(in.NewPassword); err != nil {
+		return AuthResult{}, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+	}
+	handle := users.NormalizeHandle(in.Handle)
+	code := strings.TrimSpace(in.Code)
+	if handle == "" || code == "" {
+		return AuthResult{}, ErrInvalidRecovery
+	}
+
+	user, err := s.users.GetByHandle(ctx, handle)
+	if errors.Is(err, users.ErrNotFound) {
+		return AuthResult{}, ErrInvalidRecovery
+	}
+	if err != nil {
+		return AuthResult{}, err
+	}
+
+	hash, err := HashPassword(in.NewPassword)
+	if err != nil {
+		return AuthResult{}, err
+	}
+
+	codes, err := GenerateRecoveryCodes(RecoveryCodeCount)
+	if err != nil {
+		return AuthResult{}, err
+	}
+	hashes := make([]string, len(codes))
+	for i, c := range codes {
+		hashes[i] = HashRecoveryCode(c)
+	}
+
+	ok, err := s.users.ResetWithRecoveryCode(ctx, user.ID, HashRecoveryCode(code), hash, hashes)
+	if err != nil {
+		return AuthResult{}, err
+	}
+	if !ok {
+		return AuthResult{}, ErrInvalidRecovery
+	}
+
+	user.PasswordHash = hash
+	res, err := s.issue(ctx, user)
+	if err != nil {
+		return AuthResult{}, err
+	}
+	res.RecoveryCodes = codes
+	return res, nil
+}
+
+func (s *Service) RegenerateRecoveryCodes(ctx context.Context, userID string) (RecoveryCodesResult, error) {
+	if _, err := s.users.GetByID(ctx, userID); err != nil {
+		if errors.Is(err, users.ErrNotFound) {
+			return RecoveryCodesResult{}, ErrUnauthorized
+		}
+		return RecoveryCodesResult{}, err
+	}
+
+	codes, err := GenerateRecoveryCodes(RecoveryCodeCount)
+	if err != nil {
+		return RecoveryCodesResult{}, err
+	}
+	hashes := make([]string, len(codes))
+	for i, c := range codes {
+		hashes[i] = HashRecoveryCode(c)
+	}
+	if err := s.users.ReplaceRecoveryCodes(ctx, userID, hashes); err != nil {
+		return RecoveryCodesResult{}, err
+	}
+	return RecoveryCodesResult{Codes: codes, Remaining: len(codes)}, nil
 }
 
 func (s *Service) Logout(ctx context.Context, userID string) error {
@@ -153,10 +250,15 @@ func (s *Service) Me(ctx context.Context, userID string) (domain.MeResponse, err
 	if err != nil {
 		return domain.MeResponse{}, err
 	}
+	remaining, err := s.users.RecoveryCodeRemaining(ctx, userID)
+	if err != nil {
+		return domain.MeResponse{}, err
+	}
 
 	return domain.MeResponse{
-		User:     user.ToPublic(),
-		Contacts: profile.ToPublic(),
+		User:                   user.ToPublic(),
+		Contacts:               profile.ToPublic(),
+		RecoveryCodesRemaining: remaining,
 	}, nil
 }
 
@@ -246,9 +348,14 @@ func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdatePro
 		}
 		return domain.MeResponse{}, err
 	}
+	remaining, err := s.users.RecoveryCodeRemaining(ctx, userID)
+	if err != nil {
+		return domain.MeResponse{}, err
+	}
 	return domain.MeResponse{
-		User:     savedUser.ToPublic(),
-		Contacts: savedProfile.ToPublic(),
+		User:                   savedUser.ToPublic(),
+		Contacts:               savedProfile.ToPublic(),
+		RecoveryCodesRemaining: remaining,
 	}, nil
 }
 
@@ -282,5 +389,6 @@ var (
 	ErrValidation         = errors.New("validation_error")
 	ErrHandleTaken        = errors.New("handle_taken")
 	ErrInvalidCredentials = errors.New("invalid_credentials")
+	ErrInvalidRecovery    = errors.New("invalid_recovery_code")
 	ErrUnauthorized       = errors.New("unauthorized")
 )

@@ -257,6 +257,7 @@ export async function getMe(token: string) {
   return apiFetch<{
     user: PublicProfileUser & { role?: string };
     contacts: PublicContacts;
+    recovery_codes_remaining: number;
   }>("/api/v1/me", { token });
 }
 

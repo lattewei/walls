@@ -38,7 +38,7 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-func (r *Repository) Create(ctx context.Context, handle, passwordHash, displayName string) (domain.User, error) {
+func (r *Repository) Create(ctx context.Context, handle, passwordHash, displayName string, recoveryHashes []string) (domain.User, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("begin tx: %w", err)
@@ -65,10 +65,103 @@ func (r *Repository) Create(ctx context.Context, handle, passwordHash, displayNa
 		return domain.User{}, fmt.Errorf("create producer profile: %w", err)
 	}
 
+	if err := insertRecoveryCodes(ctx, tx, u.ID, recoveryHashes); err != nil {
+		return domain.User{}, err
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return domain.User{}, fmt.Errorf("commit: %w", err)
 	}
 	return u, nil
+}
+
+func insertRecoveryCodes(ctx context.Context, tx pgx.Tx, userID string, hashes []string) error {
+	for _, hash := range hashes {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO recovery_codes (user_id, code_hash) VALUES ($1, $2)
+		`, userID, hash); err != nil {
+			return fmt.Errorf("insert recovery code: %w", err)
+		}
+	}
+	return nil
+}
+
+func (r *Repository) ReplaceRecoveryCodes(ctx context.Context, userID string, hashes []string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	if _, err := tx.Exec(ctx, `DELETE FROM recovery_codes WHERE user_id = $1`, userID); err != nil {
+		return fmt.Errorf("clear recovery codes: %w", err)
+	}
+	if err := insertRecoveryCodes(ctx, tx, userID, hashes); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) RecoveryCodeRemaining(ctx context.Context, userID string) (int, error) {
+	var n int
+	if err := r.pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM recovery_codes WHERE user_id = $1 AND used_at IS NULL
+	`, userID).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count recovery codes: %w", err)
+	}
+	return n, nil
+}
+
+func (r *Repository) ResetWithRecoveryCode(
+	ctx context.Context,
+	userID, codeHash, passwordHash string,
+	newHashes []string,
+) (bool, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	tag, err := tx.Exec(ctx, `
+		UPDATE recovery_codes
+		SET used_at = now()
+		WHERE user_id = $1 AND code_hash = $2 AND used_at IS NULL
+	`, userID, codeHash)
+	if err != nil {
+		return false, fmt.Errorf("consume recovery code: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return false, nil
+	}
+
+	tag, err = tx.Exec(ctx, `
+		UPDATE users
+		SET password_hash = $2,
+		    session_version = session_version + 1,
+		    updated_at = now()
+		WHERE id = $1 AND deleted_at IS NULL
+	`, userID, passwordHash)
+	if err != nil {
+		return false, fmt.Errorf("reset password: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return false, nil
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM recovery_codes WHERE user_id = $1`, userID); err != nil {
+		return false, fmt.Errorf("clear recovery codes: %w", err)
+	}
+	if err := insertRecoveryCodes(ctx, tx, userID, newHashes); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit: %w", err)
+	}
+	return true, nil
 }
 
 func (r *Repository) GetByHandle(ctx context.Context, handle string) (domain.User, error) {

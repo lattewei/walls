@@ -76,6 +76,37 @@ func (h *Handler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+func (h *Handler) Recover(c *gin.Context) {
+	var req struct {
+		Handle      string `json:"handle"`
+		Code        string `json:"code"`
+		NewPassword string `json:"new_password"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequest(c, "invalid JSON body")
+		return
+	}
+	res, err := h.svc.Recover(c.Request.Context(), RecoverInput{
+		Handle:      req.Handle,
+		Code:        req.Code,
+		NewPassword: req.NewPassword,
+	})
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *Handler) RegenerateRecoveryCodes(c *gin.Context) {
+	res, err := h.svc.RegenerateRecoveryCodes(c.Request.Context(), httpx.UserID(c))
+	if err != nil {
+		h.mapError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, res)
+}
+
 func (h *Handler) Logout(c *gin.Context) {
 	if err := h.svc.Logout(c.Request.Context(), httpx.UserID(c)); err != nil {
 		h.mapError(c, err)
@@ -188,6 +219,8 @@ func (h *Handler) mapError(c *gin.Context, err error) {
 		httpx.JSONError(c, http.StatusConflict, "handle_taken", "handle already taken")
 	case errors.Is(err, ErrInvalidCredentials):
 		httpx.JSONError(c, http.StatusUnauthorized, "invalid_credentials", "invalid handle or password")
+	case errors.Is(err, ErrInvalidRecovery):
+		httpx.JSONError(c, http.StatusUnauthorized, "invalid_recovery_code", "invalid handle or recovery code")
 	case errors.Is(err, ErrUnauthorized):
 		httpx.Unauthorized(c, "authentication required")
 	default:

@@ -17,6 +17,7 @@ export type AuthSession = {
   access_token: string;
   token_type: string;
   expires_at: string;
+  recovery_codes?: string[];
 };
 
 export function sessionExpired(): boolean {
@@ -133,6 +134,26 @@ export async function register(handle: string, password: string, displayName?: s
   });
   saveSession(session);
   return session;
+}
+
+export async function recover(handle: string, code: string, newPassword: string) {
+  const session = await apiFetch<AuthSession>("/api/v1/auth/recover", {
+    method: "POST",
+    body: JSON.stringify({
+      handle: handle.trim().toLowerCase(),
+      code: code.trim(),
+      new_password: newPassword,
+    }),
+  });
+  saveSession(session);
+  return session;
+}
+
+export async function regenerateRecoveryCodes(token: string) {
+  return apiFetch<{ recovery_codes: string[]; remaining: number }>(
+    "/api/v1/me/recovery-codes",
+    { method: "POST", token },
+  );
 }
 
 export async function logout() {

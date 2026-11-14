@@ -8,6 +8,7 @@ import { apiUrl, isApiRequestError } from "@/lib/api";
 import { getToken, updateStoredUser } from "@/lib/auth";
 import { getMe, updateMe, uploadAvatar } from "@/lib/catalog";
 import { useSessionToken, useSessionUser } from "@/lib/session";
+import { RecoveryCodesPanel } from "./recovery-codes-panel";
 
 export function SettingsForm() {
   const router = useRouter();
@@ -263,6 +264,7 @@ export function SettingsForm() {
       <p className="alt">
         <Link href={`/users/${handle}`}>View public page</Link>
       </p>
+      <RecoveryCodesPanel />
     </div>
   );
 }
