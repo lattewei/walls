@@ -103,6 +103,8 @@ export function PlayerDock() {
   const volume = player?.volume ?? 1;
   const upcoming = player ? player.queue.slice(player.index + 1) : [];
 
+  if (!track) return null;
+
   return (
     <div className="am-player">
       <div className="am-player__side am-player__side--left">

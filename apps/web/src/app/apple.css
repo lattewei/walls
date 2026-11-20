@@ -556,7 +556,11 @@ body {
 
 .am-main {
   min-width: 0;
-  padding: 28px 36px 120px;
+  padding: 28px 36px 48px;
+}
+
+.am:has(.am-player) .am-main {
+  padding-bottom: 120px;
 }
 
 .am-page {
@@ -1423,7 +1427,11 @@ body {
   }
 
   .am-main {
-    padding: 20px 16px 108px;
+    padding: 20px 16px 48px;
+  }
+
+  .am:has(.am-player) .am-main {
+    padding-bottom: 108px;
   }
 
   .am-detail {
